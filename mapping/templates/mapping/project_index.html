@@ -1,0 +1,360 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card m-1">
+    <div class="card-header text-white bg-info"><h5 class="card-title">Projecten</h5></div>
+    <div class="card-body">
+        <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+            <option>---</option>  
+            {% for value in project_list.values %}
+            <option value="{% url "mapping:index" %}project/{{value.id}}"{% if current_project.id == value.id %} selected {% endif %}>{{value.title}}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col col-lg-3">
+        <div class="card">
+            <div class="card-header text-white bg-info">
+                <h5 class="card-title">Modules</h5>
+            </div>
+            <div class="card-body">
+                <div class="card">
+                    <div class="card-body">
+                        <a href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{first_task.id}}">
+                            <span style="display: block;">  
+                                Inbox <strong>[{{tasks_total}} open taken op je naam]</strong>
+                            </span>
+                        </a>
+                    </div>    
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if 'mapping | project statistics' in permissions %}
+    <div class="col">
+        <div class="accordion" id="dashboardAccordion">
+            <!-- <div class="row"> -->
+                <div class="card">
+                    <div class="card-header" id="headingOne">
+                        <button class="btn btn-link text-white bg-info" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                            Admin modules
+                        </button>
+                    </div>
+                    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#dashboardAccordion">
+                        <a href="{% url "mapping:index" %}taskmanager/{{current_project.id}}" class="btn btn-link" type="button">Taskmanager</a>
+                    </div>
+                </div>
+            <!-- </div>
+            <div class="row"> -->
+                <div class="card">
+                    <div class="card-header" id="headingTwo">
+                        <button class="btn btn-link text-white bg-info" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            Grafieken
+                        </button>
+                    </div>
+                    <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#dashboardAccordion">
+                        <div class="card-columns" style="column-count: 2;">
+                            <div class="card m-1" style="width:600px;">
+                                <canvas id="lineChartTime">
+                                    <script>
+                                        var ctx = document.getElementById('lineChartTime');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'line',
+                                            data: {
+                                                labels: {{time_time|safe}},
+                                                datasets: {{time_dataset|safe}}
+                                            },
+                                            options: {
+                                                scales: {
+                                                    yAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }],
+                                                    xAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }]
+                                                },
+                                                barShowStroke : false,
+                                                scales: {
+                                                xAxes: [{
+                                                    stacked: false,
+                                                }],
+                                                yAxes: [{
+                                                    stacked: false,
+                                                }]
+                                                }
+                                            }
+                                        });
+                                        </script>
+                                </canvas>
+                            </div>
+                            <div class="card m-1" style="width:600px;">
+                                <canvas id="barChartUsersStatus">
+                                    <script>
+                                        var ctx = document.getElementById('barChartUsersStatus');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'horizontalBar',
+                                            data: {
+                                                labels: {{tasks_user_status_labels|safe}},
+                                                datasets: {{tasks_user_status_values|safe}}
+                                            },
+                                            options: {
+                                                scales: {
+                                                    yAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }]
+                                                },
+                                                responsive: true,
+                                                barShowStroke : false,
+                                                scales: {
+                                                    xAxes: [{
+                                                        stacked: true,
+                                                    }],
+                                                    yAxes: [{
+                                                        stacked: true
+                                                    }]
+                                                }
+                                            }
+                                        });
+                                    </script>
+                                </canvas>                    
+                            </div>
+                            <div class="card m-1" style="width:600px;">
+                                <canvas id="barChartUsers">
+                                    <script>
+                                        var ctx = document.getElementById('barChartUsers');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'horizontalBar',
+                                            data: {
+                                                labels: {{tasks_per_user_labels|safe}},
+                                                datasets: [{
+                                                    label: 'Aantal open taken',
+                                                    data: {{tasks_per_user_values|safe}},
+                                                    backgroundColor: [
+                                                        'rgba(255, 99, 132, 0.2)',
+                                                        'rgba(54, 162, 235, 0.2)',
+                                                        'rgba(255, 206, 86, 0.2)',
+                                                        'rgba(75, 192, 192, 0.2)',
+                                                        'rgba(153, 102, 255, 0.2)',
+                                                        'rgba(255, 159, 64, 0.2)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(255, 99, 132, 1)',
+                                                        'rgba(54, 162, 235, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(153, 102, 255, 1)',
+                                                        'rgba(255, 159, 64, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                scales: {
+                                                    yAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }],
+                                                    xAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }],
+                                                    xAxes: [{
+                                                        ticks: {
+                                                            beginAtZero: true
+                                                        }
+                                                    }]
+                                                },
+                                                responsive: true,
+                                                barShowStroke : true,
+                                            }
+                                        });
+                                    </script>
+                                </canvas>                    
+                            </div>
+                            <div class="card m-1" style="width:300px;">
+                                <canvas id="barChartStatuses1" height="300">
+                                    <script>
+                                        var ctx = document.getElementById('barChartStatuses1');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'radar',
+                                            data: {
+                                                labels: {{tasks_per_status_labels|safe}},
+                                                datasets: [{
+                                                    label: 'Aantal taken',
+                                                    data: {{tasks_per_status_values|safe}},
+                                                    backgroundColor: [
+                                                        'rgba(255, 99, 132, 0.2)',
+                                                        'rgba(54, 162, 235, 0.2)',
+                                                        'rgba(255, 206, 86, 0.2)',
+                                                        'rgba(75, 192, 192, 0.2)',
+                                                        'rgba(153, 102, 255, 0.2)',
+                                                        'rgba(255, 159, 64, 0.2)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(255, 99, 132, 1)',
+                                                        'rgba(54, 162, 235, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(153, 102, 255, 1)',
+                                                        'rgba(255, 159, 64, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                            }
+                                        });
+                                    </script>
+                                </canvas>            
+                            </div>
+                            <div class="card m-1" style="width:300px;">
+                                <canvas id="barChartStatuses2" style="width:200" height="300">
+                                    <script>
+                                        var ctx = document.getElementById('barChartStatuses2');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'polarArea',
+                                            data: {
+                                                labels: {{tasks_per_status_labels|safe}},
+                                                datasets: [{
+                                                    label: 'Aantal taken',
+                                                    data: {{tasks_per_status_values|safe}},
+                                                    backgroundColor: [
+                                                        'rgba(255, 99, 132, 0.2)',
+                                                        'rgba(54, 162, 235, 0.2)',
+                                                        'rgba(255, 206, 86, 0.2)',
+                                                        'rgba(75, 192, 192, 0.2)',
+                                                        'rgba(153, 102, 255, 0.2)',
+                                                        'rgba(255, 159, 64, 0.2)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(255, 99, 132, 1)',
+                                                        'rgba(54, 162, 235, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(153, 102, 255, 1)',
+                                                        'rgba(255, 159, 64, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true
+                                            }
+                                        });
+                                    </script>
+                                </canvas>    
+                            </div>
+                            <div class="card m-1" style="width:300px;">
+                                <canvas id="barChartStatuses3" style="width:200" height="300">
+                                    <script>
+                                        var ctx = document.getElementById('barChartStatuses3');
+                                        var myChart = new Chart(ctx, {
+                                            type: 'pie',
+                                            data: {
+                                                labels: {{tasks_per_status_labels|safe}},
+                                                datasets: [{
+                                                    label: 'Aantal taken',
+                                                    data: {{tasks_per_status_values|safe}},
+                                                    backgroundColor: [
+                                                        'rgba(255, 99, 132, 0.2)',
+                                                        'rgba(54, 162, 235, 0.2)',
+                                                        'rgba(255, 206, 86, 0.2)',
+                                                        'rgba(75, 192, 192, 0.2)',
+                                                        'rgba(153, 102, 255, 0.2)',
+                                                        'rgba(255, 159, 64, 0.2)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(255, 99, 132, 1)',
+                                                        'rgba(54, 162, 235, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(153, 102, 255, 1)',
+                                                        'rgba(255, 159, 64, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true
+                                            }
+                                        });
+                                    </script>
+                                </canvas>            
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <!-- </div> -->
+        </div>
+    </div>
+    {% else %}
+    <div class="col card-columns" style="column-count: 1;">
+        <div class="card m-1" style="width:800px;height:100%">
+            <div class="card-body">
+                <canvas id="barChartCurrentUser">
+                    <script>
+                        var ctx = document.getElementById('barChartCurrentUser');
+                        var myChart = new Chart(ctx, {
+                            type: 'horizontalBar',
+                            data: {
+                                labels: {{tasks_current_user_status_labels|safe}},
+                                datasets: [{
+                                    label: 'Aantal open taken',
+                                    data: {{tasks_current_user_status_values|safe}},
+                                    backgroundColor: [
+                                        'rgba(255, 99, 132, 0.2)',
+                                        'rgba(54, 162, 235, 0.2)',
+                                        'rgba(255, 206, 86, 0.2)',
+                                        'rgba(75, 192, 192, 0.2)',
+                                        'rgba(153, 102, 255, 0.2)',
+                                        'rgba(255, 159, 64, 0.2)'
+                                    ],
+                                    borderColor: [
+                                        'rgba(255, 99, 132, 1)',
+                                        'rgba(54, 162, 235, 1)',
+                                        'rgba(255, 206, 86, 1)',
+                                        'rgba(75, 192, 192, 1)',
+                                        'rgba(153, 102, 255, 1)',
+                                        'rgba(255, 159, 64, 1)'
+                                    ],
+                                }]
+                            },                
+                            options: {
+                                scales: {
+                                    yAxes: [{
+                                        ticks: {
+                                            beginAtZero: true
+                                        }
+                                    }],
+                                        xAxes: [{
+                                            ticks: {
+                                                beginAtZero: true
+                                            }
+                                        }]
+                                },
+                                responsive: true,
+                                barShowStroke : false,
+                            }
+                        });
+                    </script>
+                </canvas> 
+            </div>   
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}

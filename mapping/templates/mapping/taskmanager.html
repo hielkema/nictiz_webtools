@@ -1,0 +1,120 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card m-1">
+  <div class="card-body">
+    Project:
+    <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+        <option>---</option>  
+        {% for value in project_list.values %}
+          <option value="{% url "mapping:index" %}taskmanager/{{value.id}}"{% if value.id == current_project.id %} selected {% endif %}>{{value.title}}</option>
+        {% endfor %}
+    </select>
+    Statusfilter:
+    <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+        <option value="{% url "mapping:index" %}taskmanager/{{current_project.id}}/?status_filter=0">---</option>  
+        {% for value in all_statuses.values %}
+          <option value="{% url "mapping:index" %}taskmanager/{{current_project.id}}/?status_filter={{value.id}}"{% if value.id == status_filter %} selected {% endif %}>{{value.status_title}}</option>
+        {% endfor %}
+    </select>
+    Filteren op gebruiker
+    <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+        <option value="{% url "mapping:index" %}taskmanager/{{current_project.id}}/?user_filter=-1"{% if user_filter == -1 %} selected {% endif %}>Alle gebruikers</option>  
+        <option value="{% url "mapping:index" %}taskmanager/{{current_project.id}}/?user_filter=0"{% if user_filter == 0 %} selected {% endif %}>Geen gebruiker</option>  
+        {% for value in all_users.values %}
+          <option value="{% url "mapping:index" %}taskmanager/{{current_project.id}}/?user_filter={{value.id}}"{% if value.id == user_filter %} selected {% endif %}>{{value.username}}</option>
+        {% endfor %}
+    </select>
+  </div>
+</div>
+<div class="pagination">
+  <span class="step-links">
+      {% if objects.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ objects.previous_page_number }}">previous</a>
+      {% endif %}
+
+      <span class="current">
+          Page {{ objects.number }} of {{ objects.paginator.num_pages }}.
+      </span>
+
+      {% if objects.has_next %}
+          <a href="?page={{ objects.next_page_number }}">next</a>
+          <a href="?page={{ objects.paginator.num_pages }}">last &raquo;</a>
+      {% endif %}
+  </span>
+</div>
+<div class="row card m-1">
+  <div class="card">
+    <div class="card-body">
+      <input class="checkall" type="checkbox" name="item[]" id="checkAll"> Check all
+      <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        Toewijzen aan:
+        <select name="username">
+          <option value="0">Ongewijzigd</option>
+          {% for user in all_users %}
+          <option value="{{user.id}}">{{user.username}}</option>
+          {% endfor %}
+        </select>
+        Status:
+        <select name="statuschange">
+          <option value="0">Ongewijzigd</option>
+          {% for status in all_statuses %}
+          <option value="{{status.id}}">{{status.status_title}}</option>
+          {% endfor %}
+        </select>
+        <input type="submit" value="Verzenden">
+        <table class="table table-striped table-hover table-sm">
+          <thead>
+            <tr>
+              <th></th>
+              <th>ID</th>
+              <th>Source component</th>
+              <th>Status</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for form in formset %}
+          <tr>
+            <td>{{form.checkbox}}</td>
+            {{form.task_id}}
+            <td>{{form.task_id.value}}</td>
+            <td><a href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{form.task_id.value}}" target="_blank">{{form.source_component.value}}</a></td> 
+            <td>{{form.status.value}}</td>
+            <td>{{form.user.value}}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="pagination">
+    <span class="step-links">
+        {% if objects.has_previous %}
+            <a href="?page=1">&laquo; first</a>
+            <a href="?page={{ objects.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ objects.number }} of {{ objects.paginator.num_pages }}.
+        </span>
+
+        {% if objects.has_next %}
+            <a href="?page={{ objects.next_page_number }}">next</a>
+            <a href="?page={{ objects.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+<script>
+$(".checkall").click(function (e) {
+  $('input[type="checkbox"]').not(this).prop('checked', this.checked);
+});
+</script>
+{% endblock content %}

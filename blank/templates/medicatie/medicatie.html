@@ -1,0 +1,41 @@
+<!-- atc_lookup/templates/medicatie.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+
+<div class="well">
+  <h6>De hier ingevulde zoekterm wordt gezocht in de ATC-lijst. De Nederlandse vertaling uit deze lijst, en bijbehorende G-standaard items worden getoond.</h6>
+  <form action="{% url 'atc_lookup:index' %}" method="post">
+    {% csrf_token %}
+    <p>{{ form }} <input type="submit" value="ZOEK"></p>
+    <p></p>
+  </form>
+</div>
+
+{% if error %}
+    <div class="alert alert-danger">Geen resultaten gevonden</div>
+{% else %}
+    {% for key, value in respons.items %}
+    <div class="well"><br>
+        {% for key, value in value.items %}
+          {% if key == "G-standaard" %}
+            <p>
+                <b>G-standaard:</b>
+                <ul>
+                {% for key, value in value.items %}
+                <li>{{ value }}</li>
+                {% endfor %}
+                </ul>
+            </p>
+
+          {% else %}
+            <p>{{ key }}: {{ value }} </p>
+          {%  endif %}
+
+        {% endfor %}
+    </div>
+    {% endfor %}
+{% endif %}
+
+{% endblock content %}

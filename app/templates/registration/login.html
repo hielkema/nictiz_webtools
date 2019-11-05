@@ -1,0 +1,13 @@
+<!-- templates/registration/login.html -->
+{% extends 'bootstrap_base.html' %}
+
+{% block content %}
+<div class="alert alert-info"><strong>Login</strong></div>
+<div class="alert alert-warning">
+  <form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Login</button>
+</form>
+</div>
+{% endblock content %}

@@ -1,0 +1,17 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card">
+  <div class="card-header"><h5 class="card-title">Projecten</h5></div>
+  <div class="card-body">
+    <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+        <option>---</option>  
+        {% for value in project_list.values %}
+          <option value="{% url "mapping:index" %}project/{{value.id}}">{{value.title}}</option>
+          {% endfor %}
+    </select>
+  </div>
+</div>
+{% endblock content %}

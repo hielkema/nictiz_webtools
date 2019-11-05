@@ -1,0 +1,63 @@
+<!-- howdy/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">De zoekterm wordt gezocht in de gepubliceerde Snomed productie database. <br>Bij het downloaden van het bestand wordt het bestand van de server verwijderd om schijfruimte te besparen.<br>De pagina zal elke 10 seconden automatisch herladen.</h4>
+    </div>
+    <div class="card-body mb-3">
+        {% if form %}
+        <form action="{% url "build_tree:index" %}" method="post">
+            {% csrf_token %}
+            <p>{{ form }} <input type="submit" value="ZOEK"></p>
+            <p></p>
+        </form>
+        {% endif %}
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Processortijd</h5>
+    </div>
+    <div class="card-body mb-3">Er is tot nu toe <i>{{totalRunTime}}</i> seconden processortijd gebruikt.</div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Eerdere zoekopdrachten</h5>
+        <h6 class="card-subtitle mb-2 text-muted">voor de huidige gebruiker</h6>
+    </div>
+    <div class="card-body mb-3">
+        <script>
+            setTimeout(function() {
+                location.reload();
+            }, 10000);
+        </script>
+        {% for value in tasksPerUser.values %}
+        <p>
+            <li>
+            {% if value.finished %}
+            #{{value.id}}, {{value.searchterm}}, {{value.conceptFSN}} [runtime {{value.execution_time}} sec.]
+                {% if value.output_available %}
+                    <a target="_blank" onClick="openWindowReload(this)" href="{% url "build_tree:index" %}download/{{value.id}}">Download & delete file</a>
+                    <script>
+                        function openWindowReload(link) {
+                            var href = link.href;
+                            window.open(href,'_blank');
+                            document.location.reload(true)
+                        }
+                    </script>
+                {% else %}
+                    <i>Bestand al gedownload</i>
+                {% endif %}
+            {% else %}
+            #{{value.id}}, {{value.searchterm}}
+                <strong>In bewerking</strong>
+            {% endif %}
+            </li></p>
+        {% endfor %}
+    </div>
+</div>
+
+
+{% endblock content %}

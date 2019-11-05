@@ -1,0 +1,76 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card m-1">
+    <div class="card-header text-white bg-info"><h5 class="card-title">Projecten</h5></div>
+    <div class="card-body">
+        <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);">
+            <option>---</option>  
+            {% for value in project_list.values %}
+            <option value="{% url "mapping:index" %}project/{{value.id}}"{% if current_project.id == value.id %} selected {% endif %}>{{value.title}}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header text-white bg-info">
+                <h5 class="card-title">Audit results</h5>
+            </div>
+            <div class="card-body table-sm table-striped">
+                <!-- <b>{{tasks_shown}} van {{tasks_total}} taken zichtbaar</b> -->
+                <div class="card">
+                    <div class="card-header">
+                        Audit - "multiple mappings present" - Number of hits: <strong>{{number_audit_hits}}</strong>
+                    </div>
+                    <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>TaakID</th>
+                                <th>Bronconcept</th>
+                                <th>Aantal mappings</th>
+                                <th>Mapping informatie (Priority, correlation, advice, target)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in task_list %}
+                            <tr>
+                                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{task.task_id}}" >{{ task.task_id }}</a></td>
+                                <td>[{{task.source_component.component_id}}] {{task.source_component.component_title}}</td>
+                                <td>{{ task.num_mappings }}</td>
+                                <td>
+                                    <table class="table table-sm">
+                                        <!-- <thead>
+                                            <th style="width:100px;">Prioriteit</th>
+                                            <th style="width:150px;">Correlation</th>
+                                            <th style="width:150px;">Advice</th>
+                                            <th>Doelconcept</td>
+                                        </thead> -->
+                                        <tbody>
+                                        {% for mapping in task.mapping_info %}
+                                        <tr>
+                                            <td style="width:100px;">{{mapping.mappriority}}</td>
+                                            <td style="width:150px;">{{mapping.mapcorrelation}}</td>
+                                            <td style="width:250px;">{{mapping.mapadvice}}</td>
+                                            <td>[{{mapping.target_component.component_id}}] {{mapping.target_component.component_title}}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

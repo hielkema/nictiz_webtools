@@ -1,0 +1,70 @@
+version: '3'
+volumes:
+  pgdata:
+  pgadmin:
+  postgres_backup:
+services:
+  # Postgres DB for Django
+  postgres:
+    image: postgres:10.3
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_PASS}
+      POSTGRES_PASS: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - postgres_backup:/backup
+#    ports:
+#      - 5432:5432
+  # Python for Django server
+  python: &python
+    # image: python:3.5
+    build:
+      context: .
+      dockerfile: docker/dev/python/Dockerfile
+    environment:
+    - PYTHONUNBUFFERED=1
+    volumes:
+      - ./:/webserver
+    ports:
+      - 8000:8000
+    links:
+      - postgres
+    command: python /webserver/manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - postgres
+      - rabbitmq
+      - celery_worker
+    restart: always
+  ## RabbitMQ as message queue for Celery
+  rabbitmq:
+    image: rabbitmq:3.7-alpine
+  celery_worker:
+    # Copy template from service Python
+    <<: *python
+    command: celery -A app worker --scheduler django --loglevel=info #&& celery -A app beat --loglevel info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    ports: []
+    restart: always
+    volumes:
+      - ./:/webserver
+    depends_on:
+      - rabbitmq
+      - postgres
+  pgadmin:
+    ports:
+      - ${PGADMIN_PORT}:80
+    image: dpage/pgadmin4
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
+      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    links:
+      - postgres
+  # GUI for taskmanager Celery
+  flower:
+    image: mher/flower
+    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888"]
+    restart: always
+    ports:
+      - ${FLOWER_PORT}:8888

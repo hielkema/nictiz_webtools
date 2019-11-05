@@ -1,0 +1,37 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card">
+  <div class="card-header">Update Snomed from Snowstorm</div>
+  <div class="card-body">
+    <form action="{% url "mapping:update_snomed" %}" method="POST">
+      {% csrf_token %}
+      Focus concept:
+      {{ form.focus_concept }}
+      Codesystem ID {{ form.codesystem }}
+      <input type="submit" value="Zoeken">
+      <h6>NB: Deze pagina verwijst naar de mapping homepage, de taak wordt op de achtergrond uitgevoerd</h6>
+    </form>
+  </div>
+</div>
+
+<div class="row card">
+  <div class="card-header">Concepten <<{{form.focus_concept.value}} worden ingeladen in codesysteem {{form.codesystem.value}}</div>
+  <div class="card-body">
+    <ul class="list-group">
+    {% for value in result.values %}
+    <li class="list-group-item list-group-item-success">
+      <p style="float:left">[Codesystem {{value.codesystem_id}}] </p>
+      <p style="float:right">{{value.component_title}}</p>
+      <p style="float:left">{{value.result}}</p>
+      <div style="clear: both"></div>
+    </li>
+    {% endfor %}
+    </ul>
+  </div>  
+</div>
+
+
+{% endblock content %}

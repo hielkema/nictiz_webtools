@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sander - develop - list of children</title>
+<style>
+body {
+  font-family: arial;
+  font-size: 13px;
+  background-color: WhiteSmoke;
+}
+/* Remove default bullets */
+ul, #myUL {
+  list-style-type: none;
+}
+/* Remove margins and padding from the parent ul */
+#myUL {
+  margin: 0;
+  padding: 0;
+}
+/* Style the caret/arrow */
+.caret {
+  margin-left: -11px;
+  cursor: pointer;
+  user-select: none; /* Prevent text selection */
+}
+/* Create the caret/arrow with a unicode, and style it */
+.caret::before {
+  content: "\25B6";
+  color: black;
+  display: inline-block;
+}
+/* Rotate the caret/arrow icon when clicked on (using JavaScript) */
+.caret-down::before {
+  transform: rotate(90deg);
+}
+/* Hide the nested list */
+.nested {
+  display: none;
+  margin-left: -40px;
+}
+/* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+.active {
+  display: block;
+
+}
+small {
+  font-size: 9px;
+  font-style: italic;
+  color: grey;
+}
+.tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext_nl {
+  visibility: hidden;
+  width: 340px;
+  background-color: grey;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 5px;
+  top: 20px;
+  left: 10x;
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+}
+
+.tooltip .tooltiptext_en {
+  visibility: hidden;
+  width: 340px;
+  background-color: rgb(66, 139, 202);
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 5px;
+  top: 20px;
+  left: 360px;
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+}
+
+.tooltip:hover .tooltiptext_nl {
+  visibility: visible;
+}
+.tooltip:hover .tooltiptext_en {
+  visibility: visible;
+}
+.english {
+    background-color: WhiteSmoke;
+}
+.dutch {
+    background-color: lightblue;
+}
+</style>
+<body translate="no">
+<html lang="en">
+<meta charset="utf-8">
+<title>Ttree menu from ul list</title>
+<link href="" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+  $("button#active").click(function(){
+    $("ul#nest").addClass("active");
+    $("span#nest").addClass("caret-down");
+  });
+  $("button#inactive").click(function(){
+    $("ul#nest").removeClass("active");
+    $("span#nest").removeClass("caret-down");
+  });
+});
+</script>
+</head>
+<body>
+<p><button id=active>Uitklappen alle concepten</button><button id=inactive>Inklappen alle concepten</button></p>

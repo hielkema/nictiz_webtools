@@ -1,0 +1,56 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="card">
+  <div class="card-body p-3">
+    <form action="{% url "mapping:task_create" %}" method="POST">
+      {% csrf_token %}
+      Project 
+      <select name="project">
+        {% for project in projects %}
+        <option value="{{project.0}}">{{project.1}}</option>
+        {% endfor %}
+      </select>
+
+      Codesystem
+      <select name="codesystem">
+        {% for codesystem in codesystems %}
+        <option value="{{codesystem.0}}">{{codesystem.1}}</option>
+        {% endfor %}
+      </select>
+      <br>
+      Taken worden gecreëerd aan de hand van de identifier in het stelsel (bv. SCTID).
+      1 regel per taak. <br><input type="submit" value="Laden"><br>
+      {{ form.tasks }}
+      <hr>
+      Alternatief kan voor elk broncomponent in het gekozen project een taak gemaakt worden. 
+      Deze wordt zonder gebruiker aangemaakt, en kan later toegewezen worden via [TODO].<br>
+      <input type="submit" name="type" value="Taak maken voor alle componenten">
+    </form>
+  </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-3">
+      Takenlijst wordt ingeladen in project <b>{{project.title}}</b>
+      <ul class="list-group">
+      {% for value in result.values %}
+      {% if value.result == True %}
+      <li class="list-group-item list-group-item-success">
+      {% else %}
+      <li class="list-group-item list-group-item-danger">
+      {% endif %}
+        <p style="float:left">[Project {{value.project}}] </p>
+        <p style="float:right">{{value.component_id}} - {{value.component_title}}</p>
+        <p style="float:left">{{value.result}}</p>
+        <div style="clear: both"></div>
+      </li>
+      {% endfor %}
+      </ul>
+    </div>
+</div>
+
+
+{% endblock content %}
