@@ -1,0 +1,4 @@
+Inlezen descendants cache: 0.0007550716400146484 seconden 
+Inlezen concepten cache: 0.0007669925689697266 seconden 
+Inlezen children cache: 0.0007729530334472656 seconden 
+Lijst met kinderen voor concept [36653000]: Rubella (disorder). NL: rubella
