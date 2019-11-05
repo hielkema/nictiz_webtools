@@ -1,0 +1,15 @@
+Django>=2.2.3,<3.0
+psycopg2-binary
+celery>=4.2,<4.3
+pandas
+pprint
+xlwt
+xlutils
+xlrd
+datetime
+requests
+cachetools
+django-celery-beat
+openpyxl
+django_select2
+django-environ
