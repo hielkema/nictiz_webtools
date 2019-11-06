@@ -115,11 +115,11 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             audit_type=audit_type,
                             hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
                         )
-                if sorted(mapping_priorities)[-1] != 'Altijd':
+                if sorted(mapping_priorities)[-1] != 'Anders':
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Altijd'
+                            hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
                         )
             else:
                 logger.info('No rules for current task')
