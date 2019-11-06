@@ -147,3 +147,12 @@ class MappingProgressRecord(models.Model):
 
     def __str__(self):
         return str(self.id) + " " + self.name
+
+class MappingTaskAudit(models.Model):
+    audit_type = models.TextField()
+    task = models.ForeignKey("MappingTask", on_delete=models.PROTECT)
+    hit_reason = models.TextField(default=None, blank=True, null=True)
+    comment = models.TextField(default=None, blank=True, null=True)
+    ignore = models.BooleanField(default=False)
+    ignore_user = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)
+    first_hit_time  = models.DateTimeField(default=timezone.now)
