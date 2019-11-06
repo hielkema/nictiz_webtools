@@ -64,7 +64,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
             MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
 
             # Get all mapping rules for the current task
-            rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component)
+            rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
             logger.info('Number of rules: {0}'.format(rules.count()))
             # Create list for holding all used map priorities
             mapping_priorities = []
@@ -115,7 +115,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             audit_type=audit_type,
                             hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
                         )
-                if sorted(mapping_priorities)[-1] != 'Anders':
+                if rules.last().mapadvice != 'Anders':
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
