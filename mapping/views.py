@@ -1140,6 +1140,8 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
                     # Save object
                 else:
                     print("Not valid or empty target, not saved") # DEBUG
+            # Start audit on current item
+            audit_async.delay('multiple_mapping', kwargs.get('project'), kwargs.get('task'))
                 
             return HttpResponseRedirect(reverse('mapping:index')+'project/'+str(kwargs.get('project'))+'/task/'+str(kwargs.get('task')))
         else:
@@ -1349,12 +1351,17 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
         formset = MappingFormSet(initial=mapping_list)
         
         # Set default content for the extra form to allow entering a new mapping
-        formset[len(formset)-1]['source_component'].initial = componentQuery.id
+        try:
+            mappriority_next = mapping_list[-1].get('mappriority')+1
+        except:
+            mappriority_next = 1
+        formset[len(formset)-1]['source_component'].initial = current_task.source_component.id
         formset[len(formset)-1]['active'].initial = True
-        formset[len(formset)-1]['mappriority'].initial = 1
+        formset[len(formset)-1]['mappriority'].initial = mappriority_next
         formset[len(formset)-1]['mapadvice'].initial = "Altijd"
         
         # Lookup edit rights for mapping      
+        current_user = User.objects.get(id=request.user.id)
         db_permissions = request.user.groups.values_list('name', flat=True)
         permissions = []
         for perm in db_permissions:
@@ -1363,6 +1370,8 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
         return render(request, 'mapping/mapping_target_list.html', {
             'page_title': 'Commentaar',
             'formset' : formset,
+            'current_task' : current_task,
+            'current_user' : current_user,
             'permissions': permissions,
             'current_project' : current_project,
         })
@@ -1413,6 +1422,54 @@ class ViewEventsPageView(UserPassesTestMixin,TemplateView):
             'page_title': 'Commentaar',
             'current_user' : current_user,
             'events': events_list,
+        })
+
+class GetCurrentStatus(UserPassesTestMixin,TemplateView):
+    '''
+    View for getting AJAX requests for current status of task
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+        current_task = MappingTask.objects.get(id=kwargs.get('task')) 
+        current_user = User.objects.get(id=request.user.id)
+        
+        # Status manager
+        status_list = MappingTaskStatus.objects.filter(project_id=current_task.project_id.id).order_by('status_id')
+        # Lookup permissions      
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+        
+        return render(request, 'mapping/current_task_status.html', {
+        'current_user' : current_user,
+        'current_task' : current_task,
+        'status_list' : status_list,
+        'permissions' : permissions,
+        })
+
+class GetAuditsForTask(UserPassesTestMixin,TemplateView):
+    '''
+    View for requesting audit hits for current task
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+        task = MappingTask.objects.get(id=kwargs.get('task'))
+        audits = MappingTaskAudit.objects.filter(task=task)
+        
+        return render(request, 'mapping/audit_results_current_task.html', {
+        'page_title': 'Audit results',
+        'audits' : audits,
         })
 
 class AjaxTestView(UserPassesTestMixin,TemplateView):

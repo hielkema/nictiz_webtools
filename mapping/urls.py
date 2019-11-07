@@ -26,6 +26,8 @@ urlpatterns = [
     url(r'ajax_test', views.AjaxTestView.as_view(), name='ajax_test'),
     url(r'show_events/(?P<task>\w+)', views.ViewEventsPageView.as_view(), name='show_events'),
     url(r'mapping_target_list/(?P<task>\w+)', views.MappingTargetListPageView.as_view(), name='mapping_target_list'),
+    url(r'get_current_status/(?P<task>\w+)', views.GetCurrentStatus.as_view(), name='get_current_status'),
+    url(r'get_audits_for_task/(?P<task>\w+)', views.GetAuditsForTask.as_view(), name='get_audits_for_task'),
 
     url(r'', views.MappingIndexPageView.as_view(), name='index'),
 ]

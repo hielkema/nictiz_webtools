@@ -8,11 +8,11 @@
         <li class="list-group-item">
             <b>Nieuwe mapping</b><br>
         {% else %}
-        {% if not form.active.value %}
-        <li class="list-group-item list-group-item-warning">
-        {% elif form.active.value %}
-        <li class="list-group-item list-group-item-success">
-        {% endif %}
+            {% if not form.active.value %}
+            <li class="list-group-item list-group-item-warning">
+            {% elif form.active.value %}
+            <li class="list-group-item list-group-item-success">
+            {% endif %}
         {% endif %}
         {{ form.id }} {{ form.source_component }} {{ form.target_component }}
         
@@ -87,6 +87,7 @@
 {% else %}
     <!-- WITHOUT EDIT RIGHTS -->
     {% for form in formset %}
+     <fieldset disabled="disabled">
         {% if form.target_component.value %}
         {% if not form.active.value %}
             <li class="list-group-item list-group-item-warning">
@@ -94,69 +95,69 @@
             <li class="list-group-item list-group-item-success">
         {% endif %}
         
-        <table class="table">
+        <table class="table table-sm">
             <tbody>
             {% if formset.can_delete and form.target_component.value %}
             <tr>
-                <th scope="row">Huidig</th>
-                <td>
+                <th scope="row" colspan=2>
                 {% if form.target_component_codesystem.value == "Snomed" %}
-                <a class="btn btn-info" style="text-align: left;" href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">
                 {% endif %}
+                
                 [{{ form.target_component_codesystem.value }}] {{ form.target_component_term.value }} [{{ form.target_component_ident.value }}]
-                {% if form.target_component_codesystem.value == 1 %}
+                
+                {% if form.target_component_codesystem.value == "Snomed" %}
+                <a style="text-align: left;" href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">
+                <br>Open in browser
                 </a>
                 {% endif %}
-                </td>
+                </th>
             </tr>
             {% endif %}
             <tr>
                 <th scope="row">Actief</th>
-                <td>{{ form.active.value }}</td>
+                <td>{{ form.active }}</td>
             </tr>
             {% if current_project.use_mapgroup %}
             <tr>
                 <th scope="row">Mapgroup</th>
-                <td>{{ form.mapgroup.value }}</td>
+                <td>{{ form.mapgroup }}</td>
             </tr>
             {% endif %}
             {% if current_project.use_mapcorrelation %}
             <tr>
                 <th scope="row">Map correlation</th>
-                <td>{{ form.mapcorrelation.value }}</td>
+                <td>{{ form.mapcorrelation }}</td>
             </tr>
             {% endif %}
             {% if current_project.use_mappriority %}
             <tr>
                 <th scope="row">Map priority</th>
-                <td>{{ form.mappriority.value }}</td>
+                <td>{{ form.mappriority }}</td>
             </tr>
             {% endif %}
             {% if current_project.use_mapadvice %}
             <tr>
                 <th scope="row">Map advice</th>
-                <td>{{ form.mapadvice.value }}</td>
+                <td>{{ form.mapadvice }}</td>
             </tr>
             {% endif %}
             {% if current_project.use_maprule %}
             <tr>
                 <th scope="row">Map rule</th>
-                <td>{{ form.maprule.value }}</td>
+                <td>{{ form.maprule }}</td>
             </tr>
             {% endif %}
             </tbody>
         </table>
         </li>
         {% endif %}
+    </fieldset>
     {% endfor %}
     <!-- END WITHOUT EDIT RIGHTS -->
 {% endif %}
 </ul>
 
 <script>
-
-
-
 $(document).ready(function() {
     $('.js-select2-mappingtarget').select2({
     ajax: {

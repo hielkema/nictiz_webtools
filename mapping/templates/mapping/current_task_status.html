@@ -1,0 +1,33 @@
+
+<div class="card">
+    <div class="card-header">Status</div>
+    <div class="card-body text-center">
+        {% if 'mapping | change task status' in permissions and current_user.id == current_task.user.id %}
+        {% for status in status_list %}
+            {% if current_task.status.id == status.id %}
+            <button class="btn btn-info">{{status.status_title}}</button>
+            {% else %}
+            <a href="{% url "mapping:index" %}status_update/{{current_task.id}}/{{status.id}}/" class="changeStatus btn btn-light">{{status.status_title}}</a>
+            {% endif %}
+        {% endfor %}
+        {% else %}
+        <p>Huidige status is: <strong>{{current_task.status.status_title}}</strong></p>
+        <p>Huidige gebruiker is: <strong>{{current_task.user.username}}</strong></p>
+        {% endif %}
+    </div>
+</div>
+
+
+<script>
+$(".changeStatus").click(function(){
+    //alert("CLICKED")
+    var dom = $(this);
+    var url = dom.attr('href');
+    $.ajax({ 
+            type: "GET",
+            url: url,
+        });
+    $(this).removeClass('btn-light').addClass('btn-info')
+    return false;
+});
+</script>

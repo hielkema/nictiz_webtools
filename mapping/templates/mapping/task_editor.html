@@ -106,23 +106,8 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">Status</div>
-        <div class="card-body text-center">
-          {% if 'mapping | change task status' in permissions and current_user.id == current_task.user.id %}
-            {% for status in status_list %}
-              {% if current_task.status.id == status.id %}
-              <button class="btn btn-info">{{status.status_title}}</button>
-              {% else %}
-              <a href="{% url "mapping:index" %}status_update/{{current_task.id}}/{{status.id}}/" class="btn btn-light" role=button>{{status.status_title}}</a>
-              {% endif %}
-            {% endfor %}
-          {% else %}
-            <p>Huidige status is: <strong>{{current_task.status.status_title}}</strong></p>
-            <p>Huidige gebruiker is: <strong>{{current_task.user.username}}</strong></p>
-          {% endif %}
-        </div>
-      </div>
+      <div id="auditresults"></div>
+      <div id="currentTaskStatus"></div>
 
       <div class="card">
         <div class="card-header">Doorsturen naar</div>
@@ -167,42 +152,87 @@
       <div id="mappingtargets">
             
       </div>
-      <div class="card"><div class="card-body"><input type="submit" value="Opslaan" class="form-control"></div></div>
+      {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
+      <div class="card"><div class="card-body"><input type="submit" value="Opslaan" id="mapping_target_save" class="form-control"></div></div>
+      {% endif %}
     </form>
 
   </div>
 </div>
 });
 <script>
-$(document).ready(function(){
-    $("#post_mappings").submit(function(e) {
-        e.preventDefault(); // avoid to execute the actual submit of the form.
+{% comment %} If user has permission to edit mappings -> handle post {% endcomment %}
+{% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
+  $(document).ready(function(){
+      $("#post_mappings").submit(function(e) {
+          e.preventDefault(); // avoid to execute the actual submit of the form.
 
-        var form = $(this);
-        var url = form.attr('action');
+          var form = $(this);
+          var url = form.attr('action');
 
-        $.ajax({
-              type: "POST",
-              url: url,
-              data: form.serialize(), // serializes the form's elements.
-              async: true,
-              success: function(data)
-              {
-                $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
-                    $("#mappingtargets").html(result);
-                }});
-              }
-            });
-    });
-});
+          $.ajax({
+                type: "POST",
+                url: url,
+                data: form.serialize(), // serializes the form's elements.
+                async: true,
+                success: function(data)
+                {
+                  $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+                      $("#mappingtargets").html(result);
+                  }});
+                  $("#mapping_target_save").addClass("btn-success");
+                  setTimeout(function () {
+                      $("#mapping_target_save").removeClass("btn-success");
+                  },2000);
+                }
+              });
+      });
+  });
+{% else %}
+{% comment %} If user has no permission to edit mappings -> refresh every 5 seconds {% endcomment %}
+  setInterval(function(){
+      $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+        $("#mappingtargets").html(result);
+      }});
+    }, 5000);
+{% endif %}
 
+{% comment %} Load mapping targets {% endcomment %}
 $(document).ready(function loadTargets(){
     $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
       $("#mappingtargets").html(result);
     }});
   });
 
+{% comment %} Load and refresh task status {% endcomment %}
 $(document).ready(function(){ 
+  function refreshStatus(){
+    $.ajax({url: "/mapping/get_current_status/{{current_task.id}}", success: function(result){
+      $("#currentTaskStatus").html(result);
+    }});
+  }
+  refreshStatus();
+  setInterval(function(){
+      $.ajax({url: "/mapping/get_current_status/{{current_task.id}}", success: function(result){
+        $("#currentTaskStatus").html(result);
+      }});
+    }, 1000);
+
+{% comment %} Load and refresh audit results {% endcomment %}
+  function refreshAudits(){
+    $.ajax({url: "/mapping/get_audits_for_task/{{current_task.id}}", success: function(result){
+      $("#auditresults").html(result);
+    }});
+  }
+  refreshAudits();
+  setInterval(function(){
+      $.ajax({url: "/mapping/get_audits_for_task/{{current_task.id}}", success: function(result){
+        $("#auditresults").html(result);
+      }});
+    }, 1000);
+
+
+{% comment %} Load and refresh comments {% endcomment %}
   function refreshComments(){
     $.ajax({url: "/mapping/show_events/{{current_task.id}}", success: function(result){
       $("#events_container").html(result);
@@ -214,9 +244,9 @@ $(document).ready(function(){
         $("#events_container").html(result);
       }});
     }, 5000);
-
+    {% comment %} Post new comment {% endcomment %}
     $("#post_comment").submit(function(e) {
-        e.preventDefault(); // avoid to execute the actual submit of the form.
+        e.preventDefault();
 
         var form = $(this);
         var url = form.attr('action');
@@ -224,17 +254,15 @@ $(document).ready(function(){
         $.ajax({
               type: "POST",
               url: url,
-              data: form.serialize(), // serializes the form's elements.
+              data: form.serialize(),
               success: function(data)
               {
                   $('#id_comment_body').val('');
                   refreshComments();
-                  //alert(data); // show response from the php script.
               }
             });
     });
 });
-
 </script>
 
 
@@ -295,8 +323,4 @@ $(document).ready(function(){
     }
   });
 </script>
-<script>
-$(function () {
-  $('[data-toggle="popover"]').popover()
-})</script>
 {% endblock content %}
