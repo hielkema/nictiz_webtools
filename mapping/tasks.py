@@ -80,6 +80,20 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 mapping_priorities.append(rule.mappriority)
                 mapping_targets.append(rule.target_component)
                 logger.info('Rule: {0}'.format(rule))
+
+                # Hit if priority or advice is empty
+                if rule.mappriority == '' or rule.mappriority == None:
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Regel heeft geen prioriteit',
+                            )
+                if rule.mapadvice == '':
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Regel heeft geen mapadvice',
+                            )
             # Look for rules with the same target component
             for target in mapping_targets:
                 other_rules = MappingRule.objects.filter(target_component=target)

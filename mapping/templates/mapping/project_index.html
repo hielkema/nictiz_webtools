@@ -47,6 +47,11 @@
                     </div>
                     <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#dashboardAccordion">
                         <a href="{% url "mapping:index" %}taskmanager/{{current_project.id}}" class="btn btn-link" type="button">Taskmanager</a>
+                        <a href="{% url "mapping:index" %}update_nhg" class="btn btn-link" type="button">Update NHG</a>
+                        <a href="{% url "mapping:index" %}update_snomed" class="btn btn-link" type="button">Update Snomed</a>
+                        <a href="{% url "mapping:index" %}task_create" class="btn btn-link" type="button">Taken aanmaken</a>
+                        <a href="{% url "mapping:index" %}audit/{{current_project.id}}/run_async/" class="btn btn-link" type="button">Audit starten</a>
+                        <a href="{% url "mapping:index" %}audit/{{current_project.id}}/show/" class="btn btn-link" type="button">Resultaten audit tonen</a>
                     </div>
                 </div>
             <!-- </div>
