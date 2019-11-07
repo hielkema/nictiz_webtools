@@ -843,7 +843,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             'extra' : '',
             })
         elif current_audit == "show":
-            tasks = MappingTask.objects.filter(project_id=project)
+            tasks = MappingTask.objects.filter(project_id=project).order_by('id')
             data = []
             for task in tasks:
                 audits = MappingTaskAudit.objects.filter(task=task)
