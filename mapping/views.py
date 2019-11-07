@@ -25,7 +25,7 @@ url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/'
     branch+'/snowstorm_client.py'
 urllib.request.urlretrieve(url, 'snowstorm_client.py')
 from snowstorm_client import Snowstorm
-from .tasks import import_snomed_async
+from .tasks import *
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -825,10 +825,56 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         audit_types = (
+            'run_async',
             'multiple_mappings',
         )
         project = kwargs.get('project')
         current_audit = kwargs.get('audit_type')
+
+        if current_audit == "run_async":
+            task = audit_async.delay('multiple_mapping', project)
+            task_id = task.id
+            print("TASK ID ******", task_id)
+
+            return render(request, 'mapping/notice.html', {
+            'page_title': 'Succes',
+            'header' : 'Audit tool',
+            'notice_text': 'Alle audits worden op de achtergrond uitgevoerd. Resultaten zijn te zien via /show.',
+            'extra' : '',
+            })
+        elif current_audit == "show":
+            tasks = MappingTask.objects.filter(project_id=project)
+            data = []
+            for task in tasks:
+                audits = MappingTaskAudit.objects.filter(task=task)
+                if audits.count() > 0:
+                    for audit in audits:
+                        data.append(audit)
+
+            audits_total = len(tasks)
+            audits_max_page = 50
+
+            # Paginate task list #
+            # Number of tasks per page
+            paginator = Paginator(data, audits_max_page)
+            # Get correct page
+            try:
+                page = request.GET.get('page')
+                objects = paginator.page(page)
+            except PageNotAnInteger:
+                objects = paginator.page(1)
+            except EmptyPage:
+                objects = paginator.page(paginator.num_pages)
+            
+            return render(request, 'mapping/audit_results.html', {
+            'page_title': 'Alle audit resultaten',
+            'heading': 'Alle audit resultaten voor het huidige project',
+            'project_id' : project,
+            'objects' : objects,
+            })
+        
+
+        # LEGACY Audit - report all multiple mappings
         if current_audit == "multiple_mappings":
             task_map_list = []
             # Get all tasks in project

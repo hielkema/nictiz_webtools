@@ -1,0 +1,54 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row card m-1">
+    <div class="card-header text-white bg-info"><h5 class="card-title">Projecten</h5></div>
+    <div class="card-body">
+        <div class="card">
+            <div class="card-header text-white bg-info">
+            <div class="pagination">
+                <span class="step-links">
+                    {% if objects.has_previous %}
+                        <a href="?page=1" class=" text-white">&laquo;</a>
+                        <a href="?page={{ objects.previous_page_number }}" class=" text-white">&lsaquo; vorige</a>
+                    {% endif %}
+            
+                    <span class="current">
+                        <strong>Pagina {{ objects.number }} van {{ objects.paginator.num_pages }}.</strong>
+                    </span>
+            
+                    {% if objects.has_next %}
+                        <a href="?page={{ objects.next_page_number }}" class=" text-white">volgende &rsaquo;</a>
+                        <a href="?page={{ objects.paginator.num_pages }}" class=" text-white">&raquo;</a>
+                    {% endif %}
+                </span>
+            </div>
+            </div>
+        </div>
+
+        <table class="table table-sm table-striped">
+        <thead>
+            <th>Taak ID</th>
+            <th>Taak bron</th>
+            <th>Reden voor audit hit</th>
+            <th>Commentaar</th>
+            <th>Open taak</th>
+        </thead>
+        <tbody>
+            {% for hit in objects %}
+            <tr>
+                <td>{{ hit.task.id }}</td>
+                <td>{{ hit.task.source_component.component_title }}</td>
+                <td>{{ hit.hit_reason }}</td>
+                <td>{{ hit.comment }}</td>
+                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{hit.task.id}}" target="_blank">[open]</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock content %}
