@@ -142,50 +142,20 @@
         </div>
       </div>
 
-
       <div class="card">
         <div class="card-header">Commentaar</div>
         <div class="card-body">
-          {% if 'mapping | place comments' in permissions %}
-          <!-- Start author comment -->
-          <form action="{% url "mapping:post_comment" %}" method="POST">
+            {% if 'mapping | place comments' in permissions %}
+            <!-- Start author comment -->
+            <form action="{% url "mapping:post_comment" %}" id="post_comment" method="POST">
             {% csrf_token %}
             {{ comments_form.project_id }} {{ comments_form.task_id }}
             {{ comments_form.comment_body }}
             <input type="submit" value="Plaats" class="form-control"><br>
-          </form>
-          <!-- End author comment -->
-          {% endif %}
-
-          <ul class="list-group">
-            {% for event in events %}
-              {% if event.type == 'comment' %}
-              <!-- If comment -->
-                <li class="list-group-item">
-                  {{event.text|linebreaks}}
-                  <small>{{event.user}} @ {{event.created}} <a href="{% url "mapping:index" %}deletecomment/{{event.id}}">
-                    {% if event.user == current_user.username %}
-                    [delete]
-                    {% endif %}</a></small>
-                </li>
-              <!-- End if comment -->
-              {% endif %}
-              {% if event.type == 'status_change' %}
-              <!-- Start if event -->
-              <li class="list-group-item list-group-item-warning" >
-                <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" title="Dismissible popover" data-content="{{event.created}} - {{event.data}}">{{event.text}}</a>
-              </li>
-              <!-- End if event -->
-              {% endif %}
-              {% if event.type == 'user_change' %}
-              <!-- Start if event -->
-              <li class="list-group-item list-group-item-warning"><!-- style="height:20px;overflow: hidden; padding:3px; line-height: 10px;" -->
-                <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" title="Dismissible popover" data-content="{{event.created}} - {{event.data}}">{{event.text}}</a>
-              </li>
-              <!-- End if event -->
-              {% endif %}
-            {% endfor %}
-          </ul>
+            </form>
+            <!-- End author comment -->
+            {% endif %}
+            <div id="events_container"></div>
         </div>
       </div>
   </div>
@@ -193,228 +163,82 @@
     <div class="card">
         <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
     </div>
-    <div>
-          <form method="post">
-              {% csrf_token %}
-              {{ formset.management_form }}
-              <ul class="list-group">
-              {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
-                  <!-- WITH EDIT RIGHTS -->
-                  {% for form in formset %}
-                      {% if not form.target_component.value %}
-                      <li class="list-group-item">
-                          <b>Nieuwe mapping</b><br>
-                      {% else %}
-                      {% if not form.active.value %}
-                      <li class="list-group-item list-group-item-warning">
-                      {% elif form.active.value %}
-                      <li class="list-group-item list-group-item-success">
-                      {% endif %}
-                      {% endif %}
-                      {{ form.id }} {{ form.source_component }} {{ form.target_component }}
-                      
-                      <table class="table table-sm">
-                          <tbody>
-                            {% if formset.can_delete and form.target_component.value %}
-                              <tr>
-                                  <th scope="row">Huidig</th>
-                                  <td>
-                                    {% if form.target_component_codesystem.value == "Snomed" %}
-                                    <a class="btn btn-info" style="text-align: left;" href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">
-                                    {% endif %}
-                                    <b>Stelsel</b> {{ form.target_component_codesystem.value }}  <b>ID</b> {{ form.target_component_ident.value }}<br>{{ form.target_component_term.value }} 
-                                    {% if form.target_component_codesystem.value == "Snomed" %}
-                                    </a>
-                                    {% endif %}
-                                  </td>
-                              </tr>
-                            {% endif %}
-                            <tr>
-                            <th scope="row" colspan="2">
-                                <select name="{{form.prefix}}-target_component" value="{{form.target_component.value}}" class="form-control js-select2-mappingtarget">
-                                </select>
-                            </th>
-                            </tr>
-                            <tr>
-                                <th scope="row">Actief</th>
-                                <td>{{ form.active }}</td>
-                            </tr>
-                            {% if current_project.use_mapgroup %}
-                            <tr>
-                                <th scope="row">Mapgroup</th>
-                                <td>{{ form.mapgroup }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if current_project.use_mapcorrelation %}
-                            <tr>
-                                <th scope="row">Map correlation</th>
-                                <td>{{ form.mapcorrelation }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if current_project.use_mappriority %}
-                            <tr>
-                                <th scope="row">Map priority</th>
-                                <td>{{ form.mappriority }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if current_project.use_mapadvice %}
-                            <tr>
-                                <th scope="row">Map advice</th>
-                                <td>{{ form.mapadvice }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if current_project.use_maprule %}
-                            <tr>
-                                <th scope="row">Map rule</th>
-                                <td>{{ form.maprule }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if formset.can_delete and form.target_component.value %}
-                            <tr>
-                                <th scope="row">Verwijderen</th>
-                                <td>{{ form.DELETE }}</td>
-                                </tr>
-                            {% endif %}
-                          
-                          </tbody>
-                      </table>
-                      </li>
-                  {% endfor %}
-                  <div class="card"><div class="card-body"><input type="submit" value="Opslaan" class="form-control"></div></div>
-                  <!-- END WITH EDIT RIGHTS -->
-              {% else %}
-                  <!-- WITHOUT EDIT RIGHTS -->
-                  {% for form in formset %}
-                      {% if form.target_component.value %}
-                      {% if not form.active.value %}
-                          <li class="list-group-item list-group-item-warning">
-                          {% elif form.active.value %}
-                          <li class="list-group-item list-group-item-success">
-                      {% endif %}
-                      
-                      <table class="table">
-                          <tbody>
-                          {% if formset.can_delete and form.target_component.value %}
-                          <tr>
-                              <th scope="row">Huidig</th>
-                              <td>
-                                {% if form.target_component_codesystem.value == "Snomed" %}
-                                <a class="btn btn-info" style="text-align: left;" href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">
-                                {% endif %}
-                                [{{ form.target_component_codesystem.value }}] {{ form.target_component_term.value }} [{{ form.target_component_ident.value }}]
-                                {% if form.target_component_codesystem.value == 1 %}
-                                </a>
-                                {% endif %}
-                              </td>
-                          </tr>
-                          {% endif %}
-                          <tr>
-                              <th scope="row">Actief</th>
-                              <td>{{ form.active.value }}</td>
-                          </tr>
-                          {% if current_project.use_mapgroup %}
-                          <tr>
-                              <th scope="row">Mapgroup</th>
-                              <td>{{ form.mapgroup.value }}</td>
-                          </tr>
-                          {% endif %}
-                          {% if current_project.use_mapcorrelation %}
-                          <tr>
-                              <th scope="row">Map correlation</th>
-                              <td>{{ form.mapcorrelation.value }}</td>
-                          </tr>
-                          {% endif %}
-                          {% if current_project.use_mappriority %}
-                          <tr>
-                              <th scope="row">Map priority</th>
-                              <td>{{ form.mappriority.value }}</td>
-                          </tr>
-                          {% endif %}
-                          {% if current_project.use_mapadvice %}
-                          <tr>
-                              <th scope="row">Map advice</th>
-                              <td>{{ form.mapadvice.value }}</td>
-                          </tr>
-                          {% endif %}
-                          {% if current_project.use_maprule %}
-                          <tr>
-                              <th scope="row">Map rule</th>
-                              <td>{{ form.maprule.value }}</td>
-                          </tr>
-                          {% endif %}
-                          </tbody>
-                      </table>
-                      </li>
-                      {% endif %}
-                  {% endfor %}
-                  <!-- END WITHOUT EDIT RIGHTS -->
-              {% endif %}
-              </ul>
-          </form>
-        </div>
-    </div>
+    <form method="post" id="post_mappings">
+      <div id="mappingtargets">
+            
+      </div>
+      <div class="card"><div class="card-body"><input type="submit" value="Opslaan" class="form-control"></div></div>
+    </form>
+
   </div>
 </div>
-
-
-
-
-<script>
-$(document).ready(function() {
-    $('.js-select2-mappingtarget').select2({
-    ajax: {
-    url: "{% url "mapping:index" %}ajaxtargetsearch/",
-    dataType: 'json',
-    delay: 250,
-    data: function (params) {
-      return {
-        term: params.term, // search term
-        page: params.page
-      };
-    },
-    processResults: function (data, params) {
-      params.page = params.page || 1;
-
-      return {
-        results: data.items
-      };
-    },
-    cache: true
-  },
-  placeholder: 'Zoeken naar mapping target',
-  minimumInputLength: 3,
-  templateResult: formatRepo,
-  templateSelection: formatRepoSelection
-  })
-
-  function formatRepo (repo) {
-    if (repo.loading) {
-      return repo.text;
-    }
-
-    var $container = $(
-      "<div class='select2-result-repository clearfix'>" +
-          "<div class='select2-result-repository__title'></div>" +
-          "<div class='select2-result-repository__codesystem'></div>" +
-          "<div class='select2-result-repository__description'></div>" +
-          "<div class='select2-result-repository__codesystemId'></div>" +
-      "</div>"
-    );
-
-    $container.find(".select2-result-repository__title").text(repo.text);
-    $container.find(".select2-result-repository__codesystem").text('[Codesystem '+repo.codesystem+']');
-    // $container.find(".select2-result-repository__description").text('[intern ID '+repo.id+']');
-    $container.find(".select2-result-repository__codesystemId").text(repo.comp_id);
-
-    return $container;
-  }
-
-
-  function formatRepoSelection (repo) {
-    return repo.text || repo.id;
-  }
 });
+<script>
+$(document).ready(function(){
+    $("#post_mappings").submit(function(e) {
+        e.preventDefault(); // avoid to execute the actual submit of the form.
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+              type: "POST",
+              url: url,
+              data: form.serialize(), // serializes the form's elements.
+              async: true,
+              success: function(data)
+              {
+                $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+                    $("#mappingtargets").html(result);
+                }});
+              }
+            });
+    });
+});
+
+$(document).ready(function loadTargets(){
+    $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+    }});
+  });
+
+$(document).ready(function(){ 
+  function refreshComments(){
+    $.ajax({url: "/mapping/show_events/{{current_task.id}}", success: function(result){
+      $("#events_container").html(result);
+    }});
+  }
+  refreshComments();
+  setInterval(function(){
+      $.ajax({url: "/mapping/show_events/{{current_task.id}}", success: function(result){
+        $("#events_container").html(result);
+      }});
+    }, 5000);
+
+    $("#post_comment").submit(function(e) {
+        e.preventDefault(); // avoid to execute the actual submit of the form.
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+              type: "POST",
+              url: url,
+              data: form.serialize(), // serializes the form's elements.
+              success: function(data)
+              {
+                  $('#id_comment_body').val('');
+                  refreshComments();
+                  //alert(data); // show response from the php script.
+              }
+            });
+    });
+});
+
 </script>
+
+
+
 <script>
   $(document).ready(function() {
       $('.js-select2-tasksearch').select2({

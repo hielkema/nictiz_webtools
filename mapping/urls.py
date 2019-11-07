@@ -22,5 +22,10 @@ urlpatterns = [
     url(r'status_filter/(?P<project>\w+)/(?P<task>\w+)/(?P<status>\w+)', views.StatusFilterPageView.as_view(), name='status_filter'),
     url(r'status_update/(?P<task>\w+)/(?P<status>\w+)', views.StatusUpdatePageView.as_view(), name='status_update'),
     url(r'change_user/(?P<task>\w+)/(?P<user>\w+)', views.ChangeUserPageView.as_view(), name='change_user'),
+
+    url(r'ajax_test', views.AjaxTestView.as_view(), name='ajax_test'),
+    url(r'show_events/(?P<task>\w+)', views.ViewEventsPageView.as_view(), name='show_events'),
+    url(r'mapping_target_list/(?P<task>\w+)', views.MappingTargetListPageView.as_view(), name='mapping_target_list'),
+
     url(r'', views.MappingIndexPageView.as_view(), name='index'),
 ]

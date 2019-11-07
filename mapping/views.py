@@ -1237,40 +1237,7 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         # User list
         user_list = User.objects.all().order_by('username')
 
-        # Fetch mappings
-        mappings = MappingRule.objects.filter(
-            source_component=current_task.source_component,
-            project_id=current_task.project_id,
-            ).order_by('-active')
-        mapping_list = []
-        for mapping in mappings:
-            component_data = MappingCodesystemComponent.objects.get(id=mapping.target_component.id)
-            codesystem_data = MappingCodesystem.objects.get(id=component_data.codesystem_id.id)
-            mapping_list.append({
-                    'id' : mapping.id,
-                    # 'project_id' : mapping.project_id,
-                    'source_component' : mapping.source_component.id,
-                    'target_component' : mapping.target_component.id,
-                    'target_component_codesystem' : codesystem_data.codesystem_title,
-                    'target_component_term' : component_data.component_title,
-                    'target_component_ident' : component_data.component_id,
-                    'mapgroup' : mapping.mapgroup,
-                    'mappriority' : mapping.mappriority,
-                    'mapcorrelation' : mapping.mapcorrelation,
-                    'mapadvice' : mapping.mapadvice,
-                    'maprule' : mapping.maprule,
-                    'active' : mapping.active,
-                })
-        
-        # Put mappings in forms
-        MappingFormSet = formset_factory(MappingForm, can_delete=True)
-        formset = MappingFormSet(initial=mapping_list)
-        
-        # Set default content for the extra form to allow entering a new mapping
-        formset[len(formset)-1]['source_component'].initial = componentQuery.id
-        formset[len(formset)-1]['active'].initial = True
-        formset[len(formset)-1]['mappriority'].initial = 1
-        formset[len(formset)-1]['mapadvice'].initial = "Altijd"
+
 
         # Create comments form
         comments_form = PostCommentForm(initial={
@@ -1328,13 +1295,139 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'objects'   : objects,
             'comments_form' : comments_form,
             'source_component' : source_component,
-            'mappings' : mappings,
             'current_user' : current_user,
-            'formset' : formset,
             'events' : events_list,
             'status_list' : status_list,
             'user_list' : user_list,
             'own_task_filter' : int(request.session.get('own_task_filter')),
             'status_filter' : int(request.session.get('status_filter')),
             'permissions' : permissions,
+        })
+
+class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
+    '''
+    Renders mapping targets, for use with Ajax request.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+
+        current_task = MappingTask.objects.get(id=kwargs.get('task')) 
+        componentQuery = MappingCodesystemComponent.objects.get(id=current_task.source_component.id)
+        current_project = MappingProject.objects.get(id=current_task.project_id.id, active=True)
+
+        # Fetch mappings
+        mappings = MappingRule.objects.filter(
+            source_component=current_task.source_component,
+            project_id=current_task.project_id,
+            ).order_by('-active', 'mappriority')
+        mapping_list = []
+        for mapping in mappings:
+            component_data = MappingCodesystemComponent.objects.get(id=mapping.target_component.id)
+            codesystem_data = MappingCodesystem.objects.get(id=component_data.codesystem_id.id)
+            mapping_list.append({
+                    'id' : mapping.id,
+                    # 'project_id' : mapping.project_id,
+                    'source_component' : mapping.source_component.id,
+                    'target_component' : mapping.target_component.id,
+                    'target_component_codesystem' : codesystem_data.codesystem_title,
+                    'target_component_term' : component_data.component_title,
+                    'target_component_ident' : component_data.component_id,
+                    'mapgroup' : mapping.mapgroup,
+                    'mappriority' : mapping.mappriority,
+                    'mapcorrelation' : mapping.mapcorrelation,
+                    'mapadvice' : mapping.mapadvice,
+                    'maprule' : mapping.maprule,
+                    'active' : mapping.active,
+                })
+        
+        # Put mappings in forms
+        MappingFormSet = formset_factory(MappingForm, can_delete=True)
+        formset = MappingFormSet(initial=mapping_list)
+        
+        # Set default content for the extra form to allow entering a new mapping
+        formset[len(formset)-1]['source_component'].initial = componentQuery.id
+        formset[len(formset)-1]['active'].initial = True
+        formset[len(formset)-1]['mappriority'].initial = 1
+        formset[len(formset)-1]['mapadvice'].initial = "Altijd"
+        
+        # Lookup edit rights for mapping      
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+        
+        return render(request, 'mapping/mapping_target_list.html', {
+            'page_title': 'Commentaar',
+            'formset' : formset,
+            'permissions': permissions,
+            'current_project' : current_project,
+        })
+
+
+class ViewEventsPageView(UserPassesTestMixin,TemplateView):
+    '''
+    View for rendering all events, for use in Ajax call
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def get(self, request, **kwargs):
+        # Create dictionary for events (ie. should look for all actions and comments, combine them into a dict)
+        events_list = []
+        current_user = User.objects.get(id=request.user.id)
+        comments = MappingComment.objects.filter(comment_task=kwargs.get('task')).order_by('-comment_created') 
+        for item in comments:
+            events_list.append({
+                'id' : item.id,
+                'text' : item.comment_body,
+                'type' : 'comment',
+                'user' : item.comment_user.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.comment_created,
+            })
+        events = MappingEventLog.objects.filter(task_id=kwargs.get('task')).order_by('-event_time') 
+        for item in events:
+            data =  json.dumps(item.new_data, sort_keys=True, indent=4)
+            try:
+                action_user = item.action_user.username
+            except:
+                action_user = item.user_source.username
+            events_list.append({
+                'text' : action_user + ': ' + item.old + ' -> ' + item.new,
+                'data' : data,
+                'action_user' : item.action_user,
+                'type' : item.action,
+                'user' : item.user_source.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.event_time,
+            })
+        # Sort event_list on date
+        events_list.sort(key=lambda item:item['created'], reverse=True)
+
+        return render(request, 'mapping/events.html', {
+            'page_title': 'Commentaar',
+            'current_user' : current_user,
+            'events': events_list,
+        })
+
+class AjaxTestView(UserPassesTestMixin,TemplateView):
+    '''
+    View for testing AJAX requests
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def get(self, request, **kwargs):
+        
+        return render(request, 'mapping/ajax_test.html', {
+        'page_title': 'Error',
+        'error_text': 'Mogelijk probeer je een commentaar aan te passen zonder dat deze door jou gemaakt is.',
         })
