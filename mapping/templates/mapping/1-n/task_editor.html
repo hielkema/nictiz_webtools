@@ -55,7 +55,7 @@
       </div>
       <div class="card-body" style="height: 600px; overflow:auto;">
           {% for value in tasks.values %}
-              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}" style="text-decoration : none">
+              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}?page={{current_page}}" style="text-decoration : none">
                 <span style="display: block;">  
                   {% if value.id == current_task.id %}
                   <li class="list-group-item list-group-item-info">

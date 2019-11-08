@@ -1234,8 +1234,10 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             objects = paginator.page(page)
         except PageNotAnInteger:
             objects = paginator.page(1)
+            page = 1
         except EmptyPage:
             objects = paginator.page(paginator.num_pages)
+            page = paginator.num_pages
 
         task_list = {}
         for task in objects[:tasks_max_page]:
@@ -1301,6 +1303,7 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'own_task_filter' : int(request.session.get('own_task_filter')),
             'status_filter' : int(request.session.get('status_filter')),
             'permissions' : permissions,
+            'current_page' : page,
         }
 
         # Render page
