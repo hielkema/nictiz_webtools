@@ -6,7 +6,7 @@
         {{event.text|linebreaks}}
         <small>{{event.user}} @ {{event.created}} <a href="{% url "mapping:index" %}deletecomment/{{event.id}}" id="deletecomment">
         {% if event.user == current_user.username %}
-        [delete]
+        <span class="fa fa-trash" aria-hidden="true"> delete</span>
         {% endif %}</a></small>
     </li>
     <!-- End if comment -->
