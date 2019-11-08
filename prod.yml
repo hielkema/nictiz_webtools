@@ -92,7 +92,7 @@ services:
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
-    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888"]
+    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888", "--basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}"]
     restart: always
     expose:
       - "${FLOWER_PORT}"
