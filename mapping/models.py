@@ -14,7 +14,7 @@ class MappingProject(models.Model):
         ('2', 'Many to One'),
         ('3', 'Many to Many'),
     ]
-    project_types  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
+    project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
     use_mapgroup = models.BooleanField(blank=True, null=True, default=False)
     use_mappriority = models.BooleanField(blank=True, null=True, default=False)
