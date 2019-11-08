@@ -1282,10 +1282,7 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'status' : current_task.status.id,
         }
 
-
-
-        # Render page
-        return render(request, 'mapping/1-n/task_editor.html', {
+        context = {
             'page_title': 'Mapping project',
             'current_project' :  current_project,
             'current_codesystem' :  current_codesystem,
@@ -1304,7 +1301,13 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'own_task_filter' : int(request.session.get('own_task_filter')),
             'status_filter' : int(request.session.get('status_filter')),
             'permissions' : permissions,
-        })
+        }
+
+        # Render page
+        if current_project.project_type == "1":
+            return render(request, 'mapping/1-n/task_editor.html', context)
+        elif current_project.project_type == "2":
+            return render(request, 'mapping/n-1/task_editor.html', context)
 
 class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
     '''
