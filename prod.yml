@@ -63,8 +63,18 @@ services:
   celery_worker:
     # Copy template from service Python
     <<: *python
-    # command: celery -A app worker --beat --scheduler django --loglevel=info
-    command: celery -A app worker --scheduler django --loglevel=info # && celery -A app beat --loglevel info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A app worker --scheduler django --loglevel=info
+    ports: []
+    restart: always
+    depends_on:
+      - rabbitmq
+      - postgres
+    networks:
+      - webtools
+  celery_beat:
+    # Copy template from service Python
+    <<: *python
+    command: celery -A app beat --loglevel info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     ports: []
     restart: always
     depends_on:
