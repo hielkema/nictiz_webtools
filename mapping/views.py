@@ -1158,6 +1158,55 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         if request.session.get('own_task_filter') == None:
             request.session['own_task_filter'] = 1
 
+        # Status manager
+        status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id) # Do not filter the published status! Otherwise you can't assign it
+        
+        # User list
+        user_list = User.objects.all().order_by('username')
+
+        # Create comments form
+        comments_form = PostCommentForm(initial={
+            'project_id': kwargs.get('project'),
+            'task_id': kwargs.get('task'),
+            })
+
+        # Create dictionary for events (ie. should look for all actions and comments, combine them into a dict)
+        events_list = []
+        comments = MappingComment.objects.filter(comment_task=kwargs.get('task')).order_by('-comment_created') 
+        for item in comments:
+            events_list.append({
+                'id' : item.id,
+                'text' : item.comment_body,
+                'type' : 'comment',
+                'user' : item.comment_user.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.comment_created,
+            })
+        events = MappingEventLog.objects.filter(task_id=kwargs.get('task')).order_by('-event_time') 
+        for item in events:
+            data =  json.dumps(item.new_data, sort_keys=True, indent=4)
+            try:
+                action_user = item.action_user.username
+            except:
+                action_user = item.user_source.username
+            events_list.append({
+                'text' : action_user + ': ' + item.old + ' -> ' + item.new,
+                'data' : data,
+                'action_user' : item.action_user,
+                'type' : item.action,
+                'user' : item.user_source.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.event_time,
+            })
+        # Sort event_list on date
+        events_list.sort(key=lambda item:item['created'], reverse=True)
+
+        # Lookup edit rights for mapping      
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+        print("Page loaded by: ", current_user.username)
+        print("Permissions: ", permissions)
+
         # Create task list with filters
         if request.session.get('status_filter') == "0" or request.session.get('status_filter') == None or request.session.get('status_filter') == 0:
             request.session['status_filter'] = 0
@@ -1233,59 +1282,10 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'status' : current_task.status.id,
         }
 
-        # Status manager
-        status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id) # Do not filter the published status! Otherwise you can't assign it
-        
-        # User list
-        user_list = User.objects.all().order_by('username')
 
-
-
-        # Create comments form
-        comments_form = PostCommentForm(initial={
-            'project_id': kwargs.get('project'),
-            'task_id': kwargs.get('task'),
-            })
-
-        # Create dictionary for events (ie. should look for all actions and comments, combine them into a dict)
-        events_list = []
-        comments = MappingComment.objects.filter(comment_task=kwargs.get('task')).order_by('-comment_created') 
-        for item in comments:
-            events_list.append({
-                'id' : item.id,
-                'text' : item.comment_body,
-                'type' : 'comment',
-                'user' : item.comment_user.username, # achtervoegsel voor overige velden zoals user.email
-                'created' : item.comment_created,
-            })
-        events = MappingEventLog.objects.filter(task_id=kwargs.get('task')).order_by('-event_time') 
-        for item in events:
-            data =  json.dumps(item.new_data, sort_keys=True, indent=4)
-            try:
-                action_user = item.action_user.username
-            except:
-                action_user = item.user_source.username
-            events_list.append({
-                'text' : action_user + ': ' + item.old + ' -> ' + item.new,
-                'data' : data,
-                'action_user' : item.action_user,
-                'type' : item.action,
-                'user' : item.user_source.username, # achtervoegsel voor overige velden zoals user.email
-                'created' : item.event_time,
-            })
-        # Sort event_list on date
-        events_list.sort(key=lambda item:item['created'], reverse=True)
-
-        # Lookup edit rights for mapping      
-        db_permissions = request.user.groups.values_list('name', flat=True)
-        permissions = []
-        for perm in db_permissions:
-            permissions.append(perm)
-        print("Page loaded by: ", current_user.username)
-        print("Permissions: ", permissions)
 
         # Render page
-        return render(request, 'mapping/task_editor.html', {
+        return render(request, 'mapping/1-n/task_editor.html', {
             'page_title': 'Mapping project',
             'current_project' :  current_project,
             'current_codesystem' :  current_codesystem,
@@ -1367,7 +1367,7 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
         for perm in db_permissions:
             permissions.append(perm)
         
-        return render(request, 'mapping/mapping_target_list.html', {
+        return render(request, 'mapping/1-n/mapping_target_list_v2.html', {
             'page_title': 'Commentaar',
             'formset' : formset,
             'current_task' : current_task,
