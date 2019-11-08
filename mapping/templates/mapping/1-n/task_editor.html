@@ -149,11 +149,11 @@
         <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
     </div>
     <form method="post" id="post_mappings" class="form-inline">
-      <div id="mappingtargets">
+      <div id="mappingtargets" style="width:100%">
             
       </div>
       {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
-      <div class="card"><div class="card-body"><input type="submit" value="Opslaan" id="mapping_target_save" class="form-control"></div></div>
+      <div class="card" style="width:100%"><input type="submit" value="Opslaan" id="mapping_target_save" class="form-control"></div>
       {% endif %}
     </form>
 
