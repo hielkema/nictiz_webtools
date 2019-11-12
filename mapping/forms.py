@@ -26,7 +26,7 @@ class MappingForm(forms.Form):
     target_component_ident = forms.CharField(label='target_component_term', max_length=100)
     target_component_codesystem = forms.CharField(label='target_component_term', max_length=100)
     target_component_term = forms.CharField(label='target_component_term', max_length=100)
-    active = forms.BooleanField(label='active', required=False, widget=forms.CheckboxInput())
+    active = forms.BooleanField(label='active', required=False, widget=forms.HiddenInput()) #widget=forms.CheckboxInput())
 
     # Werkt wel, maar maakt site extreem traag bij renderen van de dropdown
     # target_component_dropdown = forms.ModelChoiceField(

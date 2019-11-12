@@ -8,6 +8,14 @@ class MappingProject(models.Model):
     created = models.DateTimeField(default=timezone.now)
     status_complete = models.ForeignKey('MappingTaskStatus', on_delete=models.PROTECT, blank=True, null=True, default=None)
 
+    project_types_options = [
+        # (code, readable)
+        ('1', 'One to Many'),
+        ('2', 'Many to One'),
+        ('3', 'Many to Many'),
+    ]
+    project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
+
     use_mapgroup = models.BooleanField(blank=True, null=True, default=False)
     use_mappriority = models.BooleanField(blank=True, null=True, default=False)
     use_mapcorrelation = models.BooleanField(blank=True, null=True, default=False)

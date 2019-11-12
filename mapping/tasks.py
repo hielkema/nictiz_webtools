@@ -47,7 +47,11 @@ def import_snomed_async(focus=None, codesystem=None):
 @shared_task
 def audit_async(audit_type=None, project=None, task_id=None):
     project = MappingProject.objects.get(id=project)
-    tasks = MappingTask.objects.filter(project_id=project)
+    if task_id == None:
+        tasks = MappingTask.objects.filter(project_id=project)
+    else:
+        tasks = MappingTask.objects.filter(project_id=project, id=task_id)
+        
     if audit_type == "multiple_mapping":
         # Functions needed for audit
         def checkConsecutive(l): 
@@ -61,7 +65,8 @@ def audit_async(audit_type=None, project=None, task_id=None):
             logger.info('Checking task for: {0}'.format(task.source_component.component_title))
 
             # Delete all old audit hits for this task if not whitelisted
-            MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
+            delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
+            logger.info(delete)
 
             # Get all mapping rules for the current task
             rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
@@ -75,16 +80,36 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 mapping_priorities.append(rule.mappriority)
                 mapping_targets.append(rule.target_component)
                 logger.info('Rule: {0}'.format(rule))
+
+                # Hit if priority or advice is empty
+                if rule.mappriority == '' or rule.mappriority == None:
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Regel heeft geen prioriteit',
+                            )
+                if rule.mapadvice == '':
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Regel heeft geen mapadvice',
+                            )
             # Look for rules with the same target component
             for target in mapping_targets:
                 other_rules = MappingRule.objects.filter(target_component=target)
                 if other_rules.count() > 0:
+                    other_tasks_same_target = []
+                    for other_rule in other_rules:
+                        other_tasks = MappingTask.objects.filter(source_component=other_rule.source_component)
+                        for other_task in other_tasks:
+                            other_tasks_same_target.append(other_task.id)
+
                     for other_rule in other_rules:
                         if other_rule.source_component != task.source_component:
                             obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
                                 audit_type=audit_type,
-                                hit_reason='Andere taak gebruikt hetzelfde target: component #{} - {}'.format(other_rule.target_component.component_id, other_rule.target_component.component_title)
+                                hit_reason='Meerdere taken {} gebruiken hetzelfde target: component #{} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
                             )
             # Specific rules for single or multiple mappings
             if rules.count() == 1:

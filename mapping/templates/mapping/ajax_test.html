@@ -1,0 +1,31 @@
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+
+<script>
+$(document).ready(function(){
+  function refreshComments(){
+    $.ajax({url: "http://localhost:8000/mapping/show_events/557", success: function(result){
+      $("#div1").html(result);
+    }});
+  }
+  
+  $("button").click(refreshComments());
+  setInterval(function(){
+    
+    $.ajax({url: "http://localhost:8000/mapping/show_events/557", success: function(result){
+      $("#div1").html(result);
+    }});
+
+    }, 5000);
+});
+</script>
+</head>
+<body>
+
+<button>Get External Content</button>
+<div id="div1" style="width: 300px; height: 300px"><h2>Let jQuery AJAX Change This Text</h2></div>
+
+
+{% endblock content %}

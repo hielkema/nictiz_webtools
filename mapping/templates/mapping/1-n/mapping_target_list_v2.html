@@ -1,0 +1,206 @@
+{% csrf_token %}
+{{ formset.management_form }}
+<ul class="list-group">
+{% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
+    <!-- WITH EDIT RIGHTS -->
+    {% for form in formset %}
+        {% if not form.target_component.value %}
+        <li class="list-group-item">
+            <b>Nieuwe mapping</b><br>
+        {% else %}
+            {% if not form.active.value %}
+            <li class="list-group-item list-group-item-warning">
+            {% elif form.active.value %}
+            <li class="list-group-item list-group-item-success">
+            {% endif %}
+        {% endif %}
+        {{ form.id }} {{ form.source_component }} {{ form.target_component }} {{ form.active }}
+        
+            <table style="width:100%">
+                <tbody>
+                {% if formset.can_delete and form.target_component.value %}
+                    <tr>
+                        <td scope="row" colspan="7">
+                            <b>Stelsel</b> {{ form.target_component_codesystem.value }}  <b>ID</b> {{ form.target_component_ident.value }}
+                        
+                            {% if form.target_component_codesystem.value == "Snomed" %}
+                            <a href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">Open in browser
+                            {% endif %}
+                            {% if form.target_component_codesystem.value == "Snomed" %}
+                            </a>
+                            {% endif %}
+                            <br><b>Term:</b> {{ form.target_component_term.value }} 
+                        </td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <td colspan="6">
+                        <select style="width:100%" name="{{form.prefix}}-target_component" value="{{form.target_component.value}}" class="form-control js-select2-mappingtarget">
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                {% if current_project.use_mappriority %}
+                    <th class="input-group-text">Priority</th>
+                    <td>{{ form.mappriority }}</td>
+                {% endif %}
+                {% if current_project.use_maprule %}
+                    <th class="input-group-text">Rule</th>
+                    <td>{{ form.maprule }}</td>
+                {% endif %}
+                </tr><tr>
+                {% if current_project.use_mapgroup %}
+                    <td class="input-group-text">Group</td>
+                    <td>{{ form.mapgroup }}</td>
+                {% endif %}
+                {% if current_project.use_mapadvice %}
+                    <th class="input-group-text">Advice</th>
+                    <td>{{ form.mapadvice }}</td>
+                {% endif %}
+                </tr><tr>
+                {% if current_project.use_mapcorrelation %}
+                    <td class="input-group-text">Correlation:</td>
+                    <td>{{ form.mapcorrelation }}</td>
+                {% endif %}
+                {% if formset.can_delete and form.target_component.value %}
+                    <th class="input-group-text">Verwijderen</th>
+                    <td>{{ form.DELETE }}</td>
+                {% endif %}
+                </tr><tr>
+
+                </tr>
+                
+                </tbody>
+            </table>
+        </li>
+    {% endfor %}
+    <!-- END WITH EDIT RIGHTS -->
+{% else %}
+    <!-- WITHOUT EDIT RIGHTS -->
+    {% for form in formset %}
+     <fieldset disabled="disabled">
+        {% if form.target_component.value %}
+        {% if not form.active.value %}
+            <li class="list-group-item list-group-item-warning">
+            {% elif form.active.value %}
+            <li class="list-group-item list-group-item-success">
+        {% endif %}
+        
+        <table class="table table-sm">
+            <tbody>
+            {% if formset.can_delete and form.target_component.value %}
+            <tr>
+                <th scope="row" colspan=2>
+                {% if form.target_component_codesystem.value == "Snomed" %}
+                {% endif %}
+                
+                [{{ form.target_component_codesystem.value }}] {{ form.target_component_term.value }} [{{ form.target_component_ident.value }}]
+                
+                {% if form.target_component_codesystem.value == "Snomed" %}
+                <a style="text-align: left;" href="https://browser.ihtsdotools.org/?perspective=full&conceptId1={{ form.target_component_ident.value }}&edition=MAIN/SNOMEDCT-NL&release=&languages=nl,en" target="_blank">
+                <br>Open in browser
+                </a>
+                {% endif %}
+                </th>
+            </tr>
+            {% endif %}
+            <tr>
+                <th scope="row">Actief</th>
+                <td>{{ form.active }}</td>
+            </tr>
+            {% if current_project.use_mapgroup %}
+            <tr>
+                <th scope="row">Mapgroup</th>
+                <td>{{ form.mapgroup }}</td>
+            </tr>
+            {% endif %}
+            {% if current_project.use_mapcorrelation %}
+            <tr>
+                <th scope="row">Map correlation</th>
+                <td>{{ form.mapcorrelation }}</td>
+            </tr>
+            {% endif %}
+            {% if current_project.use_mappriority %}
+            <tr>
+                <th scope="row">Map priority</th>
+                <td>{{ form.mappriority }}</td>
+            </tr>
+            {% endif %}
+            {% if current_project.use_mapadvice %}
+            <tr>
+                <th scope="row">Map advice</th>
+                <td>{{ form.mapadvice }}</td>
+            </tr>
+            {% endif %}
+            {% if current_project.use_maprule %}
+            <tr>
+                <th scope="row">Map rule</th>
+                <td>{{ form.maprule }}</td>
+            </tr>
+            {% endif %}
+            </tbody>
+        </table>
+        </li>
+        {% endif %}
+    </fieldset>
+    {% endfor %}
+    <!-- END WITHOUT EDIT RIGHTS -->
+{% endif %}
+</ul>
+
+<script>
+$(document).ready(function() {
+    $('.js-select2-mappingtarget').select2({
+    ajax: {
+    url: "{% url "mapping:index" %}ajaxtargetsearch/",
+    dataType: 'json',
+    delay: 250,
+    data: function (params) {
+      return {
+        term: params.term, // search term
+        page: params.page
+      };
+    },
+    processResults: function (data, params) {
+      params.page = params.page || 1;
+
+      return {
+        results: data.items
+      };
+    },
+    cache: true
+  },
+  placeholder: 'Zoeken naar mapping target',
+  minimumInputLength: 3,
+  templateResult: formatRepo,
+  templateSelection: formatRepoSelection
+  })
+
+  function formatRepo (repo) {
+    if (repo.loading) {
+      return repo.text;
+    }
+
+    var $container = $(
+      "<div class='select2-result-repository clearfix'>" +
+          "<div class='select2-result-repository__title'></div>" +
+          "<div class='select2-result-repository__codesystem'></div>" +
+          "<div class='select2-result-repository__description'></div>" +
+          "<div class='select2-result-repository__codesystemId'></div>" +
+      "</div>"
+    );
+
+    $container.find(".select2-result-repository__title").text(repo.text);
+    $container.find(".select2-result-repository__codesystem").text('[Codesystem '+repo.codesystem+']');
+    // $container.find(".select2-result-repository__description").text('[intern ID '+repo.id+']');
+    $container.find(".select2-result-repository__codesystemId").text(repo.comp_id);
+
+    return $container;
+  }
+
+
+  function formatRepoSelection (repo) {
+    return repo.text || repo.id;
+  }
+});
+</script>

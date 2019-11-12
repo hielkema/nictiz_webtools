@@ -1,0 +1,45 @@
+<ul class="list-group">
+{% for event in events %}
+    {% if event.type == 'comment' %}
+    <!-- If comment -->
+    <li class="list-group-item">
+        {{event.text|linebreaks}}
+        <small>{{event.user}} @ {{event.created}} <a href="{% url "mapping:index" %}deletecomment/{{event.id}}" id="deletecomment">
+        {% if event.user == current_user.username %}
+        <span class="fa fa-trash" aria-hidden="true"> delete</span>
+        {% endif %}</a></small>
+    </li>
+    <!-- End if comment -->
+    {% endif %}
+    {% if event.type == 'status_change' %}
+    <!-- Start if event -->
+    <li class="list-group-item list-group-item-warning" >
+    <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" title="Snapshot" data-content="{{event.created}} - {{event.data}}">{{event.text}}</a>
+    </li>
+    <!-- End if event -->
+    {% endif %}
+    {% if event.type == 'user_change' %}
+    <!-- Start if event -->
+    <li class="list-group-item list-group-item-warning"><!-- style="height:20px;overflow: hidden; padding:3px; line-height: 10px;" -->
+    <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" title="Snapshot" data-content="{{event.created}} - {{event.data}}">{{event.text}}</a>
+    </li>
+    <!-- End if event -->
+    {% endif %}
+{% endfor %}
+</ul>
+
+<script>
+$("#deletecomment").click(function(){
+    var dom = $(this);
+    var url = dom.attr('href');
+    $.ajax({ 
+            type: "GET",
+            url: url,
+        });
+    return false;
+});
+</script>
+<script>
+$(function () {
+  $('[data-toggle="popover"]').popover()
+})</script>

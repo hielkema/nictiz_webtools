@@ -50,9 +50,9 @@ services:
       - webtools
       - proxy
     environment:
-      - VIRTUAL_HOST=${DOMAIN}
+      - VIRTUAL_HOST=${DJANGO_DOMAIN}
       - VIRTUAL_PORT=${PORT}
-      - LETSENCRYPT_HOST=${DOMAIN}
+      - LETSENCRYPT_HOST=${DJANGO_DOMAIN}
       - LETSENCRYPT_EMAIL=${EMAIL}
 
   ## RabbitMQ as message queue for Celery
@@ -63,8 +63,18 @@ services:
   celery_worker:
     # Copy template from service Python
     <<: *python
-    # command: celery -A app worker --beat --scheduler django --loglevel=info
-    command: celery -A app worker --scheduler django --loglevel=info # && celery -A app beat --loglevel info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: celery -A app worker --scheduler django --loglevel=info
+    ports: []
+    restart: always
+    depends_on:
+      - rabbitmq
+      - postgres
+    networks:
+      - webtools
+  celery_beat:
+    # Copy template from service Python
+    <<: *python
+    command: celery -A app beat --loglevel info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     ports: []
     restart: always
     depends_on:
@@ -73,8 +83,6 @@ services:
     networks:
       - webtools
   pgadmin:
-    ports:
-      - ${PGADMIN_PORT}:80
     image: dpage/pgadmin4
     environment:
       - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
@@ -84,13 +92,25 @@ services:
     networks:
       - webtools
       - proxy
+    expose:
+      - "${PGADMIN_PORT}"
+    environment:
+      - VIRTUAL_HOST=${PGADMIN_DOMAIN}
+      - VIRTUAL_PORT=${PGADMIN_PORT}
+      - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
-    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888"]
+    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888", "--basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}"]
     restart: always
-    ports:
-      - ${FLOWER_PORT}:8888
+    expose:
+      - "${FLOWER_PORT}"
+    environment:
+      - VIRTUAL_HOST=${FLOWER_DOMAIN}
+      - VIRTUAL_PORT=${FLOWER_PORT}
+      - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
     networks:
       - webtools
       - proxy

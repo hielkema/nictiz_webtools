@@ -843,7 +843,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             'extra' : '',
             })
         elif current_audit == "show":
-            tasks = MappingTask.objects.filter(project_id=project)
+            tasks = MappingTask.objects.filter(project_id=project).order_by('id')
             data = []
             for task in tasks:
                 audits = MappingTaskAudit.objects.filter(task=task)
@@ -1140,6 +1140,8 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
                     # Save object
                 else:
                     print("Not valid or empty target, not saved") # DEBUG
+            # Start audit on current item
+            audit_async.delay('multiple_mapping', kwargs.get('project'), kwargs.get('task'))
                 
             return HttpResponseRedirect(reverse('mapping:index')+'project/'+str(kwargs.get('project'))+'/task/'+str(kwargs.get('task')))
         else:
@@ -1155,6 +1157,55 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         # Standard - filter on only own tasks
         if request.session.get('own_task_filter') == None:
             request.session['own_task_filter'] = 1
+
+        # Status manager
+        status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id) # Do not filter the published status! Otherwise you can't assign it
+        
+        # User list
+        user_list = User.objects.all().order_by('username')
+
+        # Create comments form
+        comments_form = PostCommentForm(initial={
+            'project_id': kwargs.get('project'),
+            'task_id': kwargs.get('task'),
+            })
+
+        # Create dictionary for events (ie. should look for all actions and comments, combine them into a dict)
+        events_list = []
+        comments = MappingComment.objects.filter(comment_task=kwargs.get('task')).order_by('-comment_created') 
+        for item in comments:
+            events_list.append({
+                'id' : item.id,
+                'text' : item.comment_body,
+                'type' : 'comment',
+                'user' : item.comment_user.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.comment_created,
+            })
+        events = MappingEventLog.objects.filter(task_id=kwargs.get('task')).order_by('-event_time') 
+        for item in events:
+            data =  json.dumps(item.new_data, sort_keys=True, indent=4)
+            try:
+                action_user = item.action_user.username
+            except:
+                action_user = item.user_source.username
+            events_list.append({
+                'text' : action_user + ': ' + item.old + ' -> ' + item.new,
+                'data' : data,
+                'action_user' : item.action_user,
+                'type' : item.action,
+                'user' : item.user_source.username, # achtervoegsel voor overige velden zoals user.email
+                'created' : item.event_time,
+            })
+        # Sort event_list on date
+        events_list.sort(key=lambda item:item['created'], reverse=True)
+
+        # Lookup edit rights for mapping      
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+        print("Page loaded by: ", current_user.username)
+        print("Permissions: ", permissions)
 
         # Create task list with filters
         if request.session.get('status_filter') == "0" or request.session.get('status_filter') == None or request.session.get('status_filter') == 0:
@@ -1183,8 +1234,10 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             objects = paginator.page(page)
         except PageNotAnInteger:
             objects = paginator.page(1)
+            page = 1
         except EmptyPage:
             objects = paginator.page(paginator.num_pages)
+            page = paginator.num_pages
 
         task_list = {}
         for task in objects[:tasks_max_page]:
@@ -1231,17 +1284,54 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'status' : current_task.status.id,
         }
 
-        # Status manager
-        status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id) # Do not filter the published status! Otherwise you can't assign it
-        
-        # User list
-        user_list = User.objects.all().order_by('username')
+        context = {
+            'page_title': 'Mapping project',
+            'current_project' :  current_project,
+            'current_codesystem' :  current_codesystem,
+            'current_task' :  current_task,
+            'project_list': project_list,
+            'tasks': task_list,
+            'tasks_total' : tasks_total,
+            'tasks_shown' : len(task_list),
+            'objects'   : objects,
+            'comments_form' : comments_form,
+            'source_component' : source_component,
+            'current_user' : current_user,
+            'events' : events_list,
+            'status_list' : status_list,
+            'user_list' : user_list,
+            'own_task_filter' : int(request.session.get('own_task_filter')),
+            'status_filter' : int(request.session.get('status_filter')),
+            'permissions' : permissions,
+            'current_page' : page,
+        }
+
+        # Render page
+        if current_project.project_type == "1":
+            return render(request, 'mapping/1-n/task_editor.html', context)
+        elif current_project.project_type == "2":
+            return render(request, 'mapping/n-1/task_editor.html', context)
+
+class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
+    '''
+    Renders mapping targets, for use with Ajax request.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+
+        current_task = MappingTask.objects.get(id=kwargs.get('task')) 
+        componentQuery = MappingCodesystemComponent.objects.get(id=current_task.source_component.id)
+        current_project = MappingProject.objects.get(id=current_task.project_id.id, active=True)
 
         # Fetch mappings
         mappings = MappingRule.objects.filter(
             source_component=current_task.source_component,
             project_id=current_task.project_id,
-            ).order_by('-active')
+            ).order_by('-active', 'mappriority')
         mapping_list = []
         for mapping in mappings:
             component_data = MappingCodesystemComponent.objects.get(id=mapping.target_component.id)
@@ -1267,19 +1357,46 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         formset = MappingFormSet(initial=mapping_list)
         
         # Set default content for the extra form to allow entering a new mapping
-        formset[len(formset)-1]['source_component'].initial = componentQuery.id
+        try:
+            mappriority_next = mapping_list[-1].get('mappriority')+1
+        except:
+            mappriority_next = 1
+        formset[len(formset)-1]['source_component'].initial = current_task.source_component.id
         formset[len(formset)-1]['active'].initial = True
-        formset[len(formset)-1]['mappriority'].initial = 1
+        formset[len(formset)-1]['mappriority'].initial = mappriority_next
         formset[len(formset)-1]['mapadvice'].initial = "Altijd"
+        
+        # Lookup edit rights for mapping      
+        current_user = User.objects.get(id=request.user.id)
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+        
+        return render(request, 'mapping/1-n/mapping_target_list_v2.html', {
+            'page_title': 'Commentaar',
+            'formset' : formset,
+            'current_task' : current_task,
+            'current_user' : current_user,
+            'permissions': permissions,
+            'current_project' : current_project,
+        })
 
-        # Create comments form
-        comments_form = PostCommentForm(initial={
-            'project_id': kwargs.get('project'),
-            'task_id': kwargs.get('task'),
-            })
 
+class ViewEventsPageView(UserPassesTestMixin,TemplateView):
+    '''
+    View for rendering all events, for use in Ajax call
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def get(self, request, **kwargs):
         # Create dictionary for events (ie. should look for all actions and comments, combine them into a dict)
         events_list = []
+        current_user = User.objects.get(id=request.user.id)
         comments = MappingComment.objects.filter(comment_task=kwargs.get('task')).order_by('-comment_created') 
         for item in comments:
             events_list.append({
@@ -1307,34 +1424,73 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         # Sort event_list on date
         events_list.sort(key=lambda item:item['created'], reverse=True)
 
-        # Lookup edit rights for mapping      
+        return render(request, 'mapping/events.html', {
+            'page_title': 'Commentaar',
+            'current_user' : current_user,
+            'events': events_list,
+        })
+
+class GetCurrentStatus(UserPassesTestMixin,TemplateView):
+    '''
+    View for getting AJAX requests for current status of task
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+        current_task = MappingTask.objects.get(id=kwargs.get('task')) 
+        current_user = User.objects.get(id=request.user.id)
+        
+        # Status manager
+        status_list = MappingTaskStatus.objects.filter(project_id=current_task.project_id.id).order_by('status_id')
+        # Lookup permissions      
         db_permissions = request.user.groups.values_list('name', flat=True)
         permissions = []
         for perm in db_permissions:
             permissions.append(perm)
-        print("Page loaded by: ", current_user.username)
-        print("Permissions: ", permissions)
+        
+        return render(request, 'mapping/current_task_status.html', {
+        'current_user' : current_user,
+        'current_task' : current_task,
+        'status_list' : status_list,
+        'permissions' : permissions,
+        })
 
-        # Render page
-        return render(request, 'mapping/task_editor.html', {
-            'page_title': 'Mapping project',
-            'current_project' :  current_project,
-            'current_codesystem' :  current_codesystem,
-            'current_task' :  current_task,
-            'project_list': project_list,
-            'tasks': task_list,
-            'tasks_total' : tasks_total,
-            'tasks_shown' : len(task_list),
-            'objects'   : objects,
-            'comments_form' : comments_form,
-            'source_component' : source_component,
-            'mappings' : mappings,
-            'current_user' : current_user,
-            'formset' : formset,
-            'events' : events_list,
-            'status_list' : status_list,
-            'user_list' : user_list,
-            'own_task_filter' : int(request.session.get('own_task_filter')),
-            'status_filter' : int(request.session.get('status_filter')),
-            'permissions' : permissions,
+class GetAuditsForTask(UserPassesTestMixin,TemplateView):
+    '''
+    View for requesting audit hits for current task
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+        task = MappingTask.objects.get(id=kwargs.get('task'))
+        audits = MappingTaskAudit.objects.filter(task=task)
+        
+        return render(request, 'mapping/audit_results_current_task.html', {
+        'page_title': 'Audit results',
+        'audits' : audits,
+        })
+
+class AjaxTestView(UserPassesTestMixin,TemplateView):
+    '''
+    View for testing AJAX requests
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def get(self, request, **kwargs):
+        
+        return render(request, 'mapping/ajax_test.html', {
+        'page_title': 'Error',
+        'error_text': 'Mogelijk probeer je een commentaar aan te passen zonder dat deze door jou gemaakt is.',
         })
