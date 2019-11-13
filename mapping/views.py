@@ -11,9 +11,11 @@ from django.forms import formset_factory
 from django.urls import reverse
 from django.db.models import Q
 from datetime import datetime
+from celery.task.control import inspect, revoke
 from .forms import *
 from .models import *
 from pandas import read_excel
+import sys, os
 import environ
 import time
 import random
@@ -122,6 +124,385 @@ class AjaxSearchTaskPageView(UserPassesTestMixin,TemplateView):
             
             return JsonResponse({'items':items[:20]})
 
+class AjaxWhitelistAudit(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to serve results for searching a specific task from the task manager.
+    Only accessible with view tasks rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | audit').exists()
+    
+    def get(self, request, **kwargs):
+        audit_item_id = int(kwargs.get('audit'))
+
+        try:
+            task = MappingTaskAudit.objects.get(
+                    id=int(audit_item_id),
+                )
+            task.ignore = True
+            task.ignore_user = User.objects.get(id=request.user.id)
+            task.save()
+            return HttpResponseRedirect(reverse('mapping:index'))
+        except Exception as e:
+                return render(request, 'mapping/error.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : e,
+                })
+
+
+class AjaxSimpleEclQuery(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to serve results for adding results from an ECL query as maps to the task manager.
+    Only accessible with edit mapping rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | edit mapping').exists()
+    
+    def get(self, request, **kwargs):
+        task_id = int(kwargs.get('task_id'))
+
+        try:
+            task = MappingTask.objects.get(id=int(task_id),)
+            form = EclQueryForm()
+
+            return render(request, 'mapping/n-1/ecl_query.html', {
+                'page_title': 'ECL query Snowstorm',
+                'task' : task,
+                'form' : form,
+                })
+        except Exception as e:
+                return render(request, 'mapping/error.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : e,
+                })
+
+    def post(self, request, **kwargs):
+        task_id = int(kwargs.get('task_id'))
+        try:
+            task = MappingTask.objects.get(
+                    id=int(task_id),
+                )
+            # Handle search form and present results
+            form = EclQueryForm(request.POST)
+            if form.is_valid():
+                print('valid form')
+                snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", debug=True, defaultBranchPath="MAIN/SNOMEDCT-NL", preferredLanguage="nl")
+                results = snowstorm.findConcepts(ecl=form.cleaned_data['query'])
+
+                # Create formset for displaying the results of the ECL query
+                if len(results) > 0:
+                    mapping_list = []
+                    for mapping in results.values():
+                        codesystem = task.target_codesystem
+                        # INFO - This query is hardcoded to the Snomed codesystem on ID 1 - TODO - change this to a per-project basis
+                        source_component_map = MappingCodesystemComponent.objects.get(component_id=mapping.get('conceptId'), codesystem_id_id="1")
+                        mapping_list.append({
+                                'source_component' : source_component_map.id,
+                                'source_component_ident' : source_component_map.component_id,
+                                'source_component_term' : source_component_map.component_title,
+                            })
+                    print(mapping_list)
+                    # Put mappings in forms
+                    MappingFormSet = formset_factory(MappingFormEclQuery, can_delete=True, extra=0)
+                    formset = MappingFormSet(initial=mapping_list)
+
+                return render(request, 'mapping/n-1/ecl_query.html', {
+                    'page_title': 'ECL query Snowstorm',
+                    'results_view' : "TRUE",
+                    'task' : task,
+                    'formset' : formset,
+                    'results' : results,
+                    })
+            else:
+                print('search form not valid')
+                
+            # Handle POST data if a list based on an ECL query has been submitted
+            MappingFormSet = formset_factory(MappingFormEclQuery, can_delete=True)
+            formset = MappingFormSet(request.POST)
+            for form in formset:
+                if form.is_valid():
+                    print ("#### source comps sent succesfully")
+                    # INFO - This query is hardcoded to the Snomed codesystem on ID 1 - TODO - change this to a per-project basis
+                    source = MappingCodesystemComponent.objects.get(id=form.cleaned_data['source_component'])
+                    target = task.source_component
+
+                    # Create mapping rules for all matched components
+                    obj, created = MappingRule.objects.get_or_create(
+                        project_id=task.project_id,
+                        source_component=source,
+                        target_component=target,
+                        active=True,
+                    )
+
+                else:
+                    print('mapping form not valid / not returned')
+                    # print("###########################\n",form.errors,"\n", form.non_field_errors)
+            return HttpResponseRedirect(reverse('mapping:index')+"project/"+str(task.project_id.id)+"/task/"+str(task.id))
+            
+        except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                return render(request, 'mapping/error_no_layout.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : error,
+                })
+
+class AjaxEclQueryMapBuilder(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to handle creating an ECL query bound to a (target) component.
+    Only accessible with edit mapping rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | edit mapping').exists()
+    
+    def get(self, request, **kwargs):
+        task_id = int(kwargs.get('task_id'))
+        task = MappingTask.objects.get(id=task_id)
+        try:
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
+            query_list = []
+            for query in querys:
+                query_list.append({
+                    'query_id' : query.id,
+                    'query' : query.query,
+                    'query_function' : query.query_function,
+                    'query_type' : query.query_type,
+                })
+            MappingFormSet = formset_factory(EclQueryBuilderForm, can_delete=True)
+            formset = MappingFormSet(initial=query_list)
+
+            # Generate ECL query
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
+            query_add_list = []
+            query_min_list = []
+
+            min_querys = querys.filter(query_function="1")
+            add_querys = querys.filter(query_function="2")
+            for query in min_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_min_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            for query in add_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_add_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            add_querys_sep = " or "
+            min_querys_sep = " or "
+            if len(query_add_list) > 0 and len(query_min_list) > 0:
+                generated_query = "({add}) MINUS ({minus})".format(
+                    add = add_querys_sep.join(query_add_list),
+                    minus = min_querys_sep.join(query_min_list),
+                )
+            elif len(query_add_list) > 0 and len(query_min_list) == 0:
+                generated_query = "({add})".format(
+                    add = add_querys_sep.join(query_add_list),
+                )
+            else:
+                generated_query = False
+                results = []
+
+            return render(request, 'mapping/ecl-1/ecl_query_build_form.html', {
+                'page_title': 'ECL query Snowstorm',
+                'task' : task,
+                'generated_query' : generated_query,
+                'formset' : formset,
+                })
+        except Exception as e:
+                return render(request, 'mapping/error.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : e,
+                })
+
+    def post(self, request, **kwargs):
+        task_id = int(kwargs.get('task_id'))
+        try:
+            task = MappingTask.objects.get(id=int(task_id),)
+            # Handle search form and present results
+            MappingFormSet = formset_factory(EclQueryBuilderForm, can_delete=True)
+            formset = MappingFormSet(request.POST)
+            for form in formset:
+                form.fields['query_id'].required = False
+                if form.is_valid():
+                    print('valid form')
+                    print(" Project {} \n Target {} \n Type {} \n Function {} \n Delete {}".format(
+                        task.project_id,
+                        task.source_component,
+                        form.cleaned_data['query_type'],
+                        form.cleaned_data['query_function'],
+                        form.cleaned_data['DELETE'],
+                    ))
+                    print("Saving ECL query to DB")
+                    if form.cleaned_data['query_id'] and form.cleaned_data['DELETE']:
+                        obj = MappingEclQuery.objects.get(id = form.cleaned_data['query_id']).delete()
+                    elif form.cleaned_data['query_id']:
+                        obj, created = MappingEclQuery.objects.get_or_create(id = form.cleaned_data['query_id'])
+                        obj.query_type = form.cleaned_data['query_type']
+                        obj.query_function = form.cleaned_data['query_function']
+                        obj.query = form.cleaned_data['query']
+                        obj.save()
+                    else:
+                        # New query
+                        print("Saving new query to DB")
+                        created = MappingEclQuery.objects.create(
+                            project_id=task.project_id,
+                            target_component=task.source_component,
+                            query=form.cleaned_data['query'],
+                            query_type=form.cleaned_data['query_type'],
+                            query_function=form.cleaned_data['query_function'],
+                        )
+                        created.save()
+                    print("ECL query saved in DB")
+
+                else:
+                    print('form not valid')
+
+            # Generate ECL query
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
+            query_add_list = []
+            query_min_list = []
+
+            min_querys = querys.filter(query_function="1")
+            add_querys = querys.filter(query_function="2")
+            for query in min_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_min_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            for query in add_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_add_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            add_querys_sep = " or "
+            min_querys_sep = " or "
+            if len(query_add_list) > 0 and len(query_min_list) > 0:
+                generated_query = "({add}) MINUS ({minus})".format(
+                    add = add_querys_sep.join(query_add_list),
+                    minus = min_querys_sep.join(query_min_list),
+                )
+            elif len(query_add_list) > 0 and len(query_min_list) == 0:
+                generated_query = "({add})".format(
+                    add = add_querys_sep.join(query_add_list),
+                )
+            else:
+                generated_query = False
+                results = []
+            
+            # Check if there are running celery tasks for this task, cancel them if there are before starting a new task
+            i = inspect()
+            active = i.active('mapping.tasks.add_mappings_ecl_1_task')
+            try:
+                for async_task in active:
+                    info = i.active(async_task)
+                    for celery_task in info.get(async_task):
+                        celery_task_details = json.loads(celery_task.get('kwargs').replace("\'", "\""))
+                        if celery_task_details.get('task') == task.id:
+                            print("Task already running! ID is {}. Revoking task.".format(
+                                celery_task.get('id'),
+                            ))
+                            revoke(celery_task.get('id'), terminate=True)
+            except:
+                print("No active tasks or celery unreachable.")
+
+            celery_task = add_mappings_ecl_1_task.delay(task=task.id, query=generated_query)
+            celery_task_id = celery_task.id
+            print("TASK STARTED WITH ID ******", celery_task_id)
+
+            return HttpResponseRedirect(reverse('mapping:index')+"project/"+str(task.project_id.id)+"/task/"+str(task.id))
+            
+        except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                error = ' Exc type: {} \n Exc obj: {} \n TB: {}'.format(exc_type, exc_obj, exc_tb.tb_lineno)
+                print(error)
+                return render(request, 'mapping/error_no_layout.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : error,
+                })
+
+class AjaxEclQueryMapResults(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to handle creating an ECL query bound to a (target) component.
+    Only accessible with edit mapping rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+    
+    def get(self, request, **kwargs):
+        task_id = int(kwargs.get('task_id'))
+        task = MappingTask.objects.get(id=task_id)
+        try:
+            # Check if there are running celery tasks for this task
+            running_task = False
+            i = inspect()
+            active = i.active('mapping.tasks.add_mappings_ecl_1_task')
+            for async_task in active:
+                # print("----> ",async_task)
+                info = i.active(async_task)
+                for celery_task in info.get(async_task):
+                    celery_task_details = json.loads(celery_task.get('kwargs').replace("\'", "\""))
+                    if celery_task_details.get('task') == task.id:
+                        print('There is an active task for this request.')
+                        running_task = True
+                        # revoke(celery_task.get('id'), terminate=True)
+            if not running_task:
+                rules = MappingRule.objects.filter(
+                    target_component=task.source_component,
+                    project_id=task.project_id
+                )
+            else:
+                return render(request, 'mapping/notice_no_layout.html', {
+                'page_title': 'Error',
+                'header': 'Er loopt nog een proces voor deze taak.',
+                'notice_text' : 'Vernieuw de taak om de status te controleren.',
+                })
+
+            return render(request, 'mapping/ecl-1/ecl_query_results.html', {
+                'page_title': 'ECL query result Snowstorm',
+                'task' : task,
+                'results' : rules,
+                })
+        except Exception as e:
+                return render(request, 'mapping/error.html', {
+                'page_title': 'Error',
+                'error_text': 'Mogelijk probeer je een actie uit te voeren waar je geen rechten voor hebt.',
+                'exception' : e,
+                })
+
 class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
     '''
     Class used to save progress on all tasks on a daily basis, called from a cronjob.
@@ -142,7 +523,6 @@ class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
     def get(self, request, **kwargs):
         # Taken per status
         project_list = MappingProject.objects.filter(active=True)
-        results = []
         tasks_per_user_dict = []
         tasks_per_status_dict = []
 
@@ -1069,77 +1449,115 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         # TODO - Check if project and task exist, otherwise -> error or redirect to project or homepage.
         # Save mappings if submitted
         if request.method == 'POST':
-            MappingFormSet = formset_factory(MappingForm, can_delete=True)
-            formset = MappingFormSet(request.POST)
-            for form in formset:
-                form.fields['id'].required = False
-                form.fields['target_component_ident'].required = False
-                form.fields['target_component_codesystem'].required = False
-                form.fields['target_component_term'].required = False
-                dropdown_target = form.prefix+'-'+'target_component'
-                target_component_id = request.POST.get(dropdown_target)
-                delete_yesno = form.prefix+'-'+'DELETE'
-                delete_yesno = request.POST.get(delete_yesno)
-                print("###########################\n",form.errors,"\n", form.non_field_errors)
-                if form.is_valid() and target_component_id != 'None':
-                    print("ID: ",form.cleaned_data.get('id'))
-                    print("Source: ",form.cleaned_data.get('source_component'))
-                    print("Target: ",target_component_id)
-                    print("Active: ",form.cleaned_data.get('active'))
-                    print("Delete: ",delete_yesno)
-                    print("valid? ",form.is_valid()) # DEBUG
+            project = MappingProject.objects.get(id=int(kwargs.get('project')))
+            # Handle projects of type 1-n and n-1
+            if project.project_type == "1" or project.project_type == "2":
+                MappingFormSet = formset_factory(MappingForm, can_delete=True)
+                formset = MappingFormSet(request.POST)
+                for form in formset:
+                    form.fields['id'].required = False
+                    form.fields['target_component_ident'].required = False
+                    form.fields['target_component_codesystem'].required = False
+                    form.fields['target_component_term'].required = False
+                    dropdown_target = form.prefix+'-'+'target_component'
+                    target_component_id = request.POST.get(dropdown_target)
+                    delete_yesno = form.prefix+'-'+'DELETE'
+                    delete_yesno = request.POST.get(delete_yesno)
+                    print("\n# FORM errors\n",form.errors,"\n NON-FIELD errors", form.non_field_errors)
+                    if form.is_valid() and target_component_id != 'None':
+                        print("ID: ",form.cleaned_data.get('id'))
+                        print("Source: ",form.cleaned_data.get('source_component'))
+                        print("Target: ",target_component_id)
+                        print("Active: ",form.cleaned_data.get('active'))
+                        print("Delete: ",delete_yesno)
+                        print("valid? ",form.is_valid()) # DEBUG
 
-                    # print("Valid, saved - #",form.cleaned_data.get('id')) # DEBUG
-                    try:
-                        # If object with this ID exists -> update
-                        if form.cleaned_data.get('id') == None:
-                            print("NONE - set to 0")
-                                                
-                        target_component = MappingCodesystemComponent.objects.get(id=target_component_id)
-                        source_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
-                        project = MappingProject.objects.get(id=int(kwargs.get('project')))
-                        print("Target component: ",target_component)
-                        if delete_yesno == 'on':
-                            obj = MappingRule.objects.get(id=form.cleaned_data.get('id')).delete()
-                            print(obj, "deleted")
-                        else:
-                            obj = MappingRule.objects.get(id=form.cleaned_data.get('id'))
-                            obj.project_id.id=project
-                            obj.target_component=target_component
+                        # print("Valid, saved - #",form.cleaned_data.get('id')) # DEBUG
+                        try:
+                            # If object with this ID exists -> update
+                            if form.cleaned_data.get('id') == None:
+                                print("NONE - set to 0")
+                                                    
+                            
+                            if project.project_type == "1": # One to many
+                                target_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                source_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            elif project.project_type == "2": # Many to one
+                                source_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                target_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            elif project.project_type == "4": # ECL to one
+                                source_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                target_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            else:
+                                print("No support for this project type in TaskEditorPageView POST method [3]")
+                            
+                            print("Target component: ",target_component)
+                            if delete_yesno == 'on':
+                                obj = MappingRule.objects.get(id=form.cleaned_data.get('id')).delete()
+                                print(obj, "deleted")
+                            else:
+                                obj = MappingRule.objects.get(id=form.cleaned_data.get('id'))
+                                obj.project_id.id=project
+                                if project.project_type == "1": # One to many
+                                    obj.target_component=target_component
+                                elif project.project_type == "2": # Many to one
+                                    obj.target_component=source_component
+                                elif project.project_type == "4": # ECL to one
+                                    obj.target_component=source_component
+                                else:
+                                    print("No support for this project type in TaskEditorPageView POST method [1]")
 
-                            obj.mapgroup=form.cleaned_data.get('mapgroup')
-                            obj.mappriority=form.cleaned_data.get('mappriority')
-                            obj.mapcorrelation=form.cleaned_data.get('mapcorrelation')
-                            obj.mapadvice=form.cleaned_data.get('mapadvice')
-                            obj.maprule=form.cleaned_data.get('maprule')
+                                obj.mapgroup=form.cleaned_data.get('mapgroup')
+                                obj.mappriority=form.cleaned_data.get('mappriority')
+                                obj.mapcorrelation=form.cleaned_data.get('mapcorrelation')
+                                obj.mapadvice=form.cleaned_data.get('mapadvice')
+                                obj.maprule=form.cleaned_data.get('maprule')
 
-                            obj.active = form.cleaned_data.get('active')
+                                obj.active = form.cleaned_data.get('active')
+                                obj.save()
+
+                            print("Object exists") # DEBUG
+                        except Exception as e:
+                            print (e)
+                            # If object with this ID does not exist -> create
+                            print("Object does not exist") # DEBUG
+                            project = MappingProject.objects.get(id=int(kwargs.get('project')))
+
+                            if project.project_type == "1": # One to many
+                                target_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                source_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            elif project.project_type == "2": # Many to one
+                                source_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                target_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            elif project.project_type == "4": # ECL to one
+                                source_component = MappingCodesystemComponent.objects.get(id=target_component_id)
+                                target_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
+                            else:
+                                print("No support for this project type in TaskEditorPageView POST method [2]")
+
+                            
+                            obj = MappingRule.objects.create(
+                                project_id=project,
+                                source_component=source_component,
+                                target_component=target_component,
+                                mapgroup=form.cleaned_data.get('mapgroup'),
+                                mappriority=form.cleaned_data.get('mappriority'),
+                                mapcorrelation=form.cleaned_data.get('mapcorrelation'),
+                                mapadvice=form.cleaned_data.get('mapadvice'),
+                                maprule=form.cleaned_data.get('maprule'),
+                                active = form.cleaned_data.get('active')
+                                )
                             obj.save()
+                            print("Object created")
+                        # Save object
+                    else:
+                        print("Not valid or empty target, not saved") # DEBUG
+            
+            # Handle project of type ECL-1
+            elif project.project_type == "4":
+                print("POST for ECL-1 is still WIP")
+                return HttpResponseRedirect(reverse('mapping:index'))
 
-                        print("Object exists") # DEBUG
-                    except Exception as e:
-                        print (e)
-                        # If object with this ID does not exist -> create
-                        print("Object does not exist") # DEBUG
-                        target_component = MappingCodesystemComponent.objects.get(id=target_component_id)
-                        source_component = MappingCodesystemComponent.objects.get(id=form.cleaned_data.get('source_component'))
-                        project = MappingProject.objects.get(id=int(kwargs.get('project')))
-                        obj = MappingRule.objects.create(
-                            project_id=project,
-                            source_component=source_component,
-                            target_component=target_component,
-                            mapgroup=form.cleaned_data.get('mapgroup'),
-                            mappriority=form.cleaned_data.get('mappriority'),
-                            mapcorrelation=form.cleaned_data.get('mapcorrelation'),
-                            mapadvice=form.cleaned_data.get('mapadvice'),
-                            maprule=form.cleaned_data.get('maprule'),
-                            active = form.cleaned_data.get('active')
-                            )
-                        obj.save()
-                        print("Object created")
-                    # Save object
-                else:
-                    print("Not valid or empty target, not saved") # DEBUG
             # Start audit on current item
             audit_async.delay('multiple_mapping', kwargs.get('project'), kwargs.get('task'))
                 
@@ -1307,10 +1725,12 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
         }
 
         # Render page
-        if current_project.project_type == "1":
+        if current_project.project_type == "1": # 1-n
             return render(request, 'mapping/1-n/task_editor.html', context)
-        elif current_project.project_type == "2":
+        elif current_project.project_type == "2": # n-1
             return render(request, 'mapping/n-1/task_editor.html', context)
+        elif current_project.project_type == "4": # ECL-1
+            return render(request, 'mapping/ecl-1/task_editor.html', context)
 
 class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
     '''
@@ -1328,29 +1748,55 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
         current_project = MappingProject.objects.get(id=current_task.project_id.id, active=True)
 
         # Fetch mappings
-        mappings = MappingRule.objects.filter(
-            source_component=current_task.source_component,
-            project_id=current_task.project_id,
-            ).order_by('-active', 'mappriority')
-        mapping_list = []
-        for mapping in mappings:
-            component_data = MappingCodesystemComponent.objects.get(id=mapping.target_component.id)
-            codesystem_data = MappingCodesystem.objects.get(id=component_data.codesystem_id.id)
-            mapping_list.append({
-                    'id' : mapping.id,
-                    # 'project_id' : mapping.project_id,
-                    'source_component' : mapping.source_component.id,
-                    'target_component' : mapping.target_component.id,
-                    'target_component_codesystem' : codesystem_data.codesystem_title,
-                    'target_component_term' : component_data.component_title,
-                    'target_component_ident' : component_data.component_id,
-                    'mapgroup' : mapping.mapgroup,
-                    'mappriority' : mapping.mappriority,
-                    'mapcorrelation' : mapping.mapcorrelation,
-                    'mapadvice' : mapping.mapadvice,
-                    'maprule' : mapping.maprule,
-                    'active' : mapping.active,
-                })
+        if current_project.project_type == "1":
+            mappings = MappingRule.objects.filter(
+                source_component=current_task.source_component,
+                project_id=current_task.project_id,
+                ).order_by('-active', 'mappriority')
+            mapping_list = []
+            for mapping in mappings:
+                component_data = MappingCodesystemComponent.objects.get(id=mapping.target_component.id)
+                codesystem_data = MappingCodesystem.objects.get(id=component_data.codesystem_id.id)
+                mapping_list.append({
+                        'id' : mapping.id,
+                        # 'project_id' : mapping.project_id,
+                        'source_component' : mapping.source_component.id,
+                        'target_component' : mapping.target_component.id,
+                        'target_component_codesystem' : codesystem_data.codesystem_title,
+                        'target_component_term' : component_data.component_title,
+                        'target_component_ident' : component_data.component_id,
+                        'mapgroup' : mapping.mapgroup,
+                        'mappriority' : mapping.mappriority,
+                        'mapcorrelation' : mapping.mapcorrelation,
+                        'mapadvice' : mapping.mapadvice,
+                        'maprule' : mapping.maprule,
+                        'active' : mapping.active,
+                    })
+        elif current_project.project_type == "2":
+            mappings = MappingRule.objects.filter(
+                target_component=current_task.source_component,
+                project_id=current_task.project_id,
+                ).order_by('-active', 'mappriority')
+            mapping_list = []
+            for mapping in mappings:
+                component_data = MappingCodesystemComponent.objects.get(id=mapping.source_component.id)
+                codesystem_data = MappingCodesystem.objects.get(id=component_data.codesystem_id.id)
+                mapping_list.append({
+                        'id' : mapping.id,
+                        # 'project_id' : mapping.project_id,
+                        'source_component' : mapping.source_component.id,
+                        'target_component' : mapping.target_component.id,
+                        'target_component_codesystem' : codesystem_data.codesystem_title,
+                        'target_component_term' : component_data.component_title,
+                        'target_component_ident' : component_data.component_id,
+                        'mapgroup' : mapping.mapgroup,
+                        'mappriority' : mapping.mappriority,
+                        'mapcorrelation' : mapping.mapcorrelation,
+                        'mapadvice' : mapping.mapadvice,
+                        'maprule' : mapping.maprule,
+                        'active' : mapping.active,
+                    })
+
         
         # Put mappings in forms
         MappingFormSet = formset_factory(MappingForm, can_delete=True)
@@ -1373,14 +1819,22 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
         for perm in db_permissions:
             permissions.append(perm)
         
-        return render(request, 'mapping/1-n/mapping_target_list_v2.html', {
-            'page_title': 'Commentaar',
-            'formset' : formset,
-            'current_task' : current_task,
-            'current_user' : current_user,
-            'permissions': permissions,
-            'current_project' : current_project,
-        })
+
+        context = {
+                'page_title': 'Commentaar',
+                'formset' : formset,
+                'current_task' : current_task,
+                'current_user' : current_user,
+                'permissions': permissions,
+                'current_project' : current_project,
+            }
+
+        if current_project.project_type == "1":    
+            return render(request, 'mapping/1-n/mapping_target_list_v2.html', context)
+        elif current_project.project_type == "2":    
+            return render(request, 'mapping/n-1/mapping_target_list_v2.html', context)
+        elif current_project.project_type == "4":    
+            return render(request, 'mapping/ecl-1/ecl_result.html', context)
 
 
 class ViewEventsPageView(UserPassesTestMixin,TemplateView):
@@ -1472,10 +1926,20 @@ class GetAuditsForTask(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         task = MappingTask.objects.get(id=kwargs.get('task'))
         audits = MappingTaskAudit.objects.filter(task=task)
-        
+        whitelist = audits.filter(ignore=True)
+        whitelist_num = whitelist.count()
+            # Lookup permissions      
+        db_permissions = request.user.groups.values_list('name', flat=True)
+        permissions = []
+        for perm in db_permissions:
+            permissions.append(perm)
+
         return render(request, 'mapping/audit_results_current_task.html', {
         'page_title': 'Audit results',
+        'permissions' : permissions, 
         'audits' : audits,
+        'whitelist' : whitelist,
+        'whitelist_num' : whitelist_num,
         })
 
 class AjaxTestView(UserPassesTestMixin,TemplateView):

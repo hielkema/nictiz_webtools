@@ -1,6 +1,6 @@
 from django import forms
 from .models import *
-from django_select2.forms import HeavySelect2Widget
+# from django_select2.forms import HeavySelect2Widget
 
 class MappingForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput(), label='id', max_length=100)
@@ -28,13 +28,10 @@ class MappingForm(forms.Form):
     target_component_term = forms.CharField(label='target_component_term', max_length=100)
     active = forms.BooleanField(label='active', required=False, widget=forms.HiddenInput()) #widget=forms.CheckboxInput())
 
-    # Werkt wel, maar maakt site extreem traag bij renderen van de dropdown
-    # target_component_dropdown = forms.ModelChoiceField(
-    #     widget=forms.Select(attrs={'class': 'js-example-basic-single', 'style':'width:300px'}),
-    #     empty_label="None",
-    #     # queryset=None,  
-    #     queryset=MappingCodesystem.objects.values_list("codesystem_title", flat=True).distinct(),
-    # )
+class MappingFormEclQuery(forms.Form):
+    source_component = forms.CharField(widget=forms.HiddenInput(), label='source_component', max_length=100)
+    source_component_ident = forms.CharField(label='source_component_ident', required=False, max_length=100)
+    source_component_term = forms.CharField(label='source_component_term', required=False, max_length=100)
 
 class SnomedUpdateForm(forms.Form):
     codesystem = forms.CharField(label='codesystem', max_length=100)
@@ -59,5 +56,26 @@ class TaskManagerForm(forms.Form):
     task_id            = forms.CharField(widget=forms.HiddenInput(), label='task_id', max_length=100, required=False)
     source_component   = forms.CharField(label='source_component', max_length=500, required=False)
     target_component   = forms.CharField(label='target_component', max_length=500, required=False)
-    status               = forms.CharField(label='status', max_length=500, required=False)
+    status             = forms.CharField(label='status', max_length=500, required=False)
     user               = forms.CharField(label='user', max_length=500, required=False)
+
+class EclQueryForm(forms.Form):
+    query = forms.CharField(widget=forms.TextInput(attrs={'class':'form-control'}))
+
+class EclQueryBuilderForm(forms.Form):
+    query_id    = forms.IntegerField(widget=forms.HiddenInput(), label='query_id')
+    type_options = [
+        # (code, readable)
+        ('1', 'Descendants'),
+        ('2', 'Descendants and self'),
+        ('3', 'Custom'),
+    ]
+    query_type = forms.CharField(label='Query Type', widget=forms.Select(choices=type_options, attrs={'class':'form-control'}), required=False)
+    function_options = [
+        # (code, readable)
+        ('1', 'MINUS'),
+        ('2', 'ADD'),
+        ('3', 'Custom'),
+    ]
+    query_function = forms.CharField(label='Query function', widget=forms.Select(choices=function_options, attrs={'class':'form-control'}), required=False)  
+    query = forms.CharField(widget=forms.Textarea(attrs={"rows":2, "cols":42, "class":'form-control'}))

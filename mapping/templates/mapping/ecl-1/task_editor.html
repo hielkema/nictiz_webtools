@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row">
-  <div class="col col-sm-3">
+  <div class="col col-sm-2">
     <div class="card">
       <div class="card-header text-white bg-info">
         <h5 class="card-title">Taken</h5>
@@ -55,7 +55,7 @@
       </div>
       <div class="card-body" style="height: 600px; overflow:auto;">
           {% for value in tasks.values %}
-              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}?page={{current.page}}" style="text-decoration : none">
+              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}?page={{current_page}}" style="text-decoration : none">
                 <span style="display: block;">  
                   {% if value.id == current_task.id %}
                   <li class="list-group-item list-group-item-info">
@@ -89,23 +89,25 @@
     </div>
   </div>
 
-  <div class="col col-sm-5">
+  <div class="col col-sm-6">
     <div class="card">
-        <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
+        <div class="card-header text-white bg-info"><h5 class="card-title">Bron</h5></div>
     </div>
     {% comment %} TODO -HIDE IF SOURCE IS NOT SNOMED {% endcomment %}
-    <div id="eclQuery">
+    <form action="{% url "mapping:index" %}ecl_query_builder/{{current_task.id}}/" method="POST" id="save_ecl_query">
+      <div id="eclQuery">
+      </div>
+      <div class="card" style="width:100%"><input type="submit" value="Opslaan" id="save_ecl_query_button" class="form-control"></div>
+    </form> 
 
-    </div>
-    
-    <form method="post" id="post_mappings" class="form-inline">
+      <br>
+
+      <div class="card" style="width:100%"><input type="button" value="Herladen" id="mapping_target_recalc_button" class="form-control"></div>
+      
+
       <div id="mappingtargets" style="width:100%">
             
       </div>
-      {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
-      <div class="card" style="width:100%"><input type="submit" value="Opslaan" id="mapping_target_save" class="form-control"></div>
-      {% endif %}
-    </form>
 
   </div>
 
@@ -170,6 +172,28 @@
 </div>
 
 <script>
+$(document).ready(function(){
+    $("#save_ecl_query").submit(function(e) {
+        e.preventDefault(); // avoid to execute the actual submit of the form.
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+              type: "POST",
+              url: url,
+              data: form.serialize(), // serializes the form's elements.
+              async: true,
+              success: function(data)
+              {
+                $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
+                  $("#eclQuery").html(result);
+                }});
+              }
+            });
+    });
+});
+
 {% comment %} If user has permission to edit mappings -> handle post {% endcomment %}
 {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
   $(document).ready(function(){
@@ -200,15 +224,21 @@
 {% else %}
 {% comment %} If user has no permission to edit mappings -> refresh every 5 seconds {% endcomment %}
   setInterval(function(){
-      $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+      $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
         $("#mappingtargets").html(result);
       }});
     }, 5000);
 {% endif %}
 
-{% comment %} Load mapping targets {% endcomment %}
+{% comment %} Reload mappings {% endcomment %}
+$( "#mapping_target_recalc_button" ).click(function() {
+  $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+  }});
+});
+{% comment %} Load results of ECL query {% endcomment %}
 $(document).ready(function loadTargets(){
-    $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+    $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
       $("#mappingtargets").html(result);
     }});
   });
@@ -228,7 +258,7 @@ $(document).ready(function(){
     }, 1000);
 
 {% comment %} Load ECL query box {% endcomment %}
-    $.ajax({url: "/mapping/ecl_query/{{current_task.id}}", success: function(result){
+    $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
       $("#eclQuery").html(result);
     }});
 

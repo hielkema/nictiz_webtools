@@ -13,6 +13,7 @@ class MappingProject(models.Model):
         ('1', 'One to Many'),
         ('2', 'Many to One'),
         ('3', 'Many to Many'),
+        ('4', 'Snomed ECL to one'),
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
@@ -125,6 +126,27 @@ class MappingRule(models.Model):
 
     # def __str__(self):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
+
+class MappingEclQuery(models.Model):
+    project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
+    target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
+    query               = models.TextField(default=None, blank=True, null=True)
+    
+    type_options = [
+        # (code, readable)
+        ('1', 'Children'),
+        ('2', 'Descendants and self'),
+        ('3', 'Custom'),
+    ]
+    query_type  = models.CharField(max_length=50, choices=type_options, default=None, blank=True, null=True)
+
+    function_options = [
+        # (code, readable)
+        ('1', 'MINUS'),
+        ('2', 'ADD'),
+        ('3', 'Custom'),
+    ]
+    query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
 
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)

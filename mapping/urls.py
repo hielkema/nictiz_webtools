@@ -24,6 +24,10 @@ urlpatterns = [
     url(r'change_user/(?P<task>\w+)/(?P<user>\w+)', views.ChangeUserPageView.as_view(), name='change_user'),
 
     # url(r'ajax_test', views.AjaxTestView.as_view(), name='ajax_test'),
+    url(r'ecl_query/(?P<task_id>\w+)', views.AjaxSimpleEclQuery.as_view(), name='ecl_query'),
+    url(r'ecl_query_builder_results/(?P<task_id>\w+)', views.AjaxEclQueryMapResults.as_view(), name='ecl_query_builder_results'),
+    url(r'ecl_query_builder/(?P<task_id>\w+)', views.AjaxEclQueryMapBuilder.as_view(), name='ecl_query_builder'),
+    url(r'whitelist_audit/(?P<audit>\w+)', views.AjaxWhitelistAudit.as_view(), name='whitelist_audit'),
     url(r'show_events/(?P<task>\w+)', views.ViewEventsPageView.as_view(), name='show_events'),
     url(r'mapping_target_list/(?P<task>\w+)', views.MappingTargetListPageView.as_view(), name='mapping_target_list'),
     url(r'get_current_status/(?P<task>\w+)', views.GetCurrentStatus.as_view(), name='get_current_status'),
