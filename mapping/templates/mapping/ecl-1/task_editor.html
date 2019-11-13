@@ -243,18 +243,7 @@ $(document).ready(function(){
     }, 5000);
 {% endif %}
 
-{% comment %} Reload mappings {% endcomment %}
-$( "#mapping_target_recalc_button" ).click(function() {
-  $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
-      $("#mappingtargets").html(result);
-  }});
-});
-{% comment %} Load results of ECL query {% endcomment %}
-$(document).ready(function loadTargets(){
-    $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
-      $("#mappingtargets").html(result);
-    }});
-  });
+
 
 {% comment %} Load and refresh task status {% endcomment %}
 $(document).ready(function(){ 
@@ -320,6 +309,19 @@ $(document).ready(function(){
             });
     });
 });
+
+{% comment %} Reload mappings {% endcomment %}
+$( "#mapping_target_recalc_button" ).click(function() {
+  $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+  }});
+});
+{% comment %} Load results of ECL query {% endcomment %}
+$(document).ready(function loadTargets(){
+    $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+    }});
+  });
 </script>
 
 
