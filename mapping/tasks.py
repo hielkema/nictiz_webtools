@@ -47,16 +47,14 @@ def import_snomed_async(focus=None, codesystem=None):
 
 @shared_task
 def add_mappings_ecl_1_task(task=None, query=False):
-    if query != False:
-        snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
-        results = snowstorm.findConcepts(ecl=query)
-    
     task = MappingTask.objects.get(id=task)
     # Delete existing rules
     rules = MappingRule.objects.filter(target_component=task.source_component)
     rules.delete()
-    
-    if query != False:   
+
+    if query != False:
+        snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+        results = snowstorm.findConcepts(ecl=query)
         for result in results.values():
             # Snomed is hardcoded id 1. TODO - make this flexible
             source = MappingCodesystemComponent.objects.get(
