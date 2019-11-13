@@ -257,7 +257,7 @@ $(document).ready(function(){
       $.ajax({url: "/mapping/get_current_status/{{current_task.id}}", success: function(result){
         $("#currentTaskStatus").html(result);
       }});
-    }, 1000);
+    }, 60000);
 
 {% comment %} Load ECL query box {% endcomment %}
     $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
