@@ -40,7 +40,7 @@
                         <tbody>
                             {% for task in task_list %}
                             <tr>
-                                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{task.task_id}}" >{{ task.task_id }}</a></td>
+                                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{task.task_id}}" target="_blank">{{ task.task_id }}</a></td>
                                 <td>[{{task.source_component.component_id}}] {{task.source_component.component_title}}</td>
                                 <td>{{ task.num_mappings }}</td>
                                 <td>
