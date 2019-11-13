@@ -123,6 +123,12 @@ def audit_async(audit_type=None, project=None, task_id=None):
                                 audit_type=audit_type,
                                 hit_reason='Regel heeft geen mapadvice',
                             )
+                if rule.source_component == rule.target_component:
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Regel mapt naar zichzelf',
+                            )
             # Look for rules with the same target component
             for target in mapping_targets:
                 other_rules = MappingRule.objects.filter(target_component=target)
