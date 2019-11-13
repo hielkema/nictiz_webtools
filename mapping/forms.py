@@ -66,16 +66,15 @@ class EclQueryBuilderForm(forms.Form):
     query_id    = forms.IntegerField(widget=forms.HiddenInput(), label='query_id')
     type_options = [
         # (code, readable)
-        ('1', 'Descendants'),
         ('2', 'Descendants and self'),
+        ('1', 'Descendants'),
         ('3', 'Custom'),
     ]
     query_type = forms.CharField(label='Query Type', widget=forms.Select(choices=type_options, attrs={'class':'form-control'}), required=False)
     function_options = [
         # (code, readable)
-        ('1', 'MINUS'),
         ('2', 'ADD'),
-        ('3', 'Custom'),
+        ('1', 'MINUS'),
     ]
     query_function = forms.CharField(label='Query function', widget=forms.Select(choices=function_options, attrs={'class':'form-control'}), required=False)  
     query = forms.CharField(widget=forms.Textarea(attrs={"rows":2, "cols":42, "class":'form-control'}))

@@ -97,12 +97,12 @@
     <form action="{% url "mapping:index" %}ecl_query_builder/{{current_task.id}}/" method="POST" id="save_ecl_query">
       <div id="eclQuery">
       </div>
-      <div class="card" style="width:100%"><input type="submit" value="Opslaan" id="save_ecl_query_button" class="form-control"></div>
+      <div class="card" style="width:100%"><input type="submit" value="Genereer ECL en start Snowstorm query" id="save_ecl_query_button" class="form-control"></div>
     </form> 
 
       <br>
 
-      <div class="card" style="width:100%"><input type="button" value="Herladen" id="mapping_target_recalc_button" class="form-control"></div>
+      <div class="card" style="width:100%"><input type="button" value="Forceer herladen" id="mapping_target_recalc_button" class="form-control"></div>
       
 
       <div id="mappingtargets" style="width:100%">
@@ -202,6 +202,9 @@ $(document).ready(function(){
                 $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
                   $("#eclQuery").html(result);
                 }});
+                $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+                  $("#mappingtargets").html(result);
+                }});
               }
             });
     });
@@ -234,14 +237,13 @@ $(document).ready(function(){
               });
       });
   });
-{% else %}
-{% comment %} If user has no permission to edit mappings -> refresh every 5 seconds {% endcomment %}
+{% endif %}
+{% comment %} Refresh results of ECL query every 5 seconds {% endcomment %}
   setInterval(function(){
       $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
         $("#mappingtargets").html(result);
       }});
     }, 5000);
-{% endif %}
 
 
 

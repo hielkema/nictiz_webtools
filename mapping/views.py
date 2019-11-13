@@ -268,7 +268,10 @@ class AjaxEclQueryMapBuilder(UserPassesTestMixin,TemplateView):
         task_id = int(kwargs.get('task_id'))
         task = MappingTask.objects.get(id=task_id)
         try:
-            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
+            current_user = User.objects.get(id=request.user.id)
+            
+            # Generate query list for view
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('query_function')
             query_list = []
             for query in querys:
                 query_list.append({
@@ -281,7 +284,6 @@ class AjaxEclQueryMapBuilder(UserPassesTestMixin,TemplateView):
             formset = MappingFormSet(initial=query_list)
 
             # Generate ECL query
-            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
             query_add_list = []
             query_min_list = []
 
@@ -322,11 +324,19 @@ class AjaxEclQueryMapBuilder(UserPassesTestMixin,TemplateView):
                 generated_query = False
                 results = []
 
+            # Lookup edit rights for mapping      
+            db_permissions = request.user.groups.values_list('name', flat=True)
+            permissions = []
+            for perm in db_permissions:
+                permissions.append(perm)
+
             return render(request, 'mapping/ecl-1/ecl_query_build_form.html', {
                 'page_title': 'ECL query Snowstorm',
                 'task' : task,
                 'generated_query' : generated_query,
                 'formset' : formset,
+                'permissions' : permissions,
+                'current_user' : current_user,
                 })
         except Exception as e:
                 return render(request, 'mapping/error.html', {
@@ -487,8 +497,8 @@ class AjaxEclQueryMapResults(UserPassesTestMixin,TemplateView):
             else:
                 return render(request, 'mapping/notice_no_layout.html', {
                 'page_title': 'Error',
-                'header': 'Er loopt nog een proces voor deze taak.',
-                'notice_text' : 'Vernieuw de taak om de status te controleren.',
+                'header': 'Er loopt nog een proces voor deze taak',
+                'notice_text' : 'Wacht tot dit venster zich automatisch vernieuwt (5 seconden), of klik op Forceer herladen.',
                 })
 
             return render(request, 'mapping/ecl-1/ecl_query_results.html', {
