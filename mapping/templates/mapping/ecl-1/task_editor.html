@@ -106,7 +106,7 @@
       
 
       <div id="mappingtargets" style="width:100%">
-            
+            Laden......
       </div>
 
   </div>
@@ -129,6 +129,19 @@
           </table>
         </div>
       </div>
+
+      {% if reverse_mappings %}
+        <div class="card">
+          <div class="card-header text-white bg-info"><h5 class="card-title">Reverse</h5></div>
+          <div class="card-body">
+            <table class="table table-hover table-sm">
+            {% for mapping in reverse_mappings %}
+              <tr><td>{{mapping.target_component.codesystem_id.codesystem_title}}</td><td>{{mapping.target_component.component_id}}</td><td>{{mapping.target_component.component_title}}</td></tr>
+            {% endfor %}
+            </table>
+          </div>
+        </div>
+      {% endif %}
 
       <div id="auditresults"></div>
       <div id="currentTaskStatus"></div>

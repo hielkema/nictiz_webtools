@@ -1702,6 +1702,12 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'status' : current_task.status.id,
         }
 
+        # Get reverse mappings for relevant project types
+        if current_project.project_type == "4": 
+            reverse_mappings = MappingRule.objects.filter(source_component=current_task.source_component)
+        else:
+            reverse_mappings = False
+
         context = {
             'page_title': 'Mapping project',
             'current_project' :  current_project,
@@ -1714,6 +1720,7 @@ class TaskEditorPageView(UserPassesTestMixin,TemplateView):
             'objects'   : objects,
             'comments_form' : comments_form,
             'source_component' : source_component,
+            'reverse_mappings' : reverse_mappings,
             'current_user' : current_user,
             'events' : events_list,
             'status_list' : status_list,
