@@ -25,6 +25,7 @@ urlpatterns = [
     path(r'medicatie/', include('atc_lookup.urls')),
     path(r'build_tree_excel/', include('build_tree_excel.urls')),
     path(r'build_tree/', include('build_tree.urls')), 
+    path(r'snomed_list/', include('snomed_list_generator.urls')), 
     path(r'mapping/', include('mapping.urls')), 
     url(r'^select2/', include('django_select2.urls')),
     path(r'', include('homepage.urls')),

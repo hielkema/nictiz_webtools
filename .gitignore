@@ -115,6 +115,7 @@ postgres_backup/*.bak
 **/*.xlsx
 **/*.csv
 mapping/**/*.txt
+**/*.pickle
 
 # Server specific
 reverse-proxy/
