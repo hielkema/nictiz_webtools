@@ -2,4 +2,7 @@
 git pull
 docker-compose -f prod.yml build #--no-cache
 docker-compose -f prod.yml up -d
+docker-compose exec python python manage.py makemigrations
+docker-compose exec python python manage.py migrate
+docker-compose exec python python manage.py collectstatic
 docker-compose -f prod.yml logs -f
