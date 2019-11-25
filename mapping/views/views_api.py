@@ -563,7 +563,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
         payload = request.POST
 
         task = MappingTask.objects.get(id=kwargs.get('task'))
-        mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
+        mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component).order_by('mappriority')
         mapping_list = []
         for mapping in mappings:
             mapcorrelation = mapping.mapcorrelation
