@@ -12,8 +12,6 @@ from django.urls import reverse
 from django.db.models import Q
 from datetime import datetime
 from celery.task.control import inspect, revoke
-from .forms import *
-from .models import *
 from pandas import read_excel
 import sys, os
 import environ
@@ -27,7 +25,9 @@ url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/'
     branch+'/snowstorm_client.py'
 urllib.request.urlretrieve(url, 'snowstorm_client.py')
 from snowstorm_client import Snowstorm
-from .tasks import *
+from ..tasks import *
+from ..forms import *
+from ..models import *
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -674,7 +674,7 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
                 }})
         else:
             print("###########################\n",form.errors,"\n", form.non_field_errors)
-        return render(request, 'mapping/task_create.html', {
+        return render(request, 'mapping/v2/task_create.html', {
             'page_title': 'Mapping project',
             'project' : project,
             'projects' : project_list,
@@ -693,7 +693,7 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
 
         form = TaskCreateForm()
 
-        return render(request, 'mapping/task_create.html', {
+        return render(request, 'mapping/v2/task_create.html', {
             'page_title': 'Mapping project',
             'form': form,
             'projects' : project_list,
@@ -727,7 +727,7 @@ class UpdateSnomedPageView(UserPassesTestMixin,TemplateView):
         # TODO - Check permissions for this
         form = SnomedUpdateForm()
 
-        return render(request, 'mapping/update_snomed.html', {
+        return render(request, 'mapping/v2/update_snomed.html', {
             'page_title': 'Mapping project',
             'form': form,
         })
@@ -776,7 +776,7 @@ class UpdateNHGPageView(UserPassesTestMixin,TemplateView):
                 }})
         else:
             print("###########################\n",form.errors,"\n", form.non_field_errors)
-        return render(request, 'mapping/update_nhg.html', {
+        return render(request, 'mapping/v2/update_nhg.html', {
             'page_title': 'Mapping project',
             'result': handled,
         })
@@ -784,7 +784,7 @@ class UpdateNHGPageView(UserPassesTestMixin,TemplateView):
         # TODO - Check permissions for this
         form = NHGUpdateForm()
 
-        return render(request, 'mapping/update_nhg.html', {
+        return render(request, 'mapping/v2/update_nhg.html', {
             'page_title': 'Mapping project',
             'form': form,
         })
@@ -1226,7 +1226,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             task_id = task.id
             print("TASK ID ******", task_id)
 
-            return render(request, 'mapping/notice.html', {
+            return render(request, 'mapping/v2/notice.html', {
             'page_title': 'Succes',
             'header' : 'Audit tool',
             'notice_text': 'Alle audits worden op de achtergrond uitgevoerd. Resultaten zijn te zien via /show.',
@@ -1256,7 +1256,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             except EmptyPage:
                 objects = paginator.page(paginator.num_pages)
             
-            return render(request, 'mapping/audit_results.html', {
+            return render(request, 'mapping/v2/audit_results.html', {
             'page_title': 'Alle audit resultaten',
             'heading': 'Alle audit resultaten voor het huidige project',
             'project_id' : project,
@@ -1306,7 +1306,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
                     })
             # print(task_map_list)
             # Render page
-            return render(request, 'mapping/task_audit.html', {
+            return render(request, 'mapping/v2/task_audit.html', {
                 'page_title': 'Mapping project',
                 'task_list' : task_map_list,
                 'project_id' : project,
@@ -1432,7 +1432,7 @@ class TaskManagerPageView(UserPassesTestMixin,TemplateView):
         formset = TaskManagerFormSet(initial=task_list)
         
         # Render page
-        return render(request, 'mapping/taskmanager.html', {
+        return render(request, 'mapping/v2/taskmanager.html', {
             'page_title': 'Mapping project',
             'project_list' :  project_list,
             'all_statuses' : all_statuses,
@@ -1852,7 +1852,6 @@ class MappingTargetListPageView(UserPassesTestMixin,TemplateView):
             return render(request, 'mapping/n-1/mapping_target_list_v2.html', context)
         elif current_project.project_type == "4":    
             return render(request, 'mapping/ecl-1/ecl_result.html', context)
-
 
 class ViewEventsPageView(UserPassesTestMixin,TemplateView):
     '''

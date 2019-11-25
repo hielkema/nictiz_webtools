@@ -1,0 +1,614 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+{% block content %}
+
+<style>
+  img {
+    height: auto;
+    max-width: 2.5rem;
+    margin-right: 1rem;
+  }
+  
+  .d-center {
+    display: flex;
+    align-items: center;
+  }
+  
+  .selected img {
+    width: auto;
+    max-height: 23px;
+    margin-right: 0.5rem;
+  }
+  
+  .v-select .dropdown li {
+    border-bottom: 1px solid rgba(112, 128, 144, 0.1);
+  }
+  
+  .v-select .dropdown li:last-child {
+    border-bottom: none;
+  }
+  
+  .v-select .dropdown li a {
+    padding: 10px 20px;
+    width: 100%;
+    font-size: 1.25em;
+    color: #3c3c3c;
+  }
+
+  .v-select .dropdown-menu .active > a {
+    color: #fff;
+  }
+</style>
+
+<div id="vue-task-editor">
+  <div class="row">
+    <div class="col col-sm-3">
+        <div class="card">
+        <div class="card-header text-white bg-info">
+            <h5 class="card-title">Filters</h5>
+        </div>
+        <div class="card-body">
+            <select class="form-control" v-model="filterUser">
+              <option value="" key="">Alle gebruikers</option>
+              <option v-for="(value, key) in userList" :selected="value.id == currentUser.id" :value="value.id" :key="value.id">
+                [[value.username]]
+              </option>
+            </select>
+            <select class="form-control" v-model="filterStatus">
+              <option value="" key="">Alle statussen</option>
+              <option v-for="(value, key) in statusList" :selected="filterStatus == key" :value="value.id" :key="value.id">[[value.title]]</option>
+            </select>
+        </div>
+        </div>
+        <div class="card">
+        <div class="card-header text-white bg-info">
+            <h5 class="card-title">Taken</h5>
+        </div>
+        <div class="card-body" style="height: 600px; overflow:auto;">
+          <span v-if="loading">Test</span>
+          <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
+              <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
+              [[task.component.title]]<br>
+              <small>[[task.status.title]] @ [[task.user.name]]</small>
+              </li>
+          </span>
+        </div>
+
+        <form>
+            TO-DO: Task search
+        </form>
+        </div>
+    </div>
+
+    <div class="col col-sm-5">
+      <div v-if="currentTask.id">
+        <div class="card">
+          <div class="card-header text-white bg-info"><h5 class="card-title">Te mappen concept</h5></div>
+          <div class="card-body">
+              <table class="table table-hover table-sm">                  
+                <tr><th style="width: 150px">Terminologie: </th><td>[[currentTask.component.codesystem.title]] [[currentTask.component.codesystem.version]]</td></tr>
+                <tr><th style="width: 150px">Term: </th><td>[[currentTask.component.title]] </td></tr>
+                <tr v-if="currentTask.component.extra_1"><td style="width: 150px">[[currentTask.component.extra_1.label]]: </td><td>[[currentTask.component.extra_1.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_2"><td style="width: 150px">[[currentTask.component.extra_2.label]]: </td><td>[[currentTask.component.extra_2.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_3"><td style="width: 150px">[[currentTask.component.extra_3.label]]: </td><td>[[currentTask.component.extra_3.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_4"><td style="width: 150px">[[currentTask.component.extra_4.label]]: </td><td>[[currentTask.component.extra_4.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_5"><td style="width: 150px">[[currentTask.component.extra_5.label]]: </td><td>[[currentTask.component.extra_5.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_6"><td style="width: 150px">[[currentTask.component.extra_6.label]]: </td><td>[[currentTask.component.extra_6.value]]</td></tr>
+                <tr v-if="currentTask.component.extra_7"><td style="width: 150px">[[currentTask.component.extra_7.label]]: </td><td>[[currentTask.component.extra_7.value]]</td></tr></div>
+                <tr><td style="width: 150px">Taak ID: </td><td>[[currentTask.id]]</td></tr>
+              </table>
+            </div>
+        </div>
+
+        <div>
+          <ul class="list-group">
+            <li v-for="audit in audits.hit" class="list-group-item list-group-item-danger">
+              [[audit.reason]]
+              <a href="#" class="fa fa-bell-slash" aria-hidden="true" v-on:click="whitelistAudit(audit.id)"> whitelist</a>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+            <div class="card-header">Status</div>
+            <div class="card-body">
+              <div v-if="permissions.includes('mapping | change task status')">
+                <div v-for="status in statusList">
+                    <button v-if="status.id == currentTask.status.id" style="float:left;" class="btn btn-info">[[status.title]]</button>
+                    <a v-else style="float:left;" v-on:click="changeTaskStatus(status.id)" class="btn btn-light">[[status.title]]</a>
+                </div>
+              </div><div v-else>
+                Huidige status is: <b>[[currentTask.status.title]]</b>
+              </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">Doorsturen naar
+              <div v-if="permissions.includes('mapping | change task status')">
+                <select name="changeUser" class="form-control" @change="changeTaskUser($event.target.value)">
+                  <option :selected="currentTask.user.id == user.id" v-for="user in userList" :value="user.id" :key="user.username">[[user.username]]</option>
+                </select>
+              </div><div v-else>
+                Huidige gebruiker is: <b>[[currentTask.user.name]]</b>
+              </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Commentaar</div>
+            <div class="card-body" v-if="permissions.includes('mapping | place comments')">
+              <form v-on:submit.prevent="postComment()">
+                <textarea class="form-control" v-model="newComment"></textarea>
+                <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
+                <button class="form-control">Submit</button>
+              </form>
+            </div>
+              <ul class="list-group">
+                <div v-for="event in eventList">
+                  <li v-if="event.type == 'comment'" class="list-group-item">
+                  [[event.text]]<br>
+                  [[event.action_user.name]] <small>@[[event.created]]</small>
+                  <span v-if="event.action_user.id == currentUser.id" class="fa fa-trash" aria-hidden="true" v-on:click="deleteComment(event.id)"> delete</span>
+                  </li>
+                  <li v-if="event.type == 'status_change'" class="list-group-item list-group-item-warning" >
+                    [[event.text]] <small>@[[event.created]]</small>
+                  </li>
+                  <li v-if="event.type == 'user_change'" class="list-group-item list-group-item-warning" >
+                    [[event.text]] <small>@[[event.created]]</small>
+                  </li>
+                </div>
+              </ul>
+        </div>
+      </div>
+    </div>
+  
+    <div class="col col-sm-4">
+      <div class="card" v-if="currentTask.id">
+        <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
+          <form v-on:submit.prevent="postMappings()">
+          <!-- <form method="post" id="post_mappings" class="form-inline"> -->
+            <fieldset v-bind:disabled="currentUser.id != currentTask.user.id">
+              <ul class="list-group">
+                <li v-for="mapping in mappingRules" v-bind:class="[{ 'list-group-item-success': mapping.id != 'extra' }, 'list-group-item']">
+                  <table style="width:100%">
+                    <tbody>
+                      <tr>
+                        <th width="130">Stelsel</th>
+                        <td>
+                          [[mapping.target.codesystem.title]] - [[mapping.target.component_id]]
+                          <input type="hidden" name="id" v-model="mapping.id">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Target</th>
+                        <td>
+                          [[mapping.target.component_title]]
+                        </td>
+                      </tr>
+                      <tr v-if="currentUser.id == currentTask.user.id">
+                        <th class="input-group-text">Wijzig</th>
+                        <td>
+                          <v-select v-model="mapping.target.new" name="newTarget" label="name" :filterable="false" :options="options" @search="onSearch">
+                            <template slot="option" slot-scope="option">
+                              <div class="d-center">
+                                [[option.codesystem.title]] [[option.component_title]]
+                              </div>
+                            </template>
+                          </v-select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td v-if="mapping.target.new" colspan="2"><b>Wordt gewijzigd in:</b><br>[[mapping.target.new.codesystem.title]] - [[mapping.target.new.component_title]]</td>
+                      </tr>
+                      <tr v-if="mappingProjectOptions.priority">
+                        <th class="input-group-text">Priority</th>
+                        <td>
+                          <input type="number" :required="mapping.id != 'extra'" type="text" name="priority" class="form-control" v-model="mapping.priority">
+                        </td>
+                      </tr>
+                      <tr v-if="mappingProjectOptions.rule">
+                        <th class="input-group-text">Rule</th>
+                        <td>
+                          <input type="text" name="rule" class="form-control" v-model="mapping.rule">
+                        </td>
+                      </tr>
+                      <tr v-if="mappingProjectOptions.group">
+                        <th class="input-group-text">Group</th>
+                        <td>
+                          <input type="number" name="group" class="form-control" v-model="mapping.group">
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="input-group-text">Advice</th>
+                        <td>
+                          <input type="text" name="advice" class="form-control" v-model="mapping.advice">
+                        </td>
+                      </tr>
+                      <tr v-if="mappingProjectOptions.correlation">
+                        <th class="input-group-text">Correlation</th>
+                        <td>
+                          <select name="correlation" class="form-control" v-model="mapping.correlation">
+                            <option v-for="(value, key) in mappingProjectOptions.correlation_options" :selected="mapping.correlation == key" :value="key" :key="value">[[value]]</option>
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="input-group-text">Verwijderen</th>
+                        <td>
+                          <input type="checkbox" name="delete" v-model="mapping.delete">
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </li>
+              </ul>
+              <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
+              <button class="form-control">Submit</button>
+            </fieldset>
+          </form>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<script>
+Vue.component('v-select', VueSelect.VueSelect);
+const debounce = (func, delay) => {
+  let inDebounce
+  return function() {
+    const context = this
+    const args = arguments
+    clearTimeout(inDebounce)
+    inDebounce = setTimeout(() => func.apply(context, args), delay)
+  }
+}
+var vuePosts = new Vue({
+    delimiters: ['[[', ']]'],
+    el: '#vue-task-editor',
+    data: {
+        tasks: [],
+        permissions: [],
+        currentTask: [],
+        currentUser: [],
+        audits: [],
+        eventList: [],
+        userList: [],
+        mappingRules: [],
+        statusList: [],
+        mappingProjectOptions: [],
+        newComment: '',
+        options: [],
+        filterStatus: '',
+        filterUser: '',
+        loading: false,
+        csrftoken: Cookies.get('csrftoken'),
+    },
+    methods: {
+        getGeneralData: function() {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/general/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.currentUser = response.current_user
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getEventList: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/events/get/task/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.eventList = response.eventList
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getPermissions: function() {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/permissions/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.permissions = response
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getTaskList: function() {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/task/get/project/{{current_project.id}}',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.tasks = response.taskList
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getUserList: function() {
+          var that = this
+          that.loading = true;
+          $.ajax({
+              url: '/mapping/api/user/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.userList = response
+              that.loading = false;
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getAuditsById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/audit/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.audits = response
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        getTaskById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/task/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.currentTask = response.task
+            that.statusList = response.status_list
+            that.getEventList(taskId)
+            that.getMaprulesById(taskId)
+            that.getAuditsById(taskId)
+            {% comment %} window.history.pushState({"html":'test.html',"pageTitle":'test'},"", 'patch'); {% endcomment %}
+          }
+          }).catch(function(err) {
+            {% comment %} that.currentTask = null {% endcomment %}
+            console.error(err);
+          });
+        },
+        getMaprulesById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/mapping/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.mappingRules = response.mappings
+            that.mappingProjectOptions = response.project
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        changeTaskStatus: function(newTaskStatus){
+          var that = this
+          // that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/status/put/'+that.currentTask.id,
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      task: that.currentTask.id,
+                      newStatus: newTaskStatus,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getTaskById(that.currentTask.id)
+                  that.getTaskList()
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        changeTaskUser: function(newTaskUser){
+          var that = this
+          // that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/taskuser/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      task: that.currentTask.id,
+                      newUser: newTaskUser,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getTaskById(that.currentTask.id)
+                  that.getTaskList()
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        whitelistAudit: function(auditId){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/audit/post/'+auditId,
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      auditId: auditId,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getAuditsById(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postComment: function(){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/comment/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      comment: that.newComment,
+                      task: that.currentTask.id,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
+                  that.newComment=''
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        deleteComment: function(commentId){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/comment/del/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      comment: commentId,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postMappings: function(){
+          var that = this;
+          that.loading = true;
+          var changeMap = that.mappingRules
+          var newMap = that.mappingRulesNew
+          $.ajax({
+                  url: '/mapping/api/mapping/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      mapping: JSON.stringify(changeMap),
+                      task: that.currentTask.id,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getMaprulesById(that.currentTask.id)
+                  that.getAuditsById(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        onSearch(search, loading) {
+          // loading(true);
+          debounce(this.search(loading, search, this),500);
+        },
+          search: debounce((loading, search, vm) => {
+            fetch(
+              '/mapping/api/componentsearch/?term='+escape(search)
+            ).then(res => {
+              res.json().then(json => (vm.options = json.items));
+              loading(false);
+            });
+          },450),
+        
+    },
+    mounted () {
+        this.getTaskList()
+        this.getTaskById({{current_task}})
+        this.getPermissions()
+        this.getUserList()
+        this.getGeneralData()
+        this.getMaprulesById({{current_task}})
+        setInterval(() => {
+            this.getAuditsById(this.currentTask.id);
+            this.getEventList(this.currentTask.id);
+          }, 5000);
+        
+    },
+    computed: {
+      tasksFiltered: function () {
+        let filterUser = this.filterUser.toString(),
+            filterStatus = this.filterStatus.toString()
+        return this.tasks.filter(function(item){
+          let filtered = true
+          if(filterUser && filterUser.length > 0){
+            filtered = item.user.id == filterUser
+          }
+          if(filtered){
+            if(filterStatus && filterStatus.length > 0){
+              filtered = item.status.id == filterStatus
+            }
+          }
+          return filtered
+        })
+      }
+    },
+});
+</script>
+{% endblock content %}
