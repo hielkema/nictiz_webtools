@@ -65,7 +65,7 @@
             <h5 class="card-title">Taken</h5>
         </div>
         <div class="card-body" style="height: 600px; overflow:auto;">
-          <span v-if="loading">Test</span>
+          <span v-if="loadingTaskList">Taken worden geladen, even geduld a.u.b.</span>
           <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
               <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
               [[task.component.title]]<br>
@@ -282,6 +282,7 @@ var vuePosts = new Vue({
         filterStatus: '',
         filterUser: '',
         loading: false,
+        loadingTaskList: false,
         csrftoken: Cookies.get('csrftoken'),
     },
     methods: {
@@ -335,18 +336,22 @@ var vuePosts = new Vue({
         },
         getTaskList: function() {
           var that = this
+          that.loadingTaskList = true
           $.ajax({
-              url: '/mapping/api/task/get/project/{{current_project.id}}',
-              method: 'GET'
+            url: '/mapping/api/task/get/project/{{current_project.id}}',
+            method: 'GET'
           }).then(function(response) {
           if (response.error) {
-              console.err("There was an error " + response.error);
+            that.loadingTaskList = false
+            console.err("There was an error " + response.error);
           } else {
-              console.log(response);
-              that.tasks = response.taskList
+            console.log(response);
+            that.loadingTaskList = false
+            that.tasks = response.taskList
           }
           }).catch(function(err) {
-              console.error(err);
+            that.loadingTaskList = false
+            console.error(err);
           });
         },
         getUserList: function() {
