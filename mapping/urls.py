@@ -31,6 +31,8 @@ urlpatterns = [
     
     url(r'api/events/get/task/(?P<task>\w+)', views.api_EventList_get.as_view(), name='events'),
 
+    url(r'api/updatecodesystems/put/', views.api_UpdateCodesystems_post.as_view(), name='updatecodesystems'),
+    url(r'updatecodesystems/', views.api_UpdateCodesystems_post.as_view(), name='updatecodesystems'),
 
     # V2 static views
     url(r'project/(?P<project>\w+)/task/(?P<task>\w+)', views.vue_TaskEditor.as_view(), name='task_editor'),
@@ -49,8 +51,6 @@ urlpatterns = [
     # url(r'tasksearch/(?P<project>\w+)/', views.AjaxSearchTaskPageView.as_view(), name='tasksearch'),
     # url(r'deletecomment/(?P<comment_id>\w+)', views.DeleteCommentPageView.as_view(), name='deletecomment'),
     # url(r'postcomment', views.PostCommentPageView.as_view(), name='post_comment'),
-    url(r'update_nhg', views.UpdateNHGPageView.as_view(), name='update_nhg'),
-    url(r'update_snomed', views.UpdateSnomedPageView.as_view(), name='update_snomed'),
     url(r'task_create', views.TaskCreatePageView.as_view(), name='task_create'),
     # url(r'status_filter/(?P<project>\w+)/(?P<task>\w+)/(?P<status>\w+)/(?P<own_tasks>\w+)', views.StatusFilterPageView.as_view(), name='own_task_filter'),
     # url(r'status_filter/(?P<project>\w+)/(?P<task>\w+)/(?P<status>\w+)', views.StatusFilterPageView.as_view(), name='status_filter'),

@@ -114,6 +114,7 @@ postgres_backup/*.bak
 **/*.xls
 **/*.xlsx
 **/*.csv
+**/*.xml
 mapping/**/*.txt
 **/*.pickle
 

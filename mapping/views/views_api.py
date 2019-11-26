@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.db.models import Q
 from datetime import datetime
 from celery.task.control import inspect, revoke
-from pandas import read_excel
+from pandas import read_excel, read_csv
+import xmltodict
 import sys, os
 import pprint
 import environ
@@ -193,6 +194,61 @@ class api_PostComment_post(UserPassesTestMixin,TemplateView):
             return JsonResponse(context,safe=False)
         except Exception as e:
             print(type(e), e, kwargs)
+
+class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
+    '''
+    Receives requests reload the labcodeset through async task
+    Only allowed with admin codesystem rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | admin codesystems').exists()
+
+    def post(self, request, **kwargs):
+        try:
+            print('Labcode', json.loads(request.POST.get('codesystem[labcode]')))
+            if json.loads(request.POST.get('codesystem[labcode]')):
+                import_labcodeset_async.delay()
+
+            print('Snomed', json.loads(request.POST.get('codesystem[snomed]')))
+            if json.loads(request.POST.get('codesystem[snomed]')): # codesystem 1 = snomed
+                import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
+                import_snomed_async.delay('260787004') # fysiek object (fysiek object)
+                import_snomed_async.delay('78621006') # fysieke kracht (fysieke kracht)
+                import_snomed_async.delay('272379006') # gebeurtenis (gebeurtenis)
+                import_snomed_async.delay('419891008') # gegevensobject (gegevensobject)
+                import_snomed_async.delay('404684003') # klinische bevinding (bevinding)
+                import_snomed_async.delay('362981000') # kwalificatiewaarde (kwalificatiewaarde)
+                import_snomed_async.delay('123037004') # lichaamsstructuur (lichaamsstructuur)
+                import_snomed_async.delay('123038009') # monster (monster)
+                import_snomed_async.delay('410607006') # organisme (organisme)
+                import_snomed_async.delay('243796009') # situatie met expliciete context (situatie)
+                import_snomed_async.delay('48176007') # sociale context (sociaal concept)
+                import_snomed_async.delay('105590001') # substantie (substantie)
+                import_snomed_async.delay('71388002') #  verrichting (verrichting)
+                import_snomed_async.delay('363787002') #   waarneembare entiteit (waarneembare entiteit)
+
+            print('nhgVerr', json.loads(request.POST.get('codesystem[nhgverr]')))
+            if json.loads(request.POST.get('codesystem[nhgverr]')):
+                import_nhgverrichtingen_task.delay()
+                
+            print('nhgBep', json.loads(request.POST.get('codesystem[nhgbep]')))
+            if json.loads(request.POST.get('codesystem[nhgbep]')):
+                import_nhgbepalingen_task.delay()
+            
+            context = {
+                'result': "success",
+            }
+            # Return JSON
+            return JsonResponse(context,safe=False)
+        except Exception as e:
+            print(type(e), e, kwargs)
+    def get(self, request, **kwargs):        
+        return render(request, 'mapping/v2/import_codesystems.html', {
+            'page_title': 'Mapping project',
+        })
 
 class api_DelComment_post(UserPassesTestMixin,TemplateView):
     '''
@@ -533,16 +589,19 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                     'status_id' : status.status_id,
                     'title' : status.status_title,
                 })
+            context = {
+                'task': task,
+                'status_list': status_list,
+            }
         # If task does not exist, return empty
         except Exception as e:
             print(type(e), e)
             print("Kwargs: ",kwargs)
             task = []
-        
-        context = {
-            'task': task,
-            'status_list': status_list,
-        }
+            context = {
+                'task': '',
+                'status' : 'Mislukt - geen ID?',
+            }
         # Return JSON
         return JsonResponse(context,safe=False)
 
@@ -573,6 +632,10 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             # if mapcorrelation == "447560006": mapcorrelation = "Partial overlap"
             # if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
             # if mapcorrelation == "447561005": mapcorrelation = "Not specified"
+            try:
+                extra = json.loads(mapping.target_component.component_extra_dict)
+            except:
+                extra = ""
             mapping_list.append({
                 'id' : mapping.id,
                 'source' : {
@@ -584,6 +647,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
                     'id': mapping.target_component.id,
                     'component_id': mapping.target_component.component_id,
                     'component_title': mapping.target_component.component_title,
+                    'extra' : extra,
                     'codesystem': {
                         'title' : mapping.target_component.codesystem_id.codesystem_title,
                         'version' : mapping.target_component.codesystem_id.codesystem_version,
@@ -937,6 +1001,7 @@ class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
                 'id': component.id,
                 'component_id': component.component_id,
                 'component_title': component.component_title,
+                'extra' : component.component_extra_dict,
                 'codesystem': {
                     'title' : component.codesystem_id.codesystem_title,
                     'version' : component.codesystem_id.codesystem_version,
@@ -952,6 +1017,7 @@ class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
                         'id': component.id,
                         'component_id': component.component_id,
                         'component_title': component.component_title,
+                        'extra' : component.component_extra_dict,
                         'codesystem': {
                             'title' : component.codesystem_id.codesystem_title,
                             'version' : component.codesystem_id.codesystem_version,
@@ -962,7 +1028,7 @@ class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
 
 
         # Return Json response
-        return JsonResponse({'items':items[:100]})
+        return JsonResponse({'items':items[:20]})
 
 class api_GetAudit_get(UserPassesTestMixin,TemplateView):
     '''

@@ -60,6 +60,7 @@ class MappingCodesystemComponent(models.Model):
     component_id        = models.CharField(max_length=50)
     component_title     = models.CharField(max_length=500)
     component_created   = models.DateTimeField(default=timezone.now)
+    component_extra_dict  = models.TextField(default=None, null=True, blank=True)
     component_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_3  = models.CharField(max_length=500, default=None, null=True, blank=True)

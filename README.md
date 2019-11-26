@@ -24,6 +24,12 @@ At this point it supports 1-n mappings from any codesystem to any codesystem. Th
 
 ## With a fresh DB:
 
+### Create codesystems
+- 1: Snomed
+- 2: Verrichtingen NHG
+- 3: Labcodeset
+- 4: Diagnostische bepalingen NHG
+
 ### Create groups: (without ')
 - 'ATC lookup'                      # Access to the medication ATC/g-standaard lookup module
 - 'HTML tree'                       # Access to the Snomed list generators
@@ -36,7 +42,6 @@ At this point it supports 1-n mappings from any codesystem to any codesystem. Th
 - 'mapping | admin codesystems'     # Creating codesystems, loading data into codesystems
 - 'mapping | audit'                 # Create audit reports on mapping rules
 - 'mapping | project statistics'    # Show in-depth project statistics on project page
-
 
 ### Permission check in template:
 {% if 'mapping | edit mapping' in permissions %}

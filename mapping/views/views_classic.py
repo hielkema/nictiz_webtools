@@ -700,95 +700,6 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
             'codesystems' : codesystems_list,
         })
 
-class UpdateSnomedPageView(UserPassesTestMixin,TemplateView):
-    '''
-    View used to update or fill a codesystem with Snomed concepts.
-    Calls an async function from ./tasks.py, since this can take over 10 minutes.
-    Only accessible with admin codesystem rights.
-    '''
-    def handle_no_permission(self):
-        return redirect('login')
-    def test_func(self):
-        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
-        return self.request.user.groups.filter(name='mapping | admin codesystems').exists()
-    
-    def post(self, request, **kwargs):
-        form = SnomedUpdateForm(request.POST)
-        if form.is_valid():
-            focus = str(form.cleaned_data['focus_concept'])
-            codesystem = form.cleaned_data['codesystem']
-            # Get task.id for tracking purposes
-            task = import_snomed_async.delay(focus, codesystem)
-            task_id = task.id
-            print("TASK ID ******", task_id)
-            return HttpResponseRedirect(reverse('mapping:index'))
-
-    def get(self, request, **kwargs):
-        # TODO - Check permissions for this
-        form = SnomedUpdateForm()
-
-        return render(request, 'mapping/v2/update_snomed.html', {
-            'page_title': 'Mapping project',
-            'form': form,
-        })
-
-class UpdateNHGPageView(UserPassesTestMixin,TemplateView):
-    '''
-    View for updating of filling a codesystem with NHG data.
-    Only accessible with admin codesystems rights.
-    '''
-    def handle_no_permission(self):
-        return redirect('login')
-    def test_func(self):
-        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
-        return self.request.user.groups.filter(name='mapping | admin codesystems').exists()
-
-    def post(self, request, **kwargs):
-        # TODO - Check permissions for this
-        form = NHGUpdateForm(request.POST)
-        handled = {}
-        if form.is_valid():
-            df = read_excel('/webserver/mapping/resources/nhg/Ingrepentabel_v3.xls')
-            for index, row in df.iterrows():
-                codesystem = MappingCodesystem.objects.get(id=form.cleaned_data['codesystem'])
-                obj, created = MappingCodesystemComponent.objects.get_or_create(
-                    codesystem_id=codesystem,
-                    component_id=row[0],
-                )
-                # Add data not used for matching
-                obj.component_title     = row[1]
-                obj.component_extra_1   = row[2]
-                obj.component_extra_2   = row[3]
-                obj.component_extra_3   = row[4]
-                obj.component_extra_4   = row[5]
-                obj.component_extra_5   = row[6]
-                obj.component_extra_6   = row[7]
-                obj.component_extra_7   = row[8]
-
-                # Save
-                obj.save()
-
-                handled.update({row[0] : {
-                    'result' : obj,
-                    'codesystem_id' : form.cleaned_data['codesystem'],
-                    'component_id' : row[0],
-                    'component_title' : row[1],
-                }})
-        else:
-            print("###########################\n",form.errors,"\n", form.non_field_errors)
-        return render(request, 'mapping/v2/update_nhg.html', {
-            'page_title': 'Mapping project',
-            'result': handled,
-        })
-    def get(self, request, **kwargs):
-        # TODO - Check permissions for this
-        form = NHGUpdateForm()
-
-        return render(request, 'mapping/v2/update_nhg.html', {
-            'page_title': 'Mapping project',
-            'form': form,
-        })
-
 class MappingIndexPageView(UserPassesTestMixin,TemplateView):
     '''
     View for choosing a project to work on.
@@ -826,7 +737,7 @@ class ProjectIndexPageView(UserPassesTestMixin,TemplateView):
         # Taken per status
         try:
             current_user = User.objects.get(id=request.user.id)
-            project_list = MappingProject.objects.filter(active=True)
+            project_list = MappingProject.objects.filter(active=True).order_by('id')
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
             tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
             

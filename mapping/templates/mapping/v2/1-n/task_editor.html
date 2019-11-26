@@ -161,13 +161,12 @@
         </div>
       </div>
     </div>
-  
     <div class="col col-sm-4">
       <div class="card" v-if="currentTask.id">
         <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
           <form v-on:submit.prevent="postMappings()">
           <!-- <form method="post" id="post_mappings" class="form-inline"> -->
-            <fieldset v-bind:disabled="currentUser.id != currentTask.user.id">
+            
               <ul class="list-group">
                 <li v-for="mapping in mappingRules" v-bind:class="[{ 'list-group-item-success': mapping.id != 'extra' }, 'list-group-item']">
                   <table style="width:100%">
@@ -180,9 +179,25 @@
                         </td>
                       </tr>
                       <tr>
-                        <th>Target</th>
-                        <td>
-                          [[mapping.target.component_title]]
+                        <td colspan="2">
+                          <a class="btn btn-secondary" data-toggle="collapse" :href="'#collapseExample-'+mapping.id" role="button">
+                            [[mapping.target.component_title]]
+                          </a>
+                          <div class="collapse" :id="'collapseExample-'+mapping.id">
+                            <div class="card card-body">
+                              <font v-if="key == 'Materialen'" v-for="value, key in mapping.target.extra">
+                                <b>[[key]]</b>
+                                <ul>
+                                  <font v-for="value, key in value">
+                                    <li>[[value.SCTID]] [[value.FSN]]</li>
+                                  </font>
+                                </ul>
+                              </font><font v-else>
+                                <b>[[key]]</b>
+                                  [[value]]
+                              </font>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                       <tr v-if="currentUser.id == currentTask.user.id">
@@ -190,9 +205,7 @@
                         <td>
                           <v-select v-model="mapping.target.new" name="newTarget" label="name" :filterable="false" :options="options" @search="onSearch">
                             <template slot="option" slot-scope="option">
-                              <div class="d-center">
-                                [[option.codesystem.title]] [[option.component_title]]
-                              </div>
+                                <b>[[option.codesystem.title]] [[option.component_id]]</b><br>[[option.component_title]]
                             </template>
                           </v-select>
                         </td>
@@ -203,31 +216,31 @@
                       <tr v-if="mappingProjectOptions.priority">
                         <th class="input-group-text">Priority</th>
                         <td>
-                          <input type="number" :required="mapping.id != 'extra'" type="text" name="priority" class="form-control" v-model="mapping.priority">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="priority" class="form-control" v-model="mapping.priority">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.rule">
                         <th class="input-group-text">Rule</th>
                         <td>
-                          <input type="text" name="rule" class="form-control" v-model="mapping.rule">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="rule" class="form-control" v-model="mapping.rule">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.group">
                         <th class="input-group-text">Group</th>
                         <td>
-                          <input type="number" name="group" class="form-control" v-model="mapping.group">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="number" name="group" class="form-control" v-model="mapping.group">
                         </td>
                       </tr>
                       <tr>
                         <th class="input-group-text">Advice</th>
                         <td>
-                          <input type="text" name="advice" class="form-control" v-model="mapping.advice">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="advice" class="form-control" v-model="mapping.advice">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.correlation">
                         <th class="input-group-text">Correlation</th>
                         <td>
-                          <select name="correlation" class="form-control" v-model="mapping.correlation">
+                          <select v-bind:disabled="currentUser.id != currentTask.user.id" name="correlation" class="form-control" v-model="mapping.correlation">
                             <option v-for="(value, key) in mappingProjectOptions.correlation_options" :selected="mapping.correlation == key" :value="key" :key="value">[[value]]</option>
                           </select>
                         </td>
@@ -235,7 +248,7 @@
                       <tr>
                         <th class="input-group-text">Verwijderen</th>
                         <td>
-                          <input type="checkbox" name="delete" v-model="mapping.delete">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="checkbox" name="delete" v-model="mapping.delete">
                         </td>
                       </tr>
                     </tbody>
@@ -243,13 +256,13 @@
                 </li>
               </ul>
               <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
-              <button class="form-control">Submit</button>
-            </fieldset>
+              <button v-if="currentUser.id == currentTask.user.id" class="form-control">Submit</button>
           </form>
     </div>
   </div>
 </div>
 </div>
+
 
 
 <script>
@@ -283,6 +296,7 @@ var vuePosts = new Vue({
         filterUser: '',
         loading: false,
         loadingTaskList: false,
+        loadingTargetSearch : false,
         csrftoken: Cookies.get('csrftoken'),
     },
     methods: {
@@ -570,17 +584,18 @@ var vuePosts = new Vue({
               })
         },
         onSearch(search, loading) {
-          // loading(true);
+          var that = this;
+          that.loadingTargetSearch = true;
           debounce(this.search(loading, search, this),500);
         },
-          search: debounce((loading, search, vm) => {
+        search: debounce((loading, search, vm) => {
+            var that = this;
             fetch(
               '/mapping/api/componentsearch/?term='+escape(search)
             ).then(res => {
               res.json().then(json => (vm.options = json.items));
-              loading(false);
             });
-          },450),
+        },1000),
         
     },
     mounted () {
@@ -614,6 +629,11 @@ var vuePosts = new Vue({
         })
       }
     },
+});
+</script>
+<script>
+$(document).ready(function(){
+  $('[data-toggle="popover"]').popover();
 });
 </script>
 {% endblock content %}
