@@ -263,6 +263,7 @@ def import_nhgbepalingen_task():
             codesystem_id=codesystem,
             component_id=row[0],
         )
+        obj.component_title = row[4]
         extra = {
             'Omschrijving' : row[4],
             'Bepaling nummer' : row[0],
