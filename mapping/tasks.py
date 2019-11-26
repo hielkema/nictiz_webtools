@@ -111,15 +111,15 @@ def import_labcodeset_async():
                 loinc_system    = component['loincConcept']['translation']['system']
                 loinc_scale     = component['loincConcept']['translation']['scale']
                 loinc_class     = component['loincConcept']['translation']['class']
-                loinc_orderObs  = component['loincConcept']['orderObs']
+                loinc_orderObs  = component.get('loincConcept',{}).get('orderObs')
             except:
-                loinc_component = component['loincConcept']['component']
-                loinc_property  = component['loincConcept']['property']
-                loinc_timing    = component['loincConcept']['timing']
-                loinc_system    = component['loincConcept']['system']
-                loinc_scale     = component['loincConcept']['scale']
-                loinc_class     = component['loincConcept']['class']
-                loinc_orderObs  = component['loincConcept']['orderObs']
+                loinc_component = component.get('loincConcept',{}).get('component')
+                loinc_property  = component.get('loincConcept',{}).get('property')
+                loinc_timing    = component.get('loincConcept',{}).get('timing')
+                loinc_system    = component.get('loincConcept',{}).get('system')
+                loinc_scale     = component.get('loincConcept',{}).get('scale')
+                loinc_class     = component.get('loincConcept',{}).get('class')
+                loinc_orderObs  = component.get('loincConcept',{}).get('orderObs')
 
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
@@ -127,12 +127,12 @@ def import_labcodeset_async():
             obj.component_extra_dict   = json.dumps({
                 'Nederlands'            : term_nl,
                 'Component'             : loinc_component,
-                'Property'              : loinc_property,
+                'Kenmerk'              : loinc_property,
                 'Timing'                : loinc_timing,
-                'System'                : loinc_system,
-                'Scale'                 : loinc_scale,
-                'Class'                 : loinc_class,
-                'Aanvraag/Rapporteren'  : loinc_orderObs,
+                'Systeem'                : loinc_system,
+                'Schaal'                 : loinc_scale,
+                'Klasse'                 : loinc_class,
+                'Aanvraag/Resultaat'  : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
             })
             obj.save()
