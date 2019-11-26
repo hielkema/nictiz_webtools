@@ -88,13 +88,20 @@
               <table class="table table-hover table-sm">                  
                 <tr><th style="width: 150px">Terminologie: </th><td>[[currentTask.component.codesystem.title]] [[currentTask.component.codesystem.version]]</td></tr>
                 <tr><th style="width: 150px">Term: </th><td>[[currentTask.component.title]] </td></tr>
-                <tr v-if="currentTask.component.extra_1"><td style="width: 150px">[[currentTask.component.extra_1.label]]: </td><td>[[currentTask.component.extra_1.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_2"><td style="width: 150px">[[currentTask.component.extra_2.label]]: </td><td>[[currentTask.component.extra_2.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_3"><td style="width: 150px">[[currentTask.component.extra_3.label]]: </td><td>[[currentTask.component.extra_3.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_4"><td style="width: 150px">[[currentTask.component.extra_4.label]]: </td><td>[[currentTask.component.extra_4.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_5"><td style="width: 150px">[[currentTask.component.extra_5.label]]: </td><td>[[currentTask.component.extra_5.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_6"><td style="width: 150px">[[currentTask.component.extra_6.label]]: </td><td>[[currentTask.component.extra_6.value]]</td></tr>
-                <tr v-if="currentTask.component.extra_7"><td style="width: 150px">[[currentTask.component.extra_7.label]]: </td><td>[[currentTask.component.extra_7.value]]</td></tr></div>
+                <tr v-for="value, key in currentTask.component.extra" v-if="(key == 'Materialen')">
+                  <td>[[key]]</td>
+                  <td>
+                    <ul>
+                      <font v-for="value, key in value">
+                        <li>[[value.SCTID]] [[value.FSN]]</li>
+                      </font>
+                    </ul>
+                  </td>
+                </tr><tr v-else-if="value != false">
+                  <td>[[key]]</td>
+                  <td>[[value]]</td>
+                </tr>
+                </tr>
                 <tr><td style="width: 150px">Taak ID: </td><td>[[currentTask.id]]</td></tr>
               </table>
             </div>
@@ -605,10 +612,10 @@ var vuePosts = new Vue({
         this.getUserList()
         this.getGeneralData()
         this.getMaprulesById({{current_task}})
-        setInterval(() => {
+        {% comment %} setInterval(() => {
             this.getAuditsById(this.currentTask.id);
             this.getEventList(this.currentTask.id);
-          }, 5000);
+          }, 5000); {% endcomment %}
         
     },
     computed: {

@@ -42,8 +42,10 @@ def import_snomed_async(focus=None):
         print("CREATED **** ",codesystem_obj, conceptid)
         # Add data not used for matching
         obj.component_title = str(concept['fsn']['term'])
-        obj.component_extra_1 = str(concept['pt']['term'])
-
+        extra = {
+            'Preferred term' : str(concept['pt']['term']),
+        }
+        obj.component_extra_dict = json.dumps(extra)
         # Save
         obj.save()
 
@@ -127,12 +129,12 @@ def import_labcodeset_async():
             obj.component_extra_dict   = json.dumps({
                 'Nederlands'            : term_nl,
                 'Component'             : loinc_component,
-                'Kenmerk'              : loinc_property,
+                'Kenmerk'               : loinc_property,
                 'Timing'                : loinc_timing,
-                'Systeem'                : loinc_system,
-                'Schaal'                 : loinc_scale,
-                'Klasse'                 : loinc_class,
-                'Aanvraag/Resultaat'  : loinc_orderObs,
+                'Systeem'               : loinc_system,
+                'Schaal'                : loinc_scale,
+                'Klasse'                : loinc_class,
+                'Aanvraag/Resultaat'    : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
             })
             obj.save()
@@ -172,6 +174,8 @@ def add_mappings_ecl_1_task(task=None, query=False):
 @shared_task
 def import_nhgverrichtingen_task():
     df = read_excel('/webserver/mapping/resources/nhg/Ingrepentabel_v3.xls')
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
     for index, row in df.iterrows():
         codesystem = MappingCodesystem.objects.get(id='2')
         obj, created = MappingCodesystemComponent.objects.get_or_create(
@@ -188,6 +192,16 @@ def import_nhgverrichtingen_task():
         obj.component_extra_6   = row[7]
         obj.component_extra_7   = row[8]
 
+        extra = {
+            'Rubriek' : row[2],
+            'Subrubriek' : row[3],
+            'Tractus' : row[4],
+            'CMSV-code' : row[5],
+            'VO' : row[6],
+            'VM' : row[7],
+            'VV' : row[8],
+        }
+        obj.component_extra_dict = json.dumps(extra)
         # Save
         obj.save()
 
@@ -274,7 +288,7 @@ def import_nhgbepalingen_task():
             'Eenheid' : row[16],
         }
         # print(extra)
-        obj.component_extra_dict = extra
+        obj.component_extra_dict = json.dumps(extra)
         obj.save()
 
 @shared_task

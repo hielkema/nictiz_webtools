@@ -534,6 +534,10 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
             project = MappingProject.objects.get(id=task.project_id.id)
             statuses = MappingTaskStatus.objects.filter(project_id=project).order_by('status_id')
             # print(statuses)
+            try:
+                extra_dict = json.loads(task.source_component.component_extra_dict)
+            except:
+                extra_dict = ''
             task = ({
                     'id'    :   task.id,
                     'component' : {
@@ -543,6 +547,7 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                             'title' : task.source_component.codesystem_id.codesystem_title,
                             'version' : task.source_component.codesystem_id.codesystem_version,
                         },
+                        'extra' : extra_dict,
                         'extra_1' : {
                             'label' : task.source_component.codesystem_id.codesystem_extra_1,
                             'value' : task.source_component.component_extra_1,
@@ -570,7 +575,7 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                         'extra_7' : {
                             'label' : task.source_component.codesystem_id.codesystem_extra_7,
                             'value' : task.source_component.component_extra_7,
-                        }
+                        },
                     },
                     'status' : {
                         'id' : task.status.id,
