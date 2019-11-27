@@ -295,11 +295,17 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
     
         tasks = []
         for task in data:
+            try:
+                user_id = task.user.id
+                user_name = task.user.username
+            except:
+                user_id = 'Niet toegewezen'
+                user_name = 'Niet toegewezen'
             tasks.append({
                 'id'    :   task.id,
                 'user' : {
-                    'id' : task.user.id,
-                    'name' : task.user.username,
+                    'id' : user_id,
+                    'name' : user_name,
                 },
                 'component' : {
                     'id'  :   task.source_component.component_id,
