@@ -103,6 +103,7 @@ class MappingTaskStatus(models.Model):
 
 
 class MappingRule(models.Model):
+    id = models.BigAutoField(primary_key=True)
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'source_component_rule') # Component ID in source codesystem = MappingCodesystems:component_id
     target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'target_component_rule') # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden

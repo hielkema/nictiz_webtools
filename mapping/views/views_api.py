@@ -606,8 +606,9 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
             }
         # If task does not exist, return empty
         except Exception as e:
-            print(type(e), e)
-            print("Kwargs: ",kwargs)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+            print(error)
             task = []
             context = {
                 'task': '',
@@ -629,11 +630,17 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # Get data
-        # Lookup mappings for current task     
+        # Lookup mappings for current task
         payload = request.POST
 
         task = MappingTask.objects.get(id=kwargs.get('task'))
-        mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component).order_by('mappriority')
+        if task.project_id.project_type == "1":
+            mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
+        if task.project_id.project_type == "2":
+            mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
+        elif task.project_id.project_type == "4":
+            mappings = MappingRule.objects.filter(project_id=task.project_id, target_component=task.source_component)
+        mappings = mappings.order_by('mappriority', 'mapgroup')
         mapping_list = []
         for mapping in mappings:
             mapcorrelation = mapping.mapcorrelation
@@ -672,32 +679,32 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
                 'rule' : mapping.maprule,
                 'delete' : False,
             })
-
-        # Append extra empty mapping
-        mapping_list.append({
-                'id' : 'extra',
-                'source' : {
-                    'id': task.source_component.id,
-                    'component_id': task.source_component.component_id,
-                    'component_title': task.source_component.component_title,
-                },
-                'target' : {
-                    'id': None,
-                    'component_id': None,
-                    'component_title': None,
-                    'codesystem': {
-                        'title' : None,
-                        'version' : None,
-                        'id' : None,
-                    }
-                },
-                'group' : None,
-                'priority' : None,
-                'correlation' : '447557004',
-                'advice' : None,
-                'rule' : None,
-                'delete' : False,
-            })
+        if task.project_id.project_type == "1" or task.project_id.project_type == "2" :
+            # Append extra empty mapping
+            mapping_list.append({
+                    'id' : 'extra',
+                    'source' : {
+                        'id': task.source_component.id,
+                        'component_id': task.source_component.component_id,
+                        'component_title': task.source_component.component_title,
+                    },
+                    'target' : {
+                        'id': None,
+                        'component_id': None,
+                        'component_title': None,
+                        'codesystem': {
+                            'title' : None,
+                            'version' : None,
+                            'id' : None,
+                        }
+                    },
+                    'group' : None,
+                    'priority' : None,
+                    'correlation' : '447557004',
+                    'advice' : None,
+                    'rule' : None,
+                    'delete' : False,
+                })
         
         project_data = {
             'type' : task.project_id.project_type,
@@ -721,6 +728,38 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
         }
         # Return JSON
         return JsonResponse(context,safe=False)
+
+class api_ReverseMapping_get(UserPassesTestMixin,TemplateView):
+    '''
+    Delivers the reverse mapping for a task
+    Only allowed with view tasks rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+
+    def get(self, request, **kwargs):
+        # Get reverse mappings for relevant project types
+        current_task = MappingTask.objects.get(id=kwargs.get('task')) 
+        reverse_mappings = MappingRule.objects.filter(source_component=current_task.source_component)
+        
+        reverse_list = []
+        for reverse in reverse_mappings:
+            reverse_list.append({
+                'codesystem' : {
+                    'id' : reverse.target_component.codesystem_id.id,
+                    'title' : reverse.target_component.codesystem_id.codesystem_title,
+                    'version' : reverse.target_component.codesystem_id.codesystem_version,
+                },
+                'id' : reverse.target_component.component_id,
+                'title' : reverse.target_component.component_title,
+            })
+
+        return JsonResponse({
+            'reversemappings' : reverse_list,
+        })
 
 class vue_MappingIndex(UserPassesTestMixin,TemplateView):
     '''
@@ -933,6 +972,219 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
 
         # return HttpResponseRedirect(reverse('homepage:index'))
 
+class api_EclQuery_get(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to handle creating an ECL query bound to a (target) component.
+    Only accessible with edit mapping rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | view tasks').exists()
+    
+    def get(self, request, **kwargs):
+
+        task_id = int(kwargs.get('task'))
+        task = MappingTask.objects.get(id=task_id)
+        try:
+            current_user = User.objects.get(id=request.user.id)
+            
+            # Generate query list for view
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('query_function')
+            query_list = []
+            for query in querys:
+                query_list.append({
+                    'query_id' : query.id,
+                    'query' : query.query,
+                    'query_function' : query.query_function,
+                    'query_type' : query.query_type,
+                })
+            query_list.append({
+                'query_id' : False,
+                'query' : '',
+                'query_function' : '2',
+                'query_type' : '2',
+            })
+
+            # Generate ECL query
+            query_add_list = []
+            query_min_list = []
+
+            min_querys = querys.filter(query_function="1")
+            add_querys = querys.filter(query_function="2")
+            for query in min_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_min_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            for query in add_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_add_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            add_querys_sep = " or "
+            min_querys_sep = " or "
+            if len(query_add_list) > 0 and len(query_min_list) > 0:
+                generated_query = "({add}) MINUS ({minus})".format(
+                    add = add_querys_sep.join(query_add_list),
+                    minus = min_querys_sep.join(query_min_list),
+                )
+            elif len(query_add_list) > 0 and len(query_min_list) == 0:
+                generated_query = "({add})".format(
+                    add = add_querys_sep.join(query_add_list),
+                )
+            else:
+                generated_query = False
+                results = []
+
+            return JsonResponse({
+                'generated_query' : generated_query,
+                'queries' : query_list,
+            })
+        except:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+            print(error)
+
+            return JsonResponse({
+                'result' : 'error',
+            })
+
+class api_EclQuery_put(UserPassesTestMixin,TemplateView):
+    '''
+    Class used to handle creating an ECL query bound to a (target) component.
+    Only accessible with edit mapping rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        return self.request.user.groups.filter(name='mapping | edit mapping').exists()
+    def post(self, request, **kwargs):
+        payload = request.POST
+        print(payload)
+        task_id = int(payload.get('task'))
+        try:
+            task = MappingTask.objects.get(id=int(task_id),)
+            # Handle search form and present results
+            mapping_queries = json.loads(payload.get('mappingQueries'))
+            
+            for query in mapping_queries:
+                print(query)
+                if query.get('query_id') and query.get('DELETE'):
+                    obj = MappingEclQuery.objects.get(id = query.get('query_id')).delete()
+                elif query.get('query_id'):
+                    print("Query id gevonden, aanpassen")
+                    # Aanpassen
+                    obj = MappingEclQuery.objects.get(id = query.get('query_id'))
+                    obj.query_type = query.get('query_type')
+                    obj.query_function = query.get('query_function')
+                    obj.query = query.get('query')
+                    obj.save()
+                elif query.get('query') != '':
+                    # New query
+                    print("Saving new query to DB")
+                    created = MappingEclQuery.objects.create(
+                        project_id=task.project_id,
+                        target_component=task.source_component,
+                        query=query.get('query'),
+                        query_type=query.get('query_type'),
+                        query_function=query.get('query_function'),
+                    )
+                    created.save()
+                else:
+                    print("Query niet verwerkt (query leeg?)")
+                print("ECL query saved in DB")
+
+            # Generate ECL query
+            querys = MappingEclQuery.objects.filter(target_component=task.source_component).order_by('id')
+            query_add_list = []
+            query_min_list = []
+
+            min_querys = querys.filter(query_function="1")
+            add_querys = querys.filter(query_function="2")
+            for query in min_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_min_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            for query in add_querys:
+                if query.query_type == "1":
+                    modifier = "<"
+                elif query.query_type == "2":
+                    modifier = "<<"
+                elif query.query_type == "3":
+                    modifier = ""
+                query_add_list.append(
+                    "({modif}{query})".format(modif=modifier, query=query.query)
+                )
+            add_querys_sep = " or "
+            min_querys_sep = " or "
+            if len(query_add_list) > 0 and len(query_min_list) > 0:
+                generated_query = "({add}) MINUS ({minus})".format(
+                    add = add_querys_sep.join(query_add_list),
+                    minus = min_querys_sep.join(query_min_list),
+                )
+            elif len(query_add_list) > 0 and len(query_min_list) == 0:
+                generated_query = "({add})".format(
+                    add = add_querys_sep.join(query_add_list),
+                )
+            else:
+                generated_query = False
+                results = []
+            
+            # Check if there are running celery tasks for this task, cancel them if there are before starting a new task
+            if payload.get('preview') == 'true':
+                print("preview")
+                celery_task = add_mappings_ecl_1_task.delay(task=task.id, query=generated_query, preview=True)
+                celery_task_id = celery_task.id
+                print("TASK STARTED WITH ID ******", celery_task_id)
+            
+            else:
+                print("production run")
+                i = inspect()
+                active = i.active('mapping.tasks.add_mappings_ecl_1_task')
+                try:
+                    for async_task in active:
+                        info = i.active(async_task)
+                        for celery_task in info.get(async_task):
+                            celery_task_details = json.loads(celery_task.get('kwargs').replace("\'", "\""))
+                            if celery_task_details.get('task') == task.id:
+                                print("Task already running! ID is {}. Revoking task.".format(
+                                    celery_task.get('id'),
+                                ))
+                                revoke(celery_task.get('id'), terminate=True)
+                    celery_task = add_mappings_ecl_1_task.delay(task=task.id, query=generated_query, preview=False)
+                    celery_task_id = celery_task.id
+                    print("TASK STARTED WITH ID ******", celery_task_id)
+                except:
+                    print("No active tasks or celery unreachable.")
+            
+            
+            return JsonResponse({
+                'result' : 'success',
+                'mappings' : celery_task.get(),
+                'celery' : celery_task_id,
+            })
+        except:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_obj, exc_tb.tb_lineno)
+            print(error)
+
 class vue_TaskEditor(UserPassesTestMixin,TemplateView):
     '''
     View for choosing a project to work on.
@@ -947,19 +1199,38 @@ class vue_TaskEditor(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
         project = MappingProject.objects.get(id=kwargs.get('project'))
-        user = User.objects.get(id=request.user.id)
-        try:
-            task = MappingTask.objects.get(id=kwargs.get('task'))
-            task = task.id
-        except Exception as e:
-            print(type(e),e)
-            print("Kwargs: ",kwargs)
-            task = 0
-        return render(request, 'mapping/v2/1-n/task_editor.html', {
-            'page_title': 'Mapping project',
-            'current_project': project,
-            'current_task' : task,
-        })
+        # Handle 1-N mapping tasks
+        if project.project_type == '1':
+            user = User.objects.get(id=request.user.id)
+            try:
+                task = MappingTask.objects.get(id=kwargs.get('task'))
+                task = task.id
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                print(error)
+                task = 0
+            return render(request, 'mapping/v2/1-n/task_editor.html', {
+                'page_title': 'Mapping project',
+                'current_project': project,
+                'current_task' : task,
+            })
+        # Handle ECL-1 mapping tasks
+        elif project.project_type == '4':
+            user = User.objects.get(id=request.user.id)
+            try:
+                task = MappingTask.objects.get(id=kwargs.get('task'))
+                task = task.id
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                print(error)
+                task = 0
+            return render(request, 'mapping/v2/ecl-1/task_editor.html', {
+                'page_title': 'Mapping project',
+                'current_project': project,
+                'current_task' : task,
+            })
 
 class api_GeneralData_get(UserPassesTestMixin,TemplateView):
     '''

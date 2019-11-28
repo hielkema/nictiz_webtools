@@ -15,8 +15,13 @@ urlpatterns = [
 
     url(r'api/user/get/', views.api_User_get.as_view(), name='users'),
     
-    url(r'api/mapping/get/(?P<task>\w+)', views.api_Mapping_get.as_view(), name='permissions'),
-    url(r'api/mapping/put/', views.api_Mapping_post.as_view(), name='change_status'),
+    url(r'api/eclquery/get/(?P<task>\w+)', views.api_EclQuery_get.as_view(), name='eclquery'),
+    url(r'api/eclquery/put/', views.api_EclQuery_put.as_view(), name='eclquery'),
+    
+    url(r'api/reverse_mapping/get/(?P<task>\w+)', views.api_ReverseMapping_get.as_view(), name='reversemapping'),
+    
+    url(r'api/mapping/get/(?P<task>\w+)', views.api_Mapping_get.as_view(), name='mapping'),
+    url(r'api/mapping/put/', views.api_Mapping_post.as_view(), name='mapping'),
     
     url(r'api/general/get/', views.api_GeneralData_get.as_view(), name='general_data'),
     

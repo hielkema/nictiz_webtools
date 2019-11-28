@@ -145,31 +145,44 @@ def import_labcodeset_async():
             #     break
 
 @shared_task
-def add_mappings_ecl_1_task(task=None, query=False):
-    task = MappingTask.objects.get(id=task)
-    # Delete existing rules
-    rules = MappingRule.objects.filter(target_component=task.source_component)
-    rules.delete()
-
+def add_mappings_ecl_1_task(task=None, query=False, preview=False):
     if query != False:
-        snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
-        results = snowstorm.findConcepts(ecl=query)
-        for result in results.values():
-            # Snomed is hardcoded id 1. TODO - make this flexible
-            source = MappingCodesystemComponent.objects.get(
-                component_id = result.get('conceptId'),
-                codesystem_id = "1",
-            )
-            created = MappingRule.objects.create(
-                project_id=task.project_id,
-                source_component=source,
-                target_component=task.source_component,
-                active=True,
-            )
-            print("Created SNOMED mapping {source} to {target}".format(
-                source=source,
-                target=task.source_component,
-            ))
+        if preview == True:
+            print('Preview run task add_mappings_ecl_1_task')
+            snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+            results = snowstorm.findConcepts(ecl=query)
+            return results
+        else:
+            print('Production run task add_mappings_ecl_1_task')
+            # Delete existing rules
+            task = MappingTask.objects.get(id=task)
+            rules = MappingRule.objects.filter(target_component=task.source_component, project_id=task.project_id)
+            print(rules)
+            rules.delete()
+            snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+            results = snowstorm.findConcepts(ecl=query)
+            for result in results.values():
+                # Snomed is hardcoded id 1. TODO - make this flexible
+                source = MappingCodesystemComponent.objects.get(
+                    component_id = result.get('conceptId'),
+                    codesystem_id = "1",
+                )
+                created = MappingRule.objects.create(
+                    project_id=task.project_id,
+                    source_component=source,
+                    target_component=task.source_component,
+                    active=True,
+                )
+                print("Created SNOMED mapping {source} to {target}".format(
+                    source=source,
+                    target=task.source_component,
+                ))
+            return results
+    else:
+        # Delete existing rules
+        task = MappingTask.objects.get(id=task)
+        rules = MappingRule.objects.filter(target_component=task.source_component, project_id=task.project_id)
+        return({})
 
 @shared_task
 def import_nhgverrichtingen_task():
