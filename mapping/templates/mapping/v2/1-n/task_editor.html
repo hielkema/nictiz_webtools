@@ -185,9 +185,9 @@
                           <input type="hidden" name="id" v-model="mapping.id">
                         </td>
                       </tr>
-                      <tr>
+                      <tr v-if="mapping.target.component_title != null">
                         <td colspan="2">
-                          <a class="btn btn-secondary" data-toggle="collapse" :href="'#collapseExample-'+mapping.id" role="button">
+                          <a class="btn btn-secondary" style="width:100%; text-align:left;" data-toggle="collapse" :href="'#collapseExample-'+mapping.id" role="button">
                             [[mapping.target.component_title]]
                           </a>
                           <div class="collapse" :id="'collapseExample-'+mapping.id">
