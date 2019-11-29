@@ -378,7 +378,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             )
 
             # For project 3 (NHG diag -> LOINC/SNOMED):
-            if rule.project_id.id == 3:
+            if (rule.project_id.id == 3) and rules.count() > 0:
                 # Check if one of the targets is <<specimen
                 check = False
                 for target in mapping_targets:
@@ -399,7 +399,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
                                     audit_type=audit_type,
-                                    hit_reason='Mapt niet naar LOINC',
+                                    hit_reason='Mapt niet naar labcodeset',
                                 )
 
             # Look for rules with the same target component
