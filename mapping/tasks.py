@@ -179,9 +179,11 @@ def add_mappings_ecl_1_task(task=None, query=False, preview=False):
                 ))
             return results
     else:
+        print("Query false -> delete en stop")
         # Delete existing rules
         task = MappingTask.objects.get(id=task)
         rules = MappingRule.objects.filter(target_component=task.source_component, project_id=task.project_id)
+        rules.delete()
         return({})
 
 @shared_task

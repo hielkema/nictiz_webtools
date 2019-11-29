@@ -998,12 +998,14 @@ class api_EclQuery_get(UserPassesTestMixin,TemplateView):
                     'query' : query.query,
                     'query_function' : query.query_function,
                     'query_type' : query.query_type,
+                    'DELETE' : False,
                 })
             query_list.append({
                 'query_id' : False,
                 'query' : '',
                 'query_function' : '2',
                 'query_type' : '2',
+                'DELETE' : False,
             })
 
             # Generate ECL query

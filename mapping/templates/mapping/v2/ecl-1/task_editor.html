@@ -42,6 +42,7 @@
 
 <div id="vue-task-editor">
   <div class="row">
+{% comment %} Kolom 1 {% endcomment %}
     <div class="col col-sm-3">
         <div class="card">
         <div class="card-header text-white bg-info">
@@ -79,7 +80,7 @@
         </form>
         </div>
     </div>
-
+{% comment %} Kolom 2 {% endcomment %}
     <div class="col col-sm-5">
       <div class="card" v-if="currentTask.id">
         <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
@@ -87,19 +88,35 @@
           <!-- <form method="post" id="post_mappings" class="form-inline"> -->
               <ul class="list-group">
                 <li v-for="value, key in eclQueries" class="list-group-item list-group-item-info">
-                  Functie
-                  <select class="form-control" v-model="value.query_function">
-                    <option label="-" value="1"></option>
-                    <option label="+" value="2"></option>
-                  </select>
-                  Type
-                  <select class="form-control" v-model="value.query_type">
-                    <option label="&lt; Descendants" value="1"></option>
-                    <option label="&lt;&lt; Descendants and self" value="2"></option>
-                    <option label="Custom" value="3">Custom</option>
-                  </select>
-                  Query
-                  <textarea class="form-control" v-model="value.query" :name="'queryid-'+value.query_id"></textarea>
+                  <div class="form-row">
+                    <div class="form-group col-sm-5">
+                      <label class="form-label-sm" for="functie">Functie</label>
+                      <select name="functie" v-model="value.query_function" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                        <option label="-" value="1"></option>
+                        <option label="+" value="2"></option>
+                      </select>
+                    </div>
+                    <div class="form-group col-sm-5">
+                      <label for="type">Type</label>
+                      <select class="form-control form-control-sm" name="type" v-model="value.query_type" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                        <option label="&lt; Descendants" value="1"></option>
+                        <option label="&lt;&lt; Descendants and self" value="2"></option>
+                        <option label="Custom" value="3">Custom</option>
+                      </select>
+                    </div>
+                    <div class="form-group col-sm-2">
+                      <label for="DELETE">Verwijderen</label>
+                      <input type="checkbox" class="form-control form-control-sm" name="DELETE" v-model="value.DELETE" label="Query verwijderen" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group col-sm-12">
+                      <label :for="'queryid-'+value.query_id">Query</label>
+                      <textarea class="form-control form-control-sm" v-model="value.query" :name="'queryid-'+value.query_id" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm"></textarea>
+                    </div>
+                  </div>
+
+                    
                 </li>
                 <li class="list-group-item list-group-item-info" v-if="currentUser.id == currentTask.user.id">
                   <select class="form-control" v-model="eclPreview">
@@ -119,7 +136,6 @@
               </ul>
               <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
           </form>
-        {% comment %} Hier alle huidige mappings plaatsen {% endcomment %}
         <div class="card-header">Huidige mappings</div>
         <div class="card-body" v-if="mappingRulesLoading != true">
           <ul>
@@ -135,7 +151,7 @@
       </div>
       
     </div>
-
+{% comment %} Kolom 3 {% endcomment %}
     <div class="col col-sm-4">
       <div v-if="currentTask.id">
         <div class="card">
@@ -168,7 +184,7 @@
           <div class="card-body">
             <ul class="list-group">
               <li v-for="mapping in reverseMappings" class="list-group-item list-group-item-info">
-                [[mapping.id]] [[mapping.title]]
+                [[mapping.codesystem.title]] - [[mapping.id]] [[mapping.title]]
               </li>
             </ul>
         </div>
@@ -242,15 +258,14 @@
     <div class="modal-dialog modal-lg" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 v-if="eclQueryResultsLoading" class="modal-title" id="previewModalLabel">Resultaten worden geladen</h5>
-          <h5 v-else class="modal-title" id="previewModalLabel">Resultaten ECL query</h5>
+          <h5 class="modal-title" id="previewModalLabel">Resultaten ECL query</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body">
           <h6 v-if="eclQueryResultsLoading" class="modal-title" id="previewModalLabel">Even geduld a.u.b., het moet van ver komen</h6>
-          <ul>
+          <ul v-if="eclQueryResultsLoading == false">
             <li v-for="value, key in eclQueryResults">
               [[value.fsn.term]]
             </li>
@@ -605,8 +620,11 @@ var vuePosts = new Vue({
         postEclQuery: function(){
           var that = this;
           that.eclQueryResultsLoading = true;
+          that.eclQueryResults = '';
+          that.generatedEclQuery = 'Loading...'
           if(that.eclPreview=='false'){
             that.mappingRulesLoading = true;
+            that.mappingRules = '';
           }
           
           var eclQueries = that.eclQueries
@@ -620,20 +638,24 @@ var vuePosts = new Vue({
                       preview: that.eclPreview,
                   },
               }).then((response) => {
+                  that.getEclQueries(that.currentTask.id)
                   that.eclQueryResultsLoading = false;
                   that.eclQueryResults = response.mappings;
                   if(that.eclPreview=='false'){
                     that.getMaprulesById(that.currentTask.id)
                     that.mappingRulesLoading = false;
                   }
-                  that.getEclQueries(that.currentTask.id)
                   that.getAuditsById(that.currentTask.id)
                   console.log(response);
               }).catch((err) => {
-                  that.loading = false;
+                  that.getEclQueries(that.currentTask.id)
+                  that.eclQueryResultsLoading = false;
+                  that.mappingRulesLoading = false;
                   console.log(err);
               }).done(function(val) {
-                  that.loading = false;
+                  that.getEclQueries(that.currentTask.id)
+                  that.eclQueryResultsLoading = false;
+                  that.mappingRulesLoading = false;
                   console.log("DONE");
               })
         },
