@@ -614,12 +614,10 @@ var vuePosts = new Vue({
         this.getPermissions()
         this.getUserList()
         this.getGeneralData()
-        {% if current_task != 0 %}
         setInterval(() => {
             this.getAuditsById(this.currentTask.id);
             this.getEventList(this.currentTask.id);
-          }, 5000);
-        {% endif %}
+          }, 2000);
         
     },
     computed: {
