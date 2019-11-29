@@ -111,7 +111,6 @@
                   </div>
                   <div class="form-row">
                     <div class="form-group col-sm-12">
-                      <label :for="'queryid-'+value.query_id">Query</label>
                       <textarea class="form-control form-control-sm" v-model="value.query" :name="'queryid-'+value.query_id" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm"></textarea>
                     </div>
                   </div>
