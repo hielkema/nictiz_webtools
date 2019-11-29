@@ -314,10 +314,20 @@ def audit_async(audit_type=None, project=None, task_id=None):
     else:
         tasks = MappingTask.objects.filter(project_id=project, id=task_id)
         
+    # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
+    snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+    results = snowstorm.findConcepts(ecl='<<123038009')
+    specimen_exclusion_list = []
+    for concept in results:
+        specimen_exclusion_list.append(str(concept))
+
     if audit_type == "multiple_mapping":
         # Functions needed for audit
         def checkConsecutive(l): 
-            return sorted(l) == list(range(min(l), max(l)+1)) 
+            try:
+                return sorted(l) == list(range(min(l), max(l)+1)) 
+            except:
+                return False
         # Sanity check
         logger.info('Starting multiple mapping audit')
         logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
@@ -336,14 +346,18 @@ def audit_async(audit_type=None, project=None, task_id=None):
             # Create list for holding all used map priorities
             mapping_priorities = []
             mapping_targets = []
+            mapping_target_idents = []
             # Loop through individual rules
             for rule in rules:
                 # Append priority to list for analysis
                 mapping_priorities.append(rule.mappriority)
                 mapping_targets.append(rule.target_component)
+                mapping_target_idents.append(rule.target_component.component_id)
                 logger.info('Rule: {0}'.format(rule))
 
-                # Hit if priority or advice is empty
+
+
+                # Audits valid for all rules
                 if rule.mappriority == '' or rule.mappriority == None:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
@@ -362,6 +376,32 @@ def audit_async(audit_type=None, project=None, task_id=None):
                                 audit_type=audit_type,
                                 hit_reason='Regel mapt naar zichzelf',
                             )
+
+            # For project 3 (NHG diag -> LOINC/SNOMED):
+            if rule.project_id.id == 3:
+                # Check if one of the targets is <<specimen
+                check = False
+                for target in mapping_targets:
+                    if target.component_id in specimen_exclusion_list:
+                        check = True
+                if check == False:
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Mapt niet naar <<specimen',
+                                )
+                # Check if one of the targets is a LOINC item
+                check = False
+                for target in mapping_targets:
+                    if target.codesystem_id.id == 3:
+                        check = True
+                if check == False:
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Mapt niet naar LOINC',
+                                )
+
             # Look for rules with the same target component
             for target in mapping_targets:
                 other_rules = MappingRule.objects.filter(target_component=target)
@@ -373,12 +413,17 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             other_tasks_same_target.append(other_task.id)
 
                     for other_rule in other_rules:
-                        if other_rule.source_component != task.source_component:
-                            obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type=audit_type,
-                                hit_reason='Meerdere taken {} gebruiken hetzelfde target: component #{} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
-                            )
+                        # Separate rule for project 3 (NHG Diagn-LOINC/SNOMED)    
+                        if (rule.project_id.id == 3) and (other_rule.target_component.component_id in specimen_exclusion_list):
+                            logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
+                        else:
+                            if other_rule.source_component != task.source_component:
+                                obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Meerdere taken {} gebruiken hetzelfde target: component #{} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
+                                )
+                            
             # Specific rules for single or multiple mappings
             if rules.count() == 1:
                 logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
@@ -402,12 +447,19 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             audit_type=audit_type,
                             hit_reason='Taak heeft meerdere mapping rules: geen opeenvolgende prioriteit'
                         )
-                if sorted(mapping_priorities)[0] != 1:
+                try:
+                    if sorted(mapping_priorities)[0] != 1:
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
+                            )
+                except:
                     obj, created = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
-                        )
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
+                            )
                 if rules.last().mapadvice != 'Anders':
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
