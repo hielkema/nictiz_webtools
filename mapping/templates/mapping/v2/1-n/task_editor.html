@@ -238,7 +238,7 @@
                           <input v-bind:disabled="currentUser.id != currentTask.user.id" type="number" name="group" class="form-control" v-model="mapping.group">
                         </td>
                       </tr>
-                      <tr>
+                      <tr v-if="mappingProjectOptions.advice">
                         <th class="input-group-text">Advice</th>
                         <td>
                           <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="advice" class="form-control" v-model="mapping.advice">
