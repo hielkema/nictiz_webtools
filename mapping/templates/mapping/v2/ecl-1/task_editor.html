@@ -681,11 +681,10 @@ var vuePosts = new Vue({
         this.getUserList()
         this.getGeneralData()
         this.getMaprulesById({{current_task}})
-        {% comment %} setInterval(() => {
+        setInterval(() => {
             this.getAuditsById(this.currentTask.id);
             this.getEventList(this.currentTask.id);
-            this.getReverseMaprulesById(taskId)
-          }, 5000); {% endcomment %}
+          }, 5000);
         
     },
     computed: {
