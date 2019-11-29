@@ -607,15 +607,19 @@ var vuePosts = new Vue({
     },
     mounted () {
         this.getTaskList()
+        {% if current_task != 0 %}
         this.getTaskById({{current_task}})
+        this.getMaprulesById({{current_task}})
+        {% endif %}
         this.getPermissions()
         this.getUserList()
         this.getGeneralData()
-        this.getMaprulesById({{current_task}})
-        {% comment %} setInterval(() => {
+        {% if current_task != 0 %}
+        setInterval(() => {
             this.getAuditsById(this.currentTask.id);
             this.getEventList(this.currentTask.id);
-          }, 5000); {% endcomment %}
+          }, 5000);
+        {% endif %}
         
     },
     computed: {
