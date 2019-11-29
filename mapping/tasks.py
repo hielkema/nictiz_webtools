@@ -167,7 +167,7 @@ def add_mappings_ecl_1_task(task=None, query=False, preview=False):
                     component_id = result.get('conceptId'),
                     codesystem_id = "1",
                 )
-                created = MappingRule.objects.create(
+                obj, created = MappingRule.objects.get_or_create(
                     project_id=task.project_id,
                     source_component=source,
                     target_component=task.source_component,
