@@ -211,6 +211,36 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             print('Labcode', json.loads(request.POST.get('codesystem[labcode]')))
             if json.loads(request.POST.get('codesystem[labcode]')):
                 import_labcodeset_async.delay()
+                # Import pre-existent mappings as a comment
+                try:
+                    df = read_excel('/webserver/mapping/resources/labcodeset/init_mapping_NHG45-LOINC.xlsx')
+                    # Vervang lege cellen door False
+                    df=df.fillna(value=False)
+                    codesystem = MappingCodesystem.objects.get(id='4') # NHG tabel 45
+                    user = User.objects.get(username='hielkema')
+                    for index, row in df.iterrows():
+                        bepalingnr = row['bepalingsnr']
+                        notitie = row['Notitie']
+                        loinc_id = row['LOINC-id']
+                        loinc_name = row['LOINC-naam']
+                        component = MappingCodesystemComponent.objects.get(codesystem_id=codesystem, component_id=bepalingnr)
+                        try:
+                            if loinc_id != 'UNMAPPED':
+                                task = MappingTask.objects.get(source_component=component)
+                                comment = "Voorstel import: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
+                                MappingComment.objects.get_or_create(
+                                    comment_title = 'NHG-LOINC mapping (Hielkema)',
+                                    comment_task = task,
+                                    comment_body = comment,
+                                    comment_user = user,
+                                )
+                        except:
+                            print('Geen taak voor dit concept')
+                            print(bepalingnr, notitie, loinc_id, loinc_name)
+                except:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                    print(error)
 
             print('Snomed', json.loads(request.POST.get('codesystem[snomed]')))
             if json.loads(request.POST.get('codesystem[snomed]')): # codesystem 1 = snomed
