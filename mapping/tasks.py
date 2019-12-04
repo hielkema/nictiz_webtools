@@ -83,20 +83,19 @@ def import_labcodeset_async():
                         material_list.append(material['@ref'])
                 except:
                     material_list.append('Materiaal error')
-                    break
-            
+            logger.info(material_list)
             # Materiaal -> snomed
             material_list_snomed = []
             for material in material_list:
                 print("LOINC material code", material)
                 filterr = filter(lambda x : x['id'] == material, all_materials)
-            for item in filterr:
-                # print("FILTERED ITEM: ", item)
-                material_list_snomed.append({
-                    'Materiaal ID' : item.get('id'),
-                    'SCTID' : item.get('code'),
-                    'FSN' : item.get('displayName'),
-                })
+                for item in filterr:
+                    # print("FILTERED ITEM: ", item)
+                    material_list_snomed.append({
+                        'Materiaal ID' : item.get('id'),
+                        'SCTID' : item.get('code'),
+                        'FSN' : item.get('displayName'),
+                    })
 
             # Concept -> database
             codesystem = MappingCodesystem.objects.get(id='3') # codesystem 3 = labcodeset
