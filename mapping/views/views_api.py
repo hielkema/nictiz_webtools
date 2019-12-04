@@ -742,6 +742,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             'priority' : task.project_id.use_mappriority,
             'correlation' : task.project_id.use_mapcorrelation,
             'rule' : task.project_id.use_maprule,
+            'advice' : task.project_id.use_mapadvice,
             'correlation_options' : {
                 '447559001' : 'Broad to narrow',
                 '447557004' : 'Exact match',
