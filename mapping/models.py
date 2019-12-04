@@ -178,7 +178,7 @@ class MappingProgressRecord(models.Model):
     time = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return str(self.id) + " " + self.project +" " + self.name
+        return str(self.id) + " " + str(self.project) +" " + self.name
 
 class MappingTaskAudit(models.Model):
     audit_type = models.TextField()
