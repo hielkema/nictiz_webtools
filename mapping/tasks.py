@@ -377,7 +377,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             )
 
             # For project 3 (NHG diag -> LOINC/SNOMED):
-            if (rule.project_id.id == 3) and rules.count() > 0:
+            if (task.project_id.id == 3) and rules.count() > 0:
                 # Check if one of the targets is <<specimen
                 check = False
                 for target in mapping_targets:
