@@ -292,6 +292,10 @@ def import_nhgbepalingen_task():
             component_id=row[0],
         )
         obj.component_title = row[4]
+        if row[12][-1:] == "V": 
+            vervallen = "Bepaling is vervallen"
+        else:
+            vervallen = "Bepaling lijkt actief te zijn"
         extra = {
             'Omschrijving' : row[4],
             'Bepaling nummer' : row[0],
@@ -300,6 +304,9 @@ def import_nhgbepalingen_task():
             'Materiaal voorstel Snomed' : voorstel_materiaal,
             'Vraagtype' : row[14],
             'Eenheid' : row[16],
+            'Versie opname' : row[11],
+            'Versie mutatie' : row[12],
+            'Actief?' : vervallen,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
