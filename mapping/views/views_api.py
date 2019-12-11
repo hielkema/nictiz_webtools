@@ -670,7 +670,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
         elif task.project_id.project_type == "4":
             mappings = MappingRule.objects.filter(project_id=task.project_id, target_component=task.source_component)
-        mappings = mappings.order_by('mappriority', 'mapgroup')
+        mappings = mappings.order_by('mapgroup', 'mappriority')
         mapping_list = []
         for mapping in mappings:
             mapcorrelation = mapping.mapcorrelation
