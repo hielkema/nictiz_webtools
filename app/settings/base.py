@@ -57,6 +57,7 @@ INSTALLED_APPS = (
     'app',
     'build_tree',
     'build_tree_excel',
+    'snomed_list_generator',
     'homepage',
     'django_select2',
     'mapping',

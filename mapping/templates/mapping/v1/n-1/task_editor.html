@@ -55,7 +55,7 @@
       </div>
       <div class="card-body" style="height: 600px; overflow:auto;">
           {% for value in tasks.values %}
-              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}" style="text-decoration : none">
+              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}?page={{current.page}}" style="text-decoration : none">
                 <span style="display: block;">  
                   {% if value.id == current_task.id %}
                   <li class="list-group-item list-group-item-info">
@@ -93,6 +93,11 @@
     <div class="card">
         <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
     </div>
+    {% comment %} TODO -HIDE IF SOURCE IS NOT SNOMED {% endcomment %}
+    <div id="eclQuery">
+
+    </div>
+    
     <form method="post" id="post_mappings" class="form-inline">
       <div id="mappingtargets" style="width:100%">
             
@@ -163,7 +168,7 @@
   </div>
 
 </div>
-});
+
 <script>
 {% comment %} If user has permission to edit mappings -> handle post {% endcomment %}
 {% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
@@ -221,6 +226,11 @@ $(document).ready(function(){
         $("#currentTaskStatus").html(result);
       }});
     }, 1000);
+
+{% comment %} Load ECL query box {% endcomment %}
+    $.ajax({url: "/mapping/ecl_query/{{current_task.id}}", success: function(result){
+      $("#eclQuery").html(result);
+    }});
 
 {% comment %} Load and refresh audit results {% endcomment %}
   function refreshAudits(){

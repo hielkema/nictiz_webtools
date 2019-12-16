@@ -1,0 +1,86 @@
+{% if not results_view %}
+    <div id="search_wrapper">
+        <div class="card">
+            <div class="card-header">
+                <b>ECL query</b>
+                <form action="{% url "mapping:index" %}ecl_query/{{task.id}}" id="search_query" method="POST">
+                {% csrf_token %}
+                {{form.query}}
+                <input type="submit" id="submit_search_query" name="Zoek" class="form-control">
+                </form>
+            </div> 
+        </div>
+    </div>
+    <div id="search_results_wrapper">
+{% else %}
+    <div class="card">
+        <div class="card-body">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModalLong">
+                    Toon resultaten
+            </button>        
+        </div> 
+    </div>
+    <div class="modal fade" id="exampleModalLong" tabindex="-1" role="dialog" aria-labelledby="exampleModalLongTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{% url "mapping:index" %}ecl_query/{{task.id}}" id="search_results" method="POST">
+                <div class="modal-body">
+                        {% csrf_token %}
+                        {{ formset.management_form }}
+                        {{ form.id }} {{ form.target_component }} {{ form.active }}
+                        <table class="table table-sm table-hover">
+                            {% for form in formset %}
+                            <tr>
+                                {{form.source_component}}
+                                <td> {{form.source_component_ident.value}}</td><td>{{form.source_component_term.value}}</td><td><a href="#" class="itemDelete">X</a></td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Sluiten</button>
+                    <input type="submit" class="btn btn-primary" value="Toevoegen">
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+</div>
+
+<script>
+$(document).ready(function(){
+    $('#search_results').on('click', '.itemDelete', function() {
+        $(this).parent().parent().remove();
+    });
+
+    $("#search_query").submit(function(e) {
+        e.preventDefault();
+
+        $("#search_results_wrapper").html('');
+        
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: form.serialize(),
+            success: function(data)
+            {  
+                $("#search_results_wrapper").html(data); 
+            },
+            // complete: function (data) {
+            //     $("#search_results_wrapper").html(data); 
+            // },
+        });
+    });
+});
+</script>

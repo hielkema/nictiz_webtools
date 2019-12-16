@@ -1,0 +1,57 @@
+{% csrf_token %}
+{{ formset.management_form }}
+<ul class="list-group">
+    {% for form in formset %}
+    {% if 'mapping | edit mapping' in permissions and current_user.id == task.user.id %}
+        {% if form.query_function.value == "1" %}
+            <li class="list-group-item list-group-item-danger">
+        {% elif form.query_function.value == "2" %}
+            <li class="list-group-item list-group-item-success">
+        {% elif not form.query.value %}
+            <li class="list-group-item list-group-item-info">
+
+        {% else %}
+            <li class="list-group-item">
+        {% endif %}
+            <table style="width:100%;">
+                {{form.query_id}}
+                <tr>
+                    <td>{{form.query_function}}</td>
+                    <td>{{form.query_type}}</td>
+                    <td>{{form.DELETE}}</td>
+                </tr>
+                <tr>
+                    <td colspan=2>{{form.query}}</td>
+                </tr>
+            </table>
+        </li>
+    {% else %}
+        <fieldset disabled="disabled">
+            {% if form.query_function.value == "1" %}
+                <li class="list-group-item list-group-item-danger">
+            {% elif form.query_function.value == "2" %}
+                <li class="list-group-item list-group-item-success">
+            {% elif not form.query.value %}
+                <li class="list-group-item list-group-item-info">
+
+            {% else %}
+                <li class="list-group-item">
+            {% endif %}
+                <table style="width:100%;">
+                    {{form.query_id}}
+                        <tr>
+                            <td>{{form.query_function}}</td>
+                            <td>{{form.query_type}}</td>
+                        </tr>
+                        <tr>
+                            <td colspan=2>{{form.query}}</td>
+                        </tr>
+                </table>
+            </li>
+        </fieldset>
+    {% endif %}
+    {% endfor%}
+    <li class="list-group-item list-group-item-info">
+        <b>Query:</b><br><code>{{generated_query}}</code>
+    </li>
+</ul>

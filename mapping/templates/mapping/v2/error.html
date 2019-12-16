@@ -1,0 +1,13 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">Er is een fout opgetreden:</div>
+  <div class="alert alert-info">{{error_text}}</div>
+  <div class="alert alert-warning">Stuur deze tekst naar de beheerder:<br>
+    <code>{{ request.build_absolute_uri }}</code><br>
+    <code>{{exception}}</code>
+  </div>
+</div>
+{% endblock content %}

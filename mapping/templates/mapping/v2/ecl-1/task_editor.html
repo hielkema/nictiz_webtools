@@ -1,0 +1,715 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+{% block content %}
+
+<style>
+  img {
+    height: auto;
+    max-width: 2.5rem;
+    margin-right: 1rem;
+  }
+  
+  .d-center {
+    display: flex;
+    align-items: center;
+  }
+  
+  .selected img {
+    width: auto;
+    max-height: 23px;
+    margin-right: 0.5rem;
+  }
+  
+  .v-select .dropdown li {
+    border-bottom: 1px solid rgba(112, 128, 144, 0.1);
+  }
+  
+  .v-select .dropdown li:last-child {
+    border-bottom: none;
+  }
+  
+  .v-select .dropdown li a {
+    padding: 10px 20px;
+    width: 100%;
+    font-size: 1.25em;
+    color: #3c3c3c;
+  }
+
+  .v-select .dropdown-menu .active > a {
+    color: #fff;
+  }
+</style>
+
+<div id="vue-task-editor">
+  <div class="row">
+{% comment %} Kolom 1 {% endcomment %}
+    <div class="col col-sm-3">
+        <div class="card">
+        <div class="card-header text-white bg-info">
+            <h5 class="card-title">Filters</h5>
+        </div>
+        <div class="card-body">
+            <select class="form-control" v-model="filterUser">
+              <option value="" key="">Alle gebruikers</option>
+              <option v-for="(value, key) in userList" :selected="value.id == currentUser.id" :value="value.id" :key="value.id">
+                [[value.username]]
+              </option>
+            </select>
+            <select class="form-control" v-model="filterStatus">
+              <option value="" key="">Alle statussen</option>
+              <option v-for="(value, key) in statusList" :selected="filterStatus == key" :value="value.id" :key="value.id">[[value.title]]</option>
+            </select>
+        </div>
+        </div>
+        <div class="card">
+        <div class="card-header text-white bg-info">
+            <h5 class="card-title">Taken</h5>
+        </div>
+        <div class="card-body" style="height: 600px; overflow:auto;">
+          <span v-if="loadingTaskList">Taken worden geladen, even geduld a.u.b.</span>
+          <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
+              <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
+              [[task.component.title]]<br>
+              <small>[[task.status.title]] @ [[task.user.name]]</small>
+              </li>
+          </span>
+        </div>
+
+        <form>
+            TO-DO: Task search
+        </form>
+        </div>
+    </div>
+{% comment %} Kolom 2 {% endcomment %}
+    <div class="col col-sm-5">
+      <div class="card" v-if="currentTask.id">
+        <div class="card-header text-white bg-info"><h5 class="card-title">Doel</h5></div>
+          <form v-on:submit.prevent="postEclQuery()">
+          <!-- <form method="post" id="post_mappings" class="form-inline"> -->
+              <ul class="list-group">
+                <li v-for="value, key in eclQueries" class="list-group-item list-group-item-info">
+                  <div class="form-row">
+                    <div class="form-group col-sm-5">
+                      <label class="form-label-sm" for="functie">Functie</label>
+                      <select name="functie" v-model="value.query_function" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                        <option label="-" value="1"></option>
+                        <option label="+" value="2"></option>
+                      </select>
+                    </div>
+                    <div class="form-group col-sm-5">
+                      <label for="type">Type</label>
+                      <select class="form-control form-control-sm" name="type" v-model="value.query_type" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                        <option label="&lt; Descendants" value="1"></option>
+                        <option label="&lt;&lt; Descendants and self" value="2"></option>
+                        <option label="Custom" value="3">Custom</option>
+                      </select>
+                    </div>
+                    <div class="form-group col-sm-2">
+                      <label for="DELETE">Verwijderen</label>
+                      <input type="checkbox" class="form-control form-control-sm" name="DELETE" v-model="value.DELETE" label="Query verwijderen" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group col-sm-12">
+                      <textarea class="form-control form-control-sm" v-model="value.query" :name="'queryid-'+value.query_id" v-bind:disabled="(permissions.includes('mapping | edit mapping') == false) || (currentUser.id != currentTask.user.id)" class="form-control form-control-sm"></textarea>
+                    </div>
+                  </div>
+
+                    
+                </li>
+                <li class="list-group-item list-group-item-info" v-if="currentUser.id == currentTask.user.id">
+                  <select class="form-control" v-model="eclPreview">
+                    <option label="Toon voorbeeld" value="true"></option>
+                    <option label="Resultaat query opslaan" value="false"></option>
+                  </select>
+                  <button v-on:click="postEclQuery()" v-if="currentUser.id == currentTask.user.id && eclPreview == 'false'" class="form-control">
+                    Opslaan en mappings maken
+                  </button>
+                  <button v-on:click="postEclQuery()" v-if="currentUser.id == currentTask.user.id && eclPreview == 'true'" type="button" class="form-control" data-toggle="modal" data-target="#previewModal">
+                    Query opslaan en voorbeeld tonen
+                  </button>
+                </li>
+                <li class="list-group-item list-group-item-info">
+                  <b>Query:</b><br><code>[[generatedEclQuery]]</code>
+                </li>
+              </ul>
+              <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
+          </form>
+        <div class="card-header">Huidige mappings</div>
+        <div class="card-body" v-if="mappingRulesLoading != true">
+          <ul>
+            <li v-for="value, key in mappingRules">
+              [[value.source.component_id]]<br>
+              [[value.source.component_title]]
+            </li>
+          </ul>
+        </div>
+        <div class="card-body" v-else>
+          De mappings worden berekend, even geduld a.u.b.
+        </div>
+      </div>
+      
+    </div>
+{% comment %} Kolom 3 {% endcomment %}
+    <div class="col col-sm-4">
+      <div v-if="currentTask.id">
+        <div class="card">
+          <div class="card-header text-white bg-info"><h5 class="card-title">Te mappen concept</h5></div>
+          <div class="card-body">
+              <table class="table table-hover table-sm">                  
+                <tr><th style="width: 150px">Terminologie: </th><td>[[currentTask.component.codesystem.title]] [[currentTask.component.codesystem.version]]</td></tr>
+                <tr><th style="width: 150px">Term: </th><td>[[currentTask.component.title]] </td></tr>
+                <tr v-for="value, key in currentTask.component.extra" v-if="(key == 'Materialen')">
+                  <td>[[key]]</td>
+                  <td>
+                    <ul>
+                      <font v-for="value, key in value">
+                        <li>[[value.SCTID]] [[value.FSN]]</li>
+                      </font>
+                    </ul>
+                  </td>
+                </tr><tr v-else-if="value != false">
+                  <td>[[key]]</td>
+                  <td>[[value]]</td>
+                </tr>
+                </tr>
+                <tr><td style="width: 150px">Taak ID: </td><td>[[currentTask.id]]</td></tr>
+              </table>
+            </div>
+        </div>
+        
+        <div v-if="reverseMappings" class="card">
+          <div class="card-header text-white bg-info">Reverse mappings</div>
+          <div class="card-body">
+            <ul class="list-group">
+              <li v-for="mapping in reverseMappings" class="list-group-item list-group-item-info">
+                [[mapping.codesystem.title]] - [[mapping.id]] |[[mapping.title]]|
+              </li>
+            </ul>
+        </div>
+        
+        <div>
+          <ul class="list-group">
+            <li v-for="audit in audits.hit" class="list-group-item list-group-item-danger">
+              [[audit.reason]]
+              <a v-if="permissions.includes('mapping | audit')" href="#" class="fa fa-bell-slash" aria-hidden="true" v-on:click="whitelistAudit(audit.id)"> whitelist</a>
+            </li>
+          </ul>
+        </div>
+        <div class="card">
+            <div class="card-header">Status</div>
+            <div class="card-body">
+              <div v-if="permissions.includes('mapping | change task status')">
+                <div v-for="status in statusList">
+                    <button v-if="status.id == currentTask.status.id" style="float:left;" class="btn btn-info">[[status.title]]</button>
+                    <a v-else style="float:left;" v-on:click="changeTaskStatus(status.id)" class="btn btn-light">[[status.title]]</a>
+                </div>
+              </div><div v-else>
+                Huidige status is: <b>[[currentTask.status.title]]</b>
+              </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">Doorsturen naar
+              <div v-if="permissions.includes('mapping | change task status')">
+                <select name="changeUser" class="form-control" @change="changeTaskUser($event.target.value)">
+                  <option :selected="currentTask.user.id == user.id" v-for="user in userList" :value="user.id" :key="user.username">[[user.username]]</option>
+                </select>
+              </div><div v-else>
+                Huidige gebruiker is: <b>[[currentTask.user.name]]</b>
+              </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Commentaar</div>
+            <div class="card-body" v-if="permissions.includes('mapping | place comments')">
+              <form v-on:submit.prevent="postComment()">
+                <textarea class="form-control" v-model="newComment"></textarea>
+                <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
+                <button class="form-control">Submit</button>
+              </form>
+            </div>
+              <ul class="list-group">
+                <div v-for="event in eventList">
+                  <li v-if="event.type == 'comment'" class="list-group-item">
+                  [[event.text]]<br>
+                  [[event.action_user.name]] <small>@[[event.created]]</small>
+                  <span v-if="event.action_user.id == currentUser.id" class="fa fa-trash" aria-hidden="true" v-on:click="deleteComment(event.id)"> delete</span>
+                  </li>
+                  <li v-if="event.type == 'status_change'" class="list-group-item list-group-item-warning" >
+                    [[event.text]] <small>@[[event.created]]</small>
+                  </li>
+                  <li v-if="event.type == 'user_change'" class="list-group-item list-group-item-warning" >
+                    [[event.text]] <small>@[[event.created]]</small>
+                  </li>
+                </div>
+              </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {% comment %} Modal voor preview {% endcomment %}
+  <div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="previewModalLabel">Resultaten ECL query</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h6 v-if="eclQueryResultsLoading" class="modal-title" id="previewModalLabel">Even geduld a.u.b., het moet van ver komen</h6>
+          <ul v-if="eclQueryResultsLoading == false">
+            <li v-for="value, key in eclQueryResults">
+              [[value.fsn.term]]
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Sluiten</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+
+
+
+<script>
+Vue.component('v-select', VueSelect.VueSelect);
+const debounce = (func, delay) => {
+  let inDebounce
+  return function() {
+    const context = this
+    const args = arguments
+    clearTimeout(inDebounce)
+    inDebounce = setTimeout(() => func.apply(context, args), delay)
+  }
+}
+var vuePosts = new Vue({
+    delimiters: ['[[', ']]'],
+    el: '#vue-task-editor',
+    data: {
+        tasks: [],
+        permissions: [],
+        currentTask: [],
+        currentUser: [],
+        audits: [],
+        eventList: [],
+        userList: [],
+        eclQueries: [],
+        generatedEclQuery: '',
+        reverseMappings: [],
+        mappingRules: [],
+        mappingRulesLoading: false,
+        statusList: [],
+        mappingProjectOptions: [],
+        newComment: '',
+        options: [],
+        filterStatus: '',
+        filterUser: '',
+        eclPreview: 'true',
+        eclQueryResults: [],
+        eclQueryResultsLoading: false,
+        loading: false,
+        loadingTaskList: false,
+        loadingTargetSearch : false,
+        csrftoken: Cookies.get('csrftoken'),
+    },
+    methods: {
+        getGeneralData: function() {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/general/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.currentUser = response.current_user
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getEventList: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/events/get/task/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.eventList = response.eventList
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getPermissions: function() {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/permissions/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.permissions = response
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getTaskList: function() {
+          var that = this
+          that.loadingTaskList = true
+          $.ajax({
+            url: '/mapping/api/task/get/project/{{current_project.id}}',
+            method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+            that.loadingTaskList = false
+            console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.loadingTaskList = false
+            that.tasks = response.taskList
+          }
+          }).catch(function(err) {
+            that.loadingTaskList = false
+            console.error(err);
+          });
+        },
+        getUserList: function() {
+          var that = this
+          that.loading = true;
+          $.ajax({
+              url: '/mapping/api/user/get/',
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+              console.log(response);
+              that.userList = response
+              that.loading = false;
+          }
+          }).catch(function(err) {
+              console.error(err);
+          });
+        },
+        getAuditsById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/audit/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.audits = response
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        getTaskById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/task/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.currentTask = response.task
+            that.statusList = response.status_list
+            that.getEclQueries(taskId)
+            that.getEventList(taskId)
+            that.getMaprulesById(taskId)
+            that.getAuditsById(taskId)
+            that.getReverseMaprulesById(taskId)
+            {% comment %} window.history.pushState({"html":'test.html',"pageTitle":'test'},"", 'patch'); {% endcomment %}
+          }
+          }).catch(function(err) {
+            {% comment %} that.currentTask = null {% endcomment %}
+            console.error(err);
+          });
+        },
+        getReverseMaprulesById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/reverse_mapping/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.reverseMappings = response.reversemappings
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        getMaprulesById: function(taskId) {
+          var that = this
+          $.ajax({
+              url: '/mapping/api/mapping/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.mappingRules = response.mappings
+            that.mappingProjectOptions = response.project
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        changeTaskStatus: function(newTaskStatus){
+          var that = this
+          // that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/status/put/'+that.currentTask.id,
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      task: that.currentTask.id,
+                      newStatus: newTaskStatus,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getTaskById(that.currentTask.id)
+                  that.getTaskList()
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        getEclQueries: function(taskId){
+          var that = this
+          $.ajax({
+              url: '/mapping/api/eclquery/get/'+taskId,
+              method: 'GET'
+          }).then(function(response) {
+          if (response.error) {
+              console.err("There was an error " + response.error);
+          } else {
+            console.log(response);
+            that.eclQueries = response.queries
+            that.generatedEclQuery = response.generated_query
+          }
+          }).catch(function(err) {
+            console.error(err);
+          });
+        },
+        changeTaskUser: function(newTaskUser){
+          var that = this
+          // that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/taskuser/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      task: that.currentTask.id,
+                      newUser: newTaskUser,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getTaskById(that.currentTask.id)
+                  that.getTaskList()
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        whitelistAudit: function(auditId){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/audit/post/'+auditId,
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      auditId: auditId,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getAuditsById(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postComment: function(){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/comment/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      comment: that.newComment,
+                      task: that.currentTask.id,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
+                  that.newComment=''
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        deleteComment: function(commentId){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/comment/del/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      comment: commentId,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postEclQuery: function(){
+          var that = this;
+          that.eclQueryResultsLoading = true;
+          that.eclQueryResults = '';
+          that.generatedEclQuery = 'Loading...'
+          if(that.eclPreview=='false'){
+            that.mappingRulesLoading = true;
+            that.mappingRules = '';
+          }
+          
+          var eclQueries = that.eclQueries
+          $.ajax({
+                  url: '/mapping/api/eclquery/put/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      mappingQueries: JSON.stringify(eclQueries),
+                      task: that.currentTask.id,
+                      preview: that.eclPreview,
+                  },
+              }).then((response) => {
+                  that.getEclQueries(that.currentTask.id)
+                  that.eclQueryResultsLoading = false;
+                  that.eclQueryResults = response.mappings;
+                  if(that.eclPreview=='false'){
+                    that.getMaprulesById(that.currentTask.id)
+                    that.mappingRulesLoading = false;
+                  }
+                  that.getAuditsById(that.currentTask.id)
+                  console.log(response);
+              }).catch((err) => {
+                  that.getEclQueries(that.currentTask.id)
+                  that.eclQueryResultsLoading = false;
+                  that.mappingRulesLoading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.getEclQueries(that.currentTask.id)
+                  that.eclQueryResultsLoading = false;
+                  that.mappingRulesLoading = false;
+                  console.log("DONE");
+              })
+        },
+        onSearch(search, loading) {
+          var that = this;
+          that.loadingTargetSearch = true;
+          debounce(this.search(loading, search, this),500);
+        },
+        search: debounce((loading, search, vm) => {
+            var that = this;
+            fetch(
+              '/mapping/api/componentsearch/?term='+escape(search)
+            ).then(res => {
+              res.json().then(json => (vm.options = json.items));
+            });
+        },1000),
+        
+    },
+    mounted () {
+        this.getTaskList()
+        this.getTaskById({{current_task}})
+        this.getPermissions()
+        this.getUserList()
+        this.getGeneralData()
+        this.getMaprulesById({{current_task}})
+        setInterval(() => {
+            this.getAuditsById(this.currentTask.id);
+            this.getEventList(this.currentTask.id);
+          }, 2000);
+        
+    },
+    computed: {
+      tasksFiltered: function () {
+        let filterUser = this.filterUser.toString(),
+            filterStatus = this.filterStatus.toString()
+        return this.tasks.filter(function(item){
+          let filtered = true
+          if(filterUser && filterUser.length > 0){
+            filtered = item.user.id == filterUser
+          }
+          if(filtered){
+            if(filterStatus && filterStatus.length > 0){
+              filtered = item.status.id == filterStatus
+            }
+          }
+          return filtered
+        })
+      }
+    },
+});
+</script>
+<script>
+$(document).ready(function(){
+  $('[data-toggle="popover"]').popover();
+});
+</script>
+{% endblock content %}

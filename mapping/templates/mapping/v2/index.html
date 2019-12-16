@@ -1,0 +1,14 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+  <div class="row card">
+    <div class="card-header"><h5 class="card-title">Projecten</h5></div>
+    <div class="card-body">
+      {% for value in project_list.values %}
+        <a href="{% url "mapping:index" %}project/{{value.id}}" class="btn btn-info" style="width:300px">{{value.title}}</a><br><br>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock content %}

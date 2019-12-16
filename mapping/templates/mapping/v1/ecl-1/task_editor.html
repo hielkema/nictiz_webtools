@@ -1,0 +1,387 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+<div class="row">
+  <div class="col col-sm-2">
+    <div class="card">
+      <div class="card-header text-white bg-info">
+        <h5 class="card-title">Taken</h5>
+      </div>
+      <div class="card-body">
+        <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);" class="form-control">
+            <option>---</option>  
+            {% for value in project_list.values %}
+              <option value="{% url "mapping:index" %}project/{{value.id}}"{% if current_project.id == value.id %} selected {% endif %}>{{value.title}}</option>
+            {% endfor %}
+        </select>
+      
+        <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);" class="form-control">
+            <option value="{% url "mapping:index" %}status_filter/{{current_task.project_id.id}}/{{current_task.id}}/0">Alle taken</option>  
+        {% for value in status_list %}
+          {% if value.id != current_project.status_complete.id %}
+            <option value="{% url "mapping:index" %}status_filter/{{current_task.project_id.id}}/{{current_task.id}}/{{value.id}}"{% if status_filter == value.id %} selected {% endif %}>{{value.status_title}}</option>     
+          {% endif %}
+        {% endfor %}
+        </select> 
+
+        <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);" class="form-control">
+            <option value="{% url "mapping:index" %}status_filter/{{current_task.project_id.id}}/{{current_task.id}}/{{status_filter}}/0"{% if own_task_filter == 0 %} selected {% endif %}>Taken van alle gebruikers</option>  
+            <option value="{% url "mapping:index" %}status_filter/{{current_task.project_id.id}}/{{current_task.id}}/{{status_filter}}/1"{% if own_task_filter == 1 %} selected {% endif %}>Alleen eigen taken</option>  
+        </select> 
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header text-white bg-info">
+          <b>{{tasks_shown}} van {{tasks_total}} taken zichtbaar</b>
+          <div class="pagination">
+            <span class="step-links">
+                {% if objects.has_previous %}
+                    <a href="?page=1" class=" text-white">&laquo;</a>
+                    <a href="?page={{ objects.previous_page_number }}" class=" text-white">&lsaquo; vorige</a>
+                {% endif %}
+          
+                <span class="current">
+                    <strong>Pagina {{ objects.number }} van {{ objects.paginator.num_pages }}.</strong>
+                </span>
+          
+                {% if objects.has_next %}
+                    <a href="?page={{ objects.next_page_number }}" class=" text-white">volgende &rsaquo;</a>
+                    <a href="?page={{ objects.paginator.num_pages }}" class=" text-white">&raquo;</a>
+                {% endif %}
+            </span>
+          </div>
+      </div>
+      <div class="card-body" style="height: 600px; overflow:auto;">
+          {% for value in tasks.values %}
+              <a id="{{value.id}}" href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}?page={{current_page}}" style="text-decoration : none">
+                <span style="display: block;">  
+                  {% if value.id == current_task.id %}
+                  <li class="list-group-item list-group-item-info">
+                  {% else %}
+                  <li class="list-group-item list-group-item-light">
+                  {% endif %}
+                  <!-- <p>Taak: {{value.id}} / {{value.project_title}} / {{value.source_codesystem}}) -> {{value.target_codesystem}}</p> -->
+                  {{value.source_component_title}}<br>
+                  <small><b>{{value.status.status_title}}</b></small>
+                  {% if own_task_filter == 0 %} @{{value.user.username}} {% endif %}
+                  <!-- <p><a href="{% url "mapping:index" %}project/{{current_project.id}}/task/{{value.id}}">Open taak</a></p> -->
+                  </li>
+                </span>
+              </a>
+          {% endfor %}
+      </div>
+      <script>
+        $( document ).ready(function() {
+          javascript:document.getElementById('{{current_task.id}}').scrollIntoView(true);
+          setTimeout(() => {
+            window.scrollBy(0,-500)
+          }, 0);
+        });
+      </script> 
+
+      <form action="{% url "mapping:index" %}tasksearch/{{current_project.id}}/">
+        <select name="task_id" value="{{form.target_component.value}}" class="form-control js-select2-tasksearch">
+        </select>
+        <input type="submit" value="Open taak" class="form-control">
+      </form>
+    </div>
+  </div>
+
+  <div class="col col-sm-6">
+    <div class="card">
+        <div class="card-header text-white bg-info"><h5 class="card-title">Bron</h5></div>
+    </div>
+    {% comment %} TODO -HIDE IF SOURCE IS NOT SNOMED {% endcomment %}
+    <form action="{% url "mapping:index" %}ecl_query_builder/{{current_task.id}}/" method="POST" id="save_ecl_query">
+      <div id="eclQuery">
+      </div>
+      <div class="card" style="width:100%"><input type="submit" value="Genereer ECL en start Snowstorm query" id="save_ecl_query_button" class="form-control"></div>
+    </form> 
+
+      <br>
+
+      <div class="card" style="width:100%"><input type="button" value="Forceer herladen" id="mapping_target_recalc_button" class="form-control"></div>
+      
+
+      <div id="mappingtargets" style="width:100%">
+            Laden......
+      </div>
+
+  </div>
+
+
+  <div class="col col-sm-4">
+      <div class="card">
+        <div class="card-header text-white bg-info"><h5 class="card-title">Te mappen concept</h5></div>
+        <div class="card-body">
+          <table class="table table-hover table-sm">
+            <tr><td style="width: 150px">ID: </td><td>{{source_component.component_id}} [{{source_component.codesystem}} {{source_component.codesystem_version}}]</td></tr>
+            <tr><td style="width: 150px">Term: </td><td>{{source_component.title}}</td></tr>
+            {% if source_component.extra_1 and source_component.extra_1 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_1}}: </td><td>{{source_component.extra_1}}</td></tr>{% endif %}
+            {% if source_component.extra_2 and source_component.extra_2 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_2}}: </td><td>{{source_component.extra_2}}</td></tr>{% endif %}
+            {% if source_component.extra_3 and source_component.extra_3 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_3}}: </td><td>{{source_component.extra_3}}</td></tr>{% endif %}
+            {% if source_component.extra_4 and source_component.extra_4 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_4}}: </td><td>{{source_component.extra_4}}</td></tr>{% endif %}
+            {% if source_component.extra_5 and source_component.extra_5 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_5}}: </td><td>{{source_component.extra_5}}</td></tr>{% endif %}
+            {% if source_component.extra_6 and source_component.extra_6 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_6}}: </td><td>{{source_component.extra_6}}</td></tr>{% endif %}
+            {% if source_component.extra_7 and source_component.extra_7 != 'nan'  %}<tr><td style="width: 150px">{{current_codesystem.codesystem_extra_7}}: </td><td>{{source_component.extra_7}}</td></tr>{% endif %}
+          </table>
+        </div>
+      </div>
+
+      {% if reverse_mappings %}
+        <div class="card">
+          <div class="card-header text-white bg-info"><h5 class="card-title">Reverse</h5></div>
+          <div class="card-body">
+            <table class="table table-hover table-sm">
+            {% for mapping in reverse_mappings %}
+              <tr><td>{{mapping.target_component.codesystem_id.codesystem_title}}</td><td>{{mapping.target_component.component_id}}</td><td>{{mapping.target_component.component_title}}</td></tr>
+            {% endfor %}
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      <div id="auditresults"></div>
+      <div id="currentTaskStatus"></div>
+
+      <div class="card">
+        <div class="card-header">Doorsturen naar</div>
+        <div class="card-body">
+        {% if 'mapping | change task status' in permissions %}
+        <!-- Start change task user -->
+          <select onchange="this.options[this.selectedIndex].value && (window.location = this.options[this.selectedIndex].value);" class="form-control">
+              <option>---</option>  
+              {% for value in user_list.values %}
+                <option value="{% url "mapping:index" %}change_user/{{current_task.id}}/{{value.id}}"{% if current_task.user.id == value.id %} selected {% endif %}>{{value.username}}</option>
+              {% endfor %}
+          </select>
+          <!-- End change task user -->
+          {% else %}
+          <p>Taak is toegewezen aan: <strong>{{current_task.user.username}}</strong></p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Commentaar</div>
+        <div class="card-body">
+            {% if 'mapping | place comments' in permissions %}
+            <!-- Start author comment -->
+            <form action="{% url "mapping:post_comment" %}" id="post_comment" method="POST">
+            {% csrf_token %}
+            {{ comments_form.project_id }} {{ comments_form.task_id }}
+            {{ comments_form.comment_body }}
+            <input type="submit" value="Plaats" class="form-control"><br>
+            </form>
+            <!-- End author comment -->
+            {% endif %}
+            <div id="events_container"></div>
+        </div>
+      </div>
+  </div>
+
+</div>
+
+<script>
+$(document).ready(function(){
+    $("#save_ecl_query").submit(function(e) {
+        e.preventDefault(); // avoid to execute the actual submit of the form.
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+              type: "POST",
+              url: url,
+              data: form.serialize(), // serializes the form's elements.
+              async: true,
+              success: function(data)
+              {
+                $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
+                  $("#eclQuery").html(result);
+                }});
+                $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+                  $("#mappingtargets").html(result);
+                }});
+              }
+            });
+    });
+});
+
+{% comment %} If user has permission to edit mappings -> handle post {% endcomment %}
+{% if 'mapping | edit mapping' in permissions and current_user.id == current_task.user.id %}
+  $(document).ready(function(){
+      $("#post_mappings").submit(function(e) {
+          e.preventDefault(); // avoid to execute the actual submit of the form.
+
+          var form = $(this);
+          var url = form.attr('action');
+
+          $.ajax({
+                type: "POST",
+                url: url,
+                data: form.serialize(), // serializes the form's elements.
+                async: true,
+                success: function(data)
+                {
+                  $.ajax({url: "/mapping/mapping_target_list/{{current_task.id}}", success: function(result){
+                      $("#mappingtargets").html(result);
+                  }});
+                  $("#mapping_target_save").addClass("btn-success");
+                  setTimeout(function () {
+                      $("#mapping_target_save").removeClass("btn-success");
+                  },2000);
+                }
+              });
+      });
+  });
+{% endif %}
+{% comment %} Refresh results of ECL query every 5 seconds {% endcomment %}
+  setInterval(function(){
+      $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+        $("#mappingtargets").html(result);
+      }});
+    }, 5000);
+
+
+
+{% comment %} Load and refresh task status {% endcomment %}
+$(document).ready(function(){ 
+  function refreshStatus(){
+    $.ajax({url: "/mapping/get_current_status/{{current_task.id}}", success: function(result){
+      $("#currentTaskStatus").html(result);
+    }});
+  }
+  refreshStatus();
+  setInterval(function(){
+      $.ajax({url: "/mapping/get_current_status/{{current_task.id}}", success: function(result){
+        $("#currentTaskStatus").html(result);
+      }});
+    }, 60000);
+
+{% comment %} Load ECL query box {% endcomment %}
+    $.ajax({url: "/mapping/ecl_query_builder/{{current_task.id}}", success: function(result){
+      $("#eclQuery").html(result);
+    }});
+
+{% comment %} Load and refresh audit results {% endcomment %}
+  function refreshAudits(){
+    $.ajax({url: "/mapping/get_audits_for_task/{{current_task.id}}", success: function(result){
+      $("#auditresults").html(result);
+    }});
+  }
+  refreshAudits();
+  setInterval(function(){
+      $.ajax({url: "/mapping/get_audits_for_task/{{current_task.id}}", success: function(result){
+        $("#auditresults").html(result);
+      }});
+    }, 1000);
+
+
+{% comment %} Load and refresh comments {% endcomment %}
+  function refreshComments(){
+    $.ajax({url: "/mapping/show_events/{{current_task.id}}", success: function(result){
+      $("#events_container").html(result);
+    }});
+  }
+  refreshComments();
+  setInterval(function(){
+      $.ajax({url: "/mapping/show_events/{{current_task.id}}", success: function(result){
+        $("#events_container").html(result);
+      }});
+    }, 5000);
+    {% comment %} Post new comment {% endcomment %}
+    $("#post_comment").submit(function(e) {
+        e.preventDefault();
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+              type: "POST",
+              url: url,
+              data: form.serialize(),
+              success: function(data)
+              {
+                  $('#id_comment_body').val('');
+                  refreshComments();
+              }
+            });
+    });
+});
+
+{% comment %} Reload mappings {% endcomment %}
+$( "#mapping_target_recalc_button" ).click(function() {
+  $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+  }});
+});
+{% comment %} Load results of ECL query {% endcomment %}
+$(document).ready(function loadTargets(){
+    $.ajax({url: "/mapping/ecl_query_builder_results/{{current_task.id}}", success: function(result){
+      $("#mappingtargets").html(result);
+    }});
+  });
+</script>
+
+
+
+<script>
+  $(document).ready(function() {
+      $('.js-select2-tasksearch').select2({
+      ajax: {
+      url: "{% url "mapping:index" %}tasksearch/{{current_project.id}}/",
+      dataType: 'json',
+      delay: 250,
+      data: function (params) {
+        return {
+          term: params.term, // search term
+          page: params.page
+        };
+      },
+      processResults: function (data, params) {
+        params.page = params.page || 1;
+  
+        return {
+          results: data.items
+        };
+      },
+      cache: true
+    },
+    placeholder: 'Zoek naar een taak in het project',
+    minimumInputLength: 3,
+    templateResult: formatRepo,
+    templateSelection: formatRepoSelection
+    })
+  
+    function formatRepo (repo) {
+      if (repo.loading) {
+        return repo.text;
+      }
+  
+      var $container = $(
+        "<div class='select2-result-repository clearfix'>" +
+            "<div class='select2-result-repository__title'></div>" +
+            "<div class='select2-result-repository__codesystem'></div>" +
+            "<div class='select2-result-repository__description'></div>" +
+            "<div class='select2-result-repository__codesystemId'></div>" +
+        "</div>"
+      );
+  
+      $container.find(".select2-result-repository__title").text(repo.text);
+      $container.find(".select2-result-repository__codesystem").text('[Codesystem '+repo.codesystem+']');
+      // $container.find(".select2-result-repository__description").text('[intern ID '+repo.id+']');
+      $container.find(".select2-result-repository__codesystemId").text(repo.comp_id);
+  
+      return $container;
+    }
+  
+  
+    function formatRepoSelection (repo) {
+      return repo.text || repo.id;
+    }
+  });
+</script>
+{% endblock content %}

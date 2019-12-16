@@ -1,0 +1,57 @@
+<!-- howdy/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">De zoekterm wordt gezocht in de gepubliceerde Snomed productie database. <br>Bij het downloaden van het bestand wordt het bestand van de server verwijderd om schijfruimte te besparen.<br>De pagina zal elke 10 seconden automatisch herladen.</h4>
+    </div>
+    <div class="card-body mb-3">
+        {% if form %}
+        <form action="{% url "snomed_list:create_task" %}" method="post" id="query_form">
+            {% csrf_token %}
+            {{ form }}
+            <input type="submit" value="Zoek" class="form-control">
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div id="activeTasks"> Laden... </div>
+
+<script>
+$(document).ready(function(){ 
+    $.ajax({url: "/snomed_list/get_tasks/", success: function(result){
+        $("#activeTasks").html(result);
+    }});
+    setInterval(function(){
+        $.ajax({url: "/snomed_list/get_tasks/", success: function(result){
+            $("#activeTasks").html(result);
+        }});
+    }, 5000);
+});
+
+
+$(document).ready(function(){
+    $("#query_form").submit(function(e) {
+        e.preventDefault(); // avoid to execute the actual submit of the form.
+
+        var form = $(this);
+        var url = form.attr('action');
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: form.serialize(), // serializes the form's elements.
+            async: true,
+            success: function(data)
+            {
+                $.ajax({url: "/snomed_list/get_tasks/", success: function(result){
+                    $("#activeTasks").html(result);
+                }});
+            }
+            });
+    });
+});
+</script>
+{% endblock content %}

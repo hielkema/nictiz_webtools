@@ -1,0 +1,15 @@
+<div class="card">
+    <div class="card-header">
+    Resultaten van ECL query
+    </div>
+    <div class="card-body">
+        <ul class="list-group">
+            {% for result in results %}
+                <li class="list-group-item">
+                {{result.source_component.component_id}}
+                {{result.source_component.component_title}}
+                </li>
+            {% endfor%}
+        </ul>
+    </div>
+</div>

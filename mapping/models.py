@@ -13,6 +13,7 @@ class MappingProject(models.Model):
         ('1', 'One to Many'),
         ('2', 'Many to One'),
         ('3', 'Many to Many'),
+        ('4', 'Snomed ECL to one'),
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
@@ -59,6 +60,7 @@ class MappingCodesystemComponent(models.Model):
     component_id        = models.CharField(max_length=50)
     component_title     = models.CharField(max_length=500)
     component_created   = models.DateTimeField(default=timezone.now)
+    component_extra_dict  = models.TextField(default=None, null=True, blank=True)
     component_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_3  = models.CharField(max_length=500, default=None, null=True, blank=True)
@@ -101,6 +103,7 @@ class MappingTaskStatus(models.Model):
 
 
 class MappingRule(models.Model):
+    id = models.BigAutoField(primary_key=True)
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'source_component_rule') # Component ID in source codesystem = MappingCodesystems:component_id
     target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'target_component_rule') # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
@@ -125,6 +128,27 @@ class MappingRule(models.Model):
 
     # def __str__(self):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
+
+class MappingEclQuery(models.Model):
+    project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
+    target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
+    query               = models.TextField(default=None, blank=True, null=True)
+    
+    type_options = [
+        # (code, readable)
+        ('1', 'Children'),
+        ('2', 'Descendants and self'),
+        ('3', 'Custom'),
+    ]
+    query_type  = models.CharField(max_length=50, choices=type_options, default=None, blank=True, null=True)
+
+    function_options = [
+        # (code, readable)
+        ('1', 'MINUS'),
+        ('2', 'ADD'),
+        ('3', 'Custom'),
+    ]
+    query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
 
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
@@ -154,7 +178,7 @@ class MappingProgressRecord(models.Model):
     time = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return str(self.id) + " " + self.name
+        return str(self.id) + " " + str(self.project) +" " + self.name
 
 class MappingTaskAudit(models.Model):
     audit_type = models.TextField()

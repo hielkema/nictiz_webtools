@@ -1,0 +1,82 @@
+<!-- mapping/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+{% block content %}
+<div id="vue-task-editor">
+    <form v-on:submit.prevent="sendRequest()">
+    <table style="width:100%">
+        <tbody>
+            <tr>
+                <th width="130">Labcode</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.labcode">
+                </td>
+            </tr>
+            <tr>
+                <th width="130">NHG verrichtingen</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.nhgverr">
+                </td>
+            </tr>
+            <tr>
+                <th width="130">NHG bepalingen</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.nhgbep">
+                </td>
+            </tr>
+            <tr>
+                <th width="130">Snomed</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.snomed">
+                </td>
+            </tr>
+            <tr>
+                <th width="130">Laden</th>
+                <td>
+                    <input name="Labcode" value="Start" type="submit">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
+    </form>
+</div>
+
+<script>
+var vuePosts = new Vue({
+    delimiters: ['[[', ']]'],
+    el: '#vue-task-editor',
+    data: {
+        codesystem: {
+            'labcode' : false,
+            'snomed' : false,
+            'nhgverr' : false,
+            'nhgbep' : false,
+        },
+        csrftoken: Cookies.get('csrftoken'),
+    },
+    methods: {
+        sendRequest: function(){
+        var that = this
+        // that.loading = true;
+        $.ajax({
+                url: '/mapping/api/updatecodesystems/put/',
+                type: 'post',
+                data: {
+                    csrfmiddlewaretoken: that.csrftoken,
+                    codesystem: that.codesystem,
+                },
+            }).then((response) => {
+                that.loading = false;
+                console.log(response);
+            }).catch((err) => {
+                that.loading = false;
+                console.log(err);
+            }).done(function(val) {
+                that.loading = false;
+                console.log("DONE");
+            })
+        },
+    },
+});
+</script>
+{% endblock content %}

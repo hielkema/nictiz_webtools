@@ -1,0 +1,33 @@
+<div id="content">
+  <ul class="list-group">
+  {% for audit in audits %} 
+    {% if not audit.ignore %}
+      <li class="list-group-item list-group-item-danger">
+      {{ audit.hit_reason }}
+      {% if 'mapping | audit' in permissions %}
+      <a href="{% url "mapping:index" %}whitelist_audit/{{audit.id}}" id="whitelist_audit" onclick="javascript:return(false)">
+        <i class="fa fa-bell-slash-o"></i>
+      </a>
+      {% endif %}
+      </li>
+    {% endif %}
+  {% endfor %}
+  {% if whitelist_num %}
+  <li class="list-group-item list-group-item-info">
+    Er zijn audit hits met whitelist. ({{whitelist_num}})
+  </li>
+  {% endif %}
+  </ul>
+
+  <script>
+  $("#whitelist_audit").click(function(){
+      var dom = $(this);
+      var url = dom.attr('href');
+      $.ajax({ 
+              type: "GET",
+              url: url,
+          });
+      return false;
+  });
+  </script>
+</div>
