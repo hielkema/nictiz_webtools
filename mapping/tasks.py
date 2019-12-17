@@ -295,7 +295,7 @@ def import_nhgbepalingen_task():
         if str(row[12])[-1:] == "V": 
             vervallen = "Bepaling is vervallen"
         else:
-            vervallen = "Bepaling lijkt actief te zijn"
+            vervallen = "Bepaling is actief"
         extra = {
             'Omschrijving' : row[4],
             'Bepaling nummer' : row[0],
@@ -307,6 +307,8 @@ def import_nhgbepalingen_task():
             'Versie mutatie' : row[12],
             'Actief?' : vervallen,
         }
+        # Clear material for next loop
+        voorstel_materiaal = ''
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
         obj.save()
