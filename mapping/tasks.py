@@ -236,6 +236,8 @@ def import_nhgbepalingen_task():
         # if i > 5: break
 
         # Transformeren materiaal -> Snomed koppeling
+        # Start clean
+        voorstel_materiaal = ''
         if row[2] == 'B': voorstel_materiaal = '119297000 bloed (monster)'
         if row[2] == 'BA': voorstel_materiaal = '122552005 arterieel bloed (monster)'
         if row[2] == 'BC': voorstel_materiaal = '122554006 capillair bloed (monster)'
@@ -285,7 +287,7 @@ def import_nhgbepalingen_task():
         if row[2] == 'XV': voorstel_materiaal = '258577004 fluor vaginalis (monster)'
         if row[2] == 'XP': voorstel_materiaal = '119397002 Specimen from penis (specimen)'
         if row[2] == 'YX': voorstel_materiaal = '119347001 Seminal fluid specimen (specimen)'
-        if not voorstel_materiaal: voorstel_materiaal = "Geen materiaalcode"
+        if not voorstel_materiaal: voorstel_materiaal = "Geen voorstel gevonden"
         codesystem = MappingCodesystem.objects.get(id='4')
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
@@ -307,8 +309,6 @@ def import_nhgbepalingen_task():
             'Versie mutatie' : row[12],
             'Actief?' : vervallen,
         }
-        # Clear material for next loop
-        voorstel_materiaal = ''
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
         obj.save()
