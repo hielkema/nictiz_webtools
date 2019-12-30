@@ -117,8 +117,8 @@ postgres_backup/*.bak
 **/*.xml
 mapping/**/*.txt
 **/*.pickle
+vuejs/node_modules/
 
 # Server specific
 reverse-proxy/
 database_pull.sh
-vuejs/node_modules
