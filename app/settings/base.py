@@ -51,6 +51,7 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
     'django.core.management',
     'django_celery_beat',
+    'corsheaders',
 
     # Nictiz apps
     'atc_lookup',
@@ -61,9 +62,12 @@ INSTALLED_APPS = (
     'homepage',
     'django_select2',
     'mapping',
+    'epd',
 )
 
 MIDDLEWARE = (
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,6 +83,15 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:9000",
+    "http://127.0.0.1:9000",
+]
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_SUPPORTS_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE=None
 
 ROOT_URLCONF = 'app.urls'
 

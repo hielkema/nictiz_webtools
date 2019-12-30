@@ -121,3 +121,4 @@ mapping/**/*.txt
 # Server specific
 reverse-proxy/
 database_pull.sh
+vuejs/node_modules
