@@ -24,7 +24,7 @@ branch = "develop"
 url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
     branch+'/snowstorm_client.py'
 urllib.request.urlretrieve(url, 'snowstorm_client.py')
-from snowstorm_client import Snowstorm
+from .snowstorm_client import Snowstorm
 from ..tasks import *
 from ..forms import *
 from ..models import *
