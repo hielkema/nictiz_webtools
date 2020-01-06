@@ -68,8 +68,8 @@
           <span v-if="loadingTaskList">Taken worden geladen, even geduld a.u.b.</span>
           <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
               <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
-              [[task.component.title]]<br>
-              <small>[[task.status.title]] @ [[task.user.name]]</small>
+              [[task.component.id]] - [[task.component.title]]<br>
+              <small>[task #[[task.id]]] [[task.status.title]] @ [[task.user.name]]</small>
               </li>
           </span>
         </div>
