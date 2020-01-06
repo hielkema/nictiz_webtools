@@ -6,6 +6,8 @@ Vue.use(Vuex)
 Vue.use(axios)
 export default new Vuex.Store({
   state: {
+    // baseUrl: 'http://localhost/',
+    baseUrl: 'https://termservice.test-nictiz.nl/',
     currentPatient: {},
     patientList: [],
     currentPatientDecursus: [],
@@ -30,19 +32,10 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    // Get new CSRF token
-    getCsrfToken: (context) => {
-      axios
-      .get('http://localhost:8000/epd/test/')
-      .then((response) => {
-        context.commit('setCsrftoken',response.data)
-        return true;
-      })
-    },
     // Get patient-list
     getPatientList: (context) => {
       axios
-      .get('http://localhost:8000/epd/patient/')
+      .get(context.state.baseUrl+'epd/patient/')
       .then((response) => {
         context.commit('getPatientList',response.data)
         return true;
@@ -51,7 +44,7 @@ export default new Vuex.Store({
     // Get patient-detail
     getPatientData: (context, patientid) => {
       axios
-      .get('http://localhost:8000/epd/patient/'+patientid)
+      .get(context.state.baseUrl+'epd/patient/'+patientid)
       .then((response) => {
         context.commit('getPatientData',response.data)
         return true;
@@ -60,7 +53,7 @@ export default new Vuex.Store({
     // Get decursus
     getDecursus: (context, patientid) => {
       axios
-      .get('http://localhost:8000/epd/decursus/'+patientid)
+      .get(context.state.baseUrl+'epd/decursus/'+patientid)
       .then((response) => {
         context.commit('getDecursusData',response.data)
         return true;
@@ -69,7 +62,7 @@ export default new Vuex.Store({
     // Get single decursus
     getDecursusDetail: (context, decursusId) => {
       axios
-      .get('http://localhost:8000/epd/decursus/'+context.state.currentPatient.id+'/'+decursusId)
+      .get(context.state.baseUrl+'epd/decursus/'+context.state.currentPatient.id+'/'+decursusId)
       .then((response) => {
         context.commit('getDecursusDetail',response.data)
         return true;
@@ -82,7 +75,7 @@ export default new Vuex.Store({
         withCredentials: true
       }
       axios
-      .post('http://localhost:8000/epd/decursus/', {
+      .post(context.state.baseUrl+'epd/decursus/', {
         'action'    : 'new',
         'patientId' : patientid
       },auth)
@@ -97,7 +90,7 @@ export default new Vuex.Store({
         withCredentials: true
       }
       axios
-      .post('http://localhost:8000/epd/problem/', {
+      .post(context.state.baseUrl+'epd/problem/', {
         'action'   : payload.action,
         'decursusId'   : payload.decursusId,
         'patientId'   : payload.patientId,
@@ -118,7 +111,7 @@ export default new Vuex.Store({
         withCredentials: true
       }
       axios
-      .post('http://localhost:8000/epd/decursus/', {
+      .post(context.state.baseUrl+'epd/decursus/', {
         'action'   : payload.action,
         'patientId'   : payload.decursus.patientid,
         'decursus' : payload.decursus
@@ -137,7 +130,7 @@ export default new Vuex.Store({
         withCredentials: true
       }
       axios
-      .post('http://localhost:8000/epd/decursus/', {
+      .post(context.state.baseUrl+'epd/decursus/', {
         'action'   : 'delete',
         'decursusId'   : payload,
         'patientId'   : context.state.currentPatient.id
