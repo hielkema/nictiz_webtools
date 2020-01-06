@@ -85,8 +85,9 @@ STATICFILES_FINDERS = (
 )
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:9000",
-    "http://127.0.0.1:9000",
+    "http://localhost:9123",
+    "http://127.0.0.1:9123",
+    "http://62.138.184.153:9123"
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_SUPPORTS_CREDENTIALS = True
