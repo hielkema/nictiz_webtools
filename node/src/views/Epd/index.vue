@@ -12,7 +12,6 @@
                     <PatientList />
                 </v-col>
                 <v-col class="col-7">
-                    <!-- {{this.$store.state.currentPatient}} -->
                     <PatientDecursusView />
                 </v-col>
                 <v-col class="col-3">

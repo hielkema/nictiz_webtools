@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from .models import *
+from mapping.models import *
 from django.middleware.csrf import get_token
 
 # Create your views here.
@@ -133,11 +134,25 @@ class api_decursus(TemplateView):
 
         decursus_list = []
         for decursus in decursus_query:
+            problems = ZibProbleem.objects.filter(Decursus_id=decursus.id)
+            problem_list = []
+            for problem in problems:
+                problem_list.append({
+                    'id':problem.id,
+                    'type':problem.ProbleemType,
+                    'naam':problem.ProbleemNaam.component_title,
+                    'begin':problem.ProbleemBeginDatum,
+                    'eind':problem.ProbleemEindDatum,
+                    'status':problem.ProbleemStatus,
+                    'verificatie':problem.VerificatieStatus,
+                })
+
             decursus_list.append({
                 'id': decursus.id,
                 'patientid': decursus.patient.id,
                 'user': decursus.user.username,
                 'anamnese':decursus.anamnese,
+                'problems':problem_list,
                 'created':decursus.created,
                 'edited':decursus.edited,
             })
@@ -149,3 +164,37 @@ class api_decursus(TemplateView):
 
         return JsonResponse(context,safe=False)
 
+class api_problem(TemplateView):
+    def post(self, request, **kwargs):
+        payload = json.loads(request.body.decode("utf-8"))
+        print('\nReceived problem data: ', payload)
+
+        currentUser = User.objects.get(id=request.user.id)
+        currentPatient = Patient.objects.get(id=payload.get('patientId'))
+        probleem = payload.get('problem')
+        decursus = Decursus.objects.get(id=probleem.get('decursusId'))
+
+        problem_component = MappingCodesystemComponent.objects.get(component_id=probleem.get('naam'))
+
+        obj = ZibProbleem.objects.create(
+            user = currentUser,
+            patient = currentPatient,
+
+            ProbleemType = probleem.get('type'),
+            ProbleemNaam = problem_component,
+            ProbleemBeginDatum = probleem.get('begin'),
+            ProbleemEindDatum = probleem.get('eind'),
+            ProbleemStatus = probleem.get('status'),
+            VerificatieStatus = probleem.get('verificatie'),
+
+            Decursus = decursus,
+            comments = ''
+        )
+        obj.save()
+
+        context = {
+            'patientid' : currentPatient.id,
+            'created' : str(obj),
+        }
+        # Should return patientid:id
+        return JsonResponse(context,safe=False)

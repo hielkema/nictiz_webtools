@@ -27,7 +27,7 @@
 <script>
 export default {
   name: 'PatientList',
-  props: ["patients"],
+  // props: ["patients"],
   data() {
     return {
       search: '',

@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'decursus/(?P<patientid>\w+)', views.api_decursus.as_view(), name='decursus-list'),
     url(r'decursus', views.api_decursus.as_view(), name='decursus'),
 
+    url(r'problem', views.api_problem.as_view(), name='problem'),
 
     url(r'patient/(?P<id>\w+)', views.api_patient_get.as_view(), name='patient-detail'),
     url(r'patient', views.api_patient_get.as_view(), name='patient-list'),

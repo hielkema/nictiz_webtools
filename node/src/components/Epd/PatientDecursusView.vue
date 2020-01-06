@@ -19,13 +19,16 @@
     <v-divider></v-divider>
 
     Decursus
-    <!-- List decursus items -->
+<!-- List decursus items -->
     <v-container >
       <v-row v-bind:key="item.id" v-for="item in currentPatientDecursus">
         <v-card width="100%" style="margin-bottom:5px">
           <v-card-title>{{item.date}}</v-card-title>
           <v-card-text style="white-space: pre-line;">
             {{item.anamnese}}
+            <li v-for="problem in item.problems" v-bind:key="problem.id">
+              {{problem.type}} => {{problem.status}}: {{problem.naam}} [{{problem.begin}} t/m {{problem.eind}}] - {{problem.verificatie}}
+            </li>
             
             <div style="float:right">
               <!-- {{item.edited}} -->
@@ -58,7 +61,7 @@
                     <v-btn
                       color="primary"
                       dark
-                      @click="dialog3 = true"
+                      @click="openAddDialogProblem(item.id)"
                     >
                       Verrichting
                     </v-btn>
@@ -80,7 +83,7 @@
       </v-row>
     </v-container>
     
-    <!-- Dialog edit decursus -->
+<!-- Dialog edit decursus -->
     <v-container>
       <v-dialog v-model="dialogDecursus" persistent max-width="900px">
         <v-card>
@@ -134,6 +137,110 @@
       </v-dialog>
     </v-container>
 
+<!-- Dialog add Problem -->
+    <v-container>
+      <v-dialog v-model="dialogProblem" persistent max-width="900px">
+        <v-card>
+          <v-card-title>
+            <span class="headline">Probleem</span>
+          </v-card-title>
+          <v-card-text>
+            <v-container>
+              <v-row>
+                <v-col>
+                  <v-select
+                    :items="problemTypes"
+                    label="Probleemtype"
+                    v-model="dialogProblemData.type"
+                    dense
+                    outlined
+                  ></v-select>
+                </v-col>
+                <v-col>
+                  <v-select
+                    :items="['Actueel','Niet actueel']"
+                    label="Status"
+                    v-model="dialogProblemData.status"
+                    dense
+                    outlined
+                  ></v-select>
+                </v-col>
+                <v-col>
+                  <v-select
+                    :items="['Werkdiagnose','Differentiaaldiagnose','Aangetoond','Uitgesloten','Onbekend']"
+                    label="Verificatie"
+                    v-model="dialogProblemData.verificatie"
+                    dense
+                    outlined
+                  ></v-select>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col>
+                  <v-menu
+                    v-model="beginpicker"
+                    :close-on-content-click="false"
+                    :nudge-right="40"
+                    transition="scale-transition"
+                    offset-y
+                    min-width="290px"
+                  >
+                    <template v-slot:activator="{ on }">
+                      <v-text-field
+                        v-model="dialogProblemData.begin"
+                        label="Picker without buttons"
+                        prepend-icon="mdi-event"
+                        readonly
+                        v-on="on"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker v-model="dialogProblemData.begin" @input="beginpicker = false"></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col>
+                  <v-menu
+                    v-model="eindpicker"
+                    :close-on-content-click="false"
+                    :nudge-right="40"
+                    transition="scale-transition"
+                    offset-y
+                    min-width="290px"
+                  >
+                    <template v-slot:activator="{ on }">
+                      <v-text-field
+                        v-model="dialogProblemData.eind"
+                        label="Picker without buttons"
+                        prepend-icon="mdi-event"
+                        readonly
+                        v-on="on"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker v-model="dialogProblemData.eind" @input="eindpicker = false"></v-date-picker>
+                  </v-menu>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-select
+                  v-show="dialogProblemData.type"
+                  :items="['74400008']"
+                  :label="dialogProblemData.type"
+                  v-model="dialogProblemData.naam"
+                  dense
+                  outlined
+                ></v-select>
+              </v-row>
+            </v-container>
+            <small>*verplichte velden</small>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" text @click="dialogProblem = false">Close</v-btn>
+            <v-btn color="blue darken-1" text @click="saveDialogProblem()">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-container>
+
   </div>
 </template>
 
@@ -147,8 +254,15 @@ export default {
         decursusId: null,
         patientId: this.$store.state.currentPatient.id
       },
+      dialogProblem: false,
+      dialogProblemData: {},
       dialog2: false,
-      dialog3: false
+      dialog3: false,
+      eindpicker: false,
+      beginpicker: false,
+      problemTypes: [
+        'Diagnose','Symptoom','Klacht','Functionele beperking','Complicatie'
+      ]
     }
   },
   methods: {
@@ -175,6 +289,12 @@ export default {
       // Open dialog
       this.dialogDecursus = true
     },
+    openAddDialogProblem: function(decursusId) {
+      // Empty data object for decursus dialog
+      this.dialogProblemData = {'decursusId':decursusId}
+      // Open dialog
+      this.dialogProblem = true
+    },
     saveDialogDecursus: function(){
       // Close decursus dialog
       this.dialogDecursus = false
@@ -187,6 +307,20 @@ export default {
       this.$store.dispatch('getDecursus',this.$store.state.currentPatient.id)
       // Clear decursus dialog data
       this.dialogDecursusData = {}
+    },
+    saveDialogProblem: function(){
+      // Close decursus dialog
+      this.dialogProblem = false
+      var payload = {
+        'action':'new',
+        'patientId':this.$store.state.currentPatient.id,
+        'problem':this.dialogProblemData
+        }
+      // Dispatch post
+      this.$store.dispatch('postProblem',payload)
+      this.$store.dispatch('getDecursus',this.$store.state.currentPatient.id)
+      // Clear decursus dialog data
+      this.dialogProblemData = {}
     }
   },
   computed: {

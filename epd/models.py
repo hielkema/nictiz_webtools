@@ -31,3 +31,19 @@ class Decursus(models.Model):
     anamnese    = models.TextField(default=None, null=True, blank=True)
     created     = models.DateTimeField(default=timezone.now)
     edited      = models.DateTimeField(default=timezone.now)
+
+class ZibProbleem(models.Model):
+    patient     = models.ForeignKey('Patient', on_delete=models.PROTECT)
+    user        = models.ForeignKey(User, on_delete=models.PROTECT)
+    created     = models.DateTimeField(default=timezone.now)
+    edited      = models.DateTimeField(default=timezone.now)
+    
+    ProbleemType        = models.TextField(default=None, null=True, blank=True)
+    ProbleemNaam        = models.ForeignKey('mapping.MappingCodesystemComponent', on_delete=models.PROTECT)
+    ProbleemBeginDatum  = models.TextField(default=None, null=True, blank=True)
+    ProbleemEindDatum   = models.TextField(default=None, null=True, blank=True)
+    ProbleemStatus      = models.TextField(default=None, null=True, blank=True)
+    VerificatieStatus   = models.TextField(default=None, null=True, blank=True)
+    Decursus            = models.ForeignKey('Decursus', on_delete=models.PROTECT)
+    comments            = models.TextField(default=None, null=True, blank=True)
+    

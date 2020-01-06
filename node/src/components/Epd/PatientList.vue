@@ -4,14 +4,15 @@
         <v-subheader>Patiënten</v-subheader>
           <v-list three-line>
             <v-list-item-group v-model="patients" color="primary">
-              <v-list-item
+              <v-list-item 
+                three-line
                 v-for="item in patients"
                 :key="item.id"
                 v-on:click="setCurrentPatient(item.id)"
               >
                 <v-list-item-content>
                   <v-list-item-title>{{item.name.first}} ({{item.name.initials}}) {{item.name.last}}</v-list-item-title>
-                  <v-list-item-subtitle v-if="currentPatient.id ? item.id: red">
+                  <v-list-item-subtitle>
                     <span>{{item.dob}}</span><br>
                     <span>{{item.id}}</span><br>
                     <v-divider></v-divider>

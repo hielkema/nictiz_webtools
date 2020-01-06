@@ -91,6 +91,26 @@ export default new Vuex.Store({
         }
       )
     },
+    postProblem: (context, payload) => {
+      const auth = {
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        withCredentials: true
+      }
+      axios
+      .post('http://localhost:8000/epd/problem/', {
+        'action'   : payload.action,
+        'decursusId'   : payload.decursusId,
+        'patientId'   : payload.patientId,
+        'problem' : payload.problem
+      },auth)
+      .then(response => {
+        // console.log('Updating data for pt '+response.data.patientid+' after response '+response.data)
+        context.dispatch('getPatientData',response.data.patientid)
+        context.dispatch('getDecursus',response.data.patientid)
+        return true;
+      })
+    },
+    // Post problem data
     // Post decursus data
     postDecursus: (context, payload) => {
       const auth = {
