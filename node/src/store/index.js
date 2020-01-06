@@ -26,9 +26,6 @@ export default new Vuex.Store({
     },
     getDecursusDetail: (state, payload) => {
       state.dialogDecursusData = payload
-    },
-    setCsrftoken: (state, payload) => {
-      state.csrftoken = payload
     }
   },
   actions: {
