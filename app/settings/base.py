@@ -85,7 +85,8 @@ STATICFILES_FINDERS = (
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:9123",
     "http://127.0.0.1:9123",
-    "http://62.138.184.153:9123"
+    "http://62.138.184.153:9123",
+    ".test-nictiz.nl"
 ]
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_SUPPORTS_CREDENTIALS = True
@@ -93,13 +94,11 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE=None
 SESSION_COOKIE_DOMAIN = [
     'localhost',
-    '.test-nictiz.nl',
-    '62.138.184.153'
+    '.test-nictiz.nl'
     ]
 ALLOWED_HOSTS = [
     'localhost',
-    '.test-nictiz.nl',
-    '62.138.184.153'
+    '.test-nictiz.nl'
     ]
 
 ROOT_URLCONF = 'app.urls'
