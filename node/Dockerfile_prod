@@ -13,4 +13,4 @@ COPY package.json /usr/src/app/package.json
 RUN npm install
 RUN npm install -g @vue/cli
 # start app
-CMD ["npm", "run", "build"]
+CMD ["npm", "run", "serve"]
