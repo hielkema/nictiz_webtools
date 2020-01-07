@@ -26,9 +26,21 @@ export default new Vuex.Store({
     },
     getDecursusDetail: (state, payload) => {
       state.dialogDecursusData = payload
+    },
+    setCsrftoken: (state, payload) => {
+      state.csrftoken = payload
     }
   },
   actions: {
+    // Get new CSRF token
+    getCsrfToken: (context) => {
+      axios
+      .get(context.state.baseUrl+'epd/test/')
+      .then((response) => {
+        context.commit('setCsrftoken',response.data)
+        return true;
+      })
+    },
     // Get patient-list
     getPatientList: (context) => {
       axios
