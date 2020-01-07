@@ -101,20 +101,20 @@ services:
       - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
       - LETSENCRYPT_EMAIL=${EMAIL}
   # GUI for taskmanager Celery
-  flower:
-    image: mher/flower
-    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888", "--basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}"]
-    restart: always
-    expose:
-      - "${FLOWER_PORT}"
-    environment:
-      - VIRTUAL_HOST=${FLOWER_DOMAIN}
-      - VIRTUAL_PORT=${FLOWER_PORT}
-      - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
-      - LETSENCRYPT_EMAIL=${EMAIL}
-    networks:
-      - webtools
-      - proxy
+  # flower:
+  #   image: mher/flower
+  #   command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888", "--basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}"]
+  #   restart: always
+    # expose:
+    #   - "${FLOWER_PORT}"
+    # environment:
+    #   - VIRTUAL_HOST=${FLOWER_DOMAIN}
+    #   - VIRTUAL_PORT=${FLOWER_PORT}
+    #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
+    #   - LETSENCRYPT_EMAIL=${EMAIL}
+    # networks:
+    #   - webtools
+    #   - proxy
   nodejs:
     build:
       context: './node'
@@ -122,10 +122,15 @@ services:
     volumes:
       - './node:/usr/src/app'
       - 'node_modules:/usr/src/app/node_modules'
-    environment: 
+    expose:
+      - "${NODE_PORT}"
+    environment:
+      - VIRTUAL_HOST=${NODE_DOMAIN}
+      - VIRTUAL_PORT=${NODE_PORT}
+      - LETSENCRYPT_HOST=${NODE_DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+      
       - CHOKIDAR_USEPOLLING=true
-    ports:
-      - '9123:8080'
     links:
       - python
 networks:
