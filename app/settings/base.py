@@ -32,8 +32,6 @@ SECRET_KEY = env('DJANGO_SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
-
 LOGIN_REDIRECT_URL = '/'
 
 # AUTH_USER_MODEL = 'users.CustomUser'
@@ -93,6 +91,14 @@ CORS_ORIGIN_WHITELIST = [
 CORS_SUPPORTS_CREDENTIALS = True
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE=None
+SESSION_COOKIE_DOMAIN = [
+    'localhost',
+    '.test-nictiz.nl'
+    ]
+ALLOWED_HOSTS = [
+    'localhost',
+    '.test-nictiz.nl'
+    ]
 
 ROOT_URLCONF = 'app.urls'
 
