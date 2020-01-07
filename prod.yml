@@ -118,7 +118,7 @@ services:
   nodejs:
     build:
       context: './node'
-      dockerfile: 'Dockerfile'
+      dockerfile: 'Dockerfile_prod'
     volumes:
       - './node:/usr/src/app'
       - 'node_modules:/usr/src/app/node_modules'
