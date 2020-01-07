@@ -80,7 +80,7 @@ export default new Vuex.Store({
     // Add new decursus
     newDecursus: (context, patientid) => {
       const auth = {
-        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrf-token')},
         withCredentials: true
       }
       axios
@@ -95,7 +95,7 @@ export default new Vuex.Store({
     },
     postProblem: (context, payload) => {
       const auth = {
-        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrf-token')},
         withCredentials: true
       }
       axios
@@ -116,7 +116,7 @@ export default new Vuex.Store({
     // Post decursus data
     postDecursus: (context, payload) => {
       const auth = {
-        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrf-token')},
         withCredentials: true
       }
       axios
@@ -135,7 +135,7 @@ export default new Vuex.Store({
     // Delete decursus
     deleteDecursus: (context, payload) => {
       const auth = {
-        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrf-token')},
         withCredentials: true
       }
       axios
