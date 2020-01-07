@@ -8,6 +8,7 @@ SECRET_KEY = '+kbl$5-%8x4dn$l_cf%^^6kjb0+f5lm3rvlt56+z!)*#_^-5gm'
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
+SESSION_COOKIE_DOMAIN = ["*"]
 
 INSTALLED_APPS += ('debug_toolbar',)
 MIDDLEWARE     += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
