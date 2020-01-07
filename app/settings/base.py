@@ -93,11 +93,13 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE=None
 SESSION_COOKIE_DOMAIN = [
     'localhost',
-    '.test-nictiz.nl'
+    '.test-nictiz.nl',
+    '62.138.184.153'
     ]
 ALLOWED_HOSTS = [
     'localhost',
-    '.test-nictiz.nl'
+    '.test-nictiz.nl',
+    '62.138.184.153'
     ]
 
 ROOT_URLCONF = 'app.urls'
