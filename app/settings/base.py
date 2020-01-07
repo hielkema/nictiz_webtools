@@ -92,12 +92,8 @@ CORS_ORIGIN_WHITELIST = [
 CORS_SUPPORTS_CREDENTIALS = True
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE=None
-SESSION_COOKIE_DOMAIN = [
-    'localhost',
-    '.test-nictiz.nl'
-    ]
+SESSION_COOKIE_DOMAIN = '.test-nictiz.nl'
 ALLOWED_HOSTS = [
-    'localhost',
     '.test-nictiz.nl'
     ]
 
