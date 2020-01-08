@@ -149,7 +149,10 @@
                 <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
                 <button class="form-control">Submit</button>
               </form>
-            </div>
+
+              <button v-on:click="showevents=true" v-if="showevents==false">Toon events</button><br>
+              
+
               <ul class="list-group">
                 <div v-for="event in eventList">
                   <li v-if="event.type == 'comment'" class="list-group-item">
@@ -157,14 +160,15 @@
                   [[event.action_user.name]] <small>@[[event.created]]</small>
                   <span v-if="event.action_user.id == currentUser.id" class="fa fa-trash" aria-hidden="true" v-on:click="deleteComment(event.id)"> delete</span>
                   </li>
-                  <li v-if="event.type == 'status_change'" class="list-group-item list-group-item-warning" >
+                  <li v-if="event.type == 'status_change' && showevents == true" class="list-group-item list-group-item-warning" >
                     [[event.text]] <small>@[[event.created]]</small>
                   </li>
-                  <li v-if="event.type == 'user_change'" class="list-group-item list-group-item-warning" >
+                  <li v-if="event.type == 'user_change' && showevents == true" class="list-group-item list-group-item-warning" >
                     [[event.text]] <small>@[[event.created]]</small>
                   </li>
                 </div>
               </ul>
+            </div>
         </div>
       </div>
     </div>
@@ -315,6 +319,7 @@ var vuePosts = new Vue({
         loadingTaskList: false,
         loadingTargetSearch : false,
         csrftoken: Cookies.get('csrftoken'),
+        showevents: false,
     },
     methods: {
         getGeneralData: function() {
