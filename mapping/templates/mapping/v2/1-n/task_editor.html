@@ -151,7 +151,8 @@
               </form>
 
               <button v-on:click="showevents=true" v-if="showevents==false">Toon events</button><br>
-              
+              <button v-on:click="showevents=false" v-if="showevents==true">Verberg events</button><br>
+
 
               <ul class="list-group">
                 <div v-for="event in eventList">
