@@ -147,13 +147,20 @@
               <form v-on:submit.prevent="postComment()">
                 <textarea class="form-control" v-model="newComment"></textarea>
                 <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
-                <button class="form-control">Submit</button>
+                <button class="form-control">Commentaar opslaan</button>
               </form>
               
+              
+              
+              {% comment %} LOOP hashtags {% endcomment %}
+              <div class="btn-group d-flex" role="group">
+                <button v-for="tag in hashtags"  class="form-control" v-on:click="postHashtag(tag)">#[[tag]]</button>
+              </div>
               <br>
-              <button class="form-control" v-on:click="showevents=true" v-if="showevents==false">Toon events</button>
-              <button class="form-control" v-on:click="showevents=false" v-if="showevents==true">Verberg events</button>
+
               <br>
+                <button class="form-control" v-on:click="showevents=true" v-if="showevents==false">Toon events</button>
+                <button class="form-control" v-on:click="showevents=false" v-if="showevents==true">Verberg events</button>
 
               <ul class="list-group">
                 <div v-for="event in eventList">
@@ -305,6 +312,7 @@ var vuePosts = new Vue({
     data: {
         tasks: [],
         permissions: [],
+        hashtags: ['NVKC','NVMM','monster'],
         currentTask: [],
         currentUser: [],
         audits: [],
@@ -327,7 +335,7 @@ var vuePosts = new Vue({
         getGeneralData: function() {
           var that = this
           $.ajax({
-              url: '/mapping/api/general/get/',
+              url: '/mapping/api/general/get/{{current_project.id}}',
               method: 'GET'
           }).then(function(response) {
           if (response.error) {
@@ -335,6 +343,7 @@ var vuePosts = new Vue({
           } else {
               console.log(response);
               that.currentUser = response.current_user
+              that.statusList = response.status_list
           }
           }).catch(function(err) {
               console.error(err);
@@ -559,6 +568,29 @@ var vuePosts = new Vue({
                   that.loading = false;
                   that.getEventList(that.currentTask.id)
                   that.newComment=''
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postHashtag: function(hashtag){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/hashtag/post/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      tag: hashtag,
+                      task: that.currentTask.id,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
                   console.log(response);
               }).catch((err) => {
                   that.loading = false;

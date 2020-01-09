@@ -307,6 +307,38 @@ class api_DelComment_post(UserPassesTestMixin,TemplateView):
         except Exception as e:
             print(type(e), e, kwargs)
 
+class api_hashtag_post(UserPassesTestMixin,TemplateView):
+    '''
+    Receives requests to place a new comment
+    Only allowed with place comments rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def post(self, request, **kwargs):
+        try:
+            payload = request.POST
+            print(payload)
+            task = MappingTask.objects.get(id=payload.get('task'))
+            current_user = User.objects.get(id=request.user.id)
+            MappingComment.objects.create(
+                comment_title='hashtag',
+                comment_task=task,
+                comment_body='#'+payload.get('tag'),
+                comment_user=current_user
+            )
+
+            context = {
+                'result': "success",
+            }
+            # Return JSON
+            return JsonResponse(context,safe=False)
+        except Exception as e:
+            print(type(e), e, kwargs)
+
 class api_TaskList_get(UserPassesTestMixin,TemplateView):
     '''
     Delivers task lists
@@ -394,7 +426,7 @@ class api_User_get(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         # Get data
         # Lookup edit rights for mapping      
-        users = User.objects.filter()
+        users = User.objects.filter().order_by('username')
         user_list = []
         for user in users:
             user_list.append({
@@ -1280,12 +1312,24 @@ class api_GeneralData_get(UserPassesTestMixin,TemplateView):
         # TODO - Check if project and task exist, otherwise -> redirect to project or homepage.
         
         user = User.objects.get(id=request.user.id)
+        project = MappingProject.objects.get(id=kwargs.get('project'))
+        statuses = MappingTaskStatus.objects.filter(project_id=project).order_by('status_id')
+        status_list = []
+        for status in statuses:
+            status_list.append({
+                'id' : status.id,
+                'status_id' : status.status_id,
+                'title' : status.status_title,
+            })
 
         # Return Json response
-        return JsonResponse({'current_user': {
-            'id' : user.id,
-            'name' : user.username,
-        }})
+        return JsonResponse({
+            'current_user': {
+                'id' : user.id,
+                'name' : user.username,
+            },
+            'status_list' : status_list,
+        })
 
 class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
     '''
