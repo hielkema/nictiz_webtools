@@ -43,6 +43,7 @@ class NHGUpdateForm(forms.Form):
 class TaskCreateForm(forms.Form):
     project = forms.CharField(label='project', max_length=100)
     codesystem = forms.CharField(label='codesystem', max_length=100)
+    comment = forms.CharField(label='comment', required=False, widget=forms.Textarea(attrs={"rows":3, "cols":42}))
     tasks = forms.CharField(label='tasks', required=False, widget=forms.Textarea(attrs={"rows":3, "cols":42}))
 
 class PostCommentForm(forms.Form):

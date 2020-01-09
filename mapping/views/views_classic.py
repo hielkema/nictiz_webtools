@@ -638,40 +638,70 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
             
             for component in tasks_list:
                 print("\nAttempting to find component ",component)
+                error   = False
+                created = False
+                present = False
+                component_id = None
+                component_title = None
                 try:
                     component_obj = MappingCodesystemComponent.objects.get(component_id=component, codesystem_id=codesystem)
                     print("Component found: ", component_obj)
 
-                    obj, created = MappingTask.objects.get_or_create(
+                    obj = MappingTask.objects.filter(
                         project_id=project,
                         source_component=component_obj,
                     )
-                    # Add data not used for matching
-                    # obj.source_component = component_obj.id
-                    print(component_obj)
-                    obj.source_codesystem = component_obj.codesystem_id
-                    obj.target_codesystem = component_obj.codesystem_id # Voor nu gelijk aan bron.
-                    # TODO target nog aanpassen naar optie in formulier, om een doel-codesystem af te dwingen.
-                    obj.status = status1
-                    # obj.user = user # taken worden aangemaakt zonder gebruiker
+                    if obj.count() > 0:
+                        present = True
+                        obj = obj.first()
+                    else:
+                        present = False
+                        obj = MappingTask.objects.create(
+                            project_id=project,
+                            source_component=component_obj,
+                        )
+                        # Add data not used for matching
+                        # obj.source_component = component_obj.id
+                        print(component_obj)
+                        obj.source_codesystem = component_obj.codesystem_id
+                        obj.target_codesystem = component_obj.codesystem_id # Voor nu gelijk aan bron.
+                        # TODO target nog aanpassen naar optie in formulier, om een doel-codesystem af te dwingen.
+                        obj.status = status1
+                        # obj.user = user # taken worden aangemaakt zonder gebruiker
 
-                    # Save
-                    obj.save()
-                
-                    db_hit = True
+                        # Save
+                        obj.save()
 
+                        # Add comment
+                        user = User.objects.get(id=request.user.id)
+                        comment = MappingComment.objects.get_or_create(
+                                    comment_title = 'task created',
+                                    comment_task = obj,
+                                    comment_body = '[Commentaar bij aanmaken taak]\n'+form.cleaned_data['comment'],
+                                    comment_user = user,
+                                )
+
+                        created = True
+                    
+                    component_id = component_obj.id
+                    component_title = component_obj.component_title
                     
                 except Exception as e:
                     print("Component not found, or error: ", e)
-                    db_hit = False
+                    error = True
         
                 handled.update({component : {
-                    'form' : form,
-                    'result' : db_hit,
-                    'project' : project.title,
-                    'component_id' : component_obj.id,
-                    'component_title' : component_obj.component_title,
+                    'form'      : form,
+                    'taskid'    : obj.id,
+                    'reqid'     : component,
+                    'present'   : present,
+                    'created'   : created,
+                    'error'     : error,
+                    'project'   : project.title,
+                    'component_id'      : component_id,
+                    'component_title'   : component_title,
                 }})
+                
         else:
             print("###########################\n",form.errors,"\n", form.non_field_errors)
         return render(request, 'mapping/v2/task_create.html', {
