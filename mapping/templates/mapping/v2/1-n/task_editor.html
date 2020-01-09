@@ -62,10 +62,10 @@
         </div>
         <div class="card">
         <div class="card-header text-white bg-info">
-            <h5 class="card-title">Taken</h5>
+            <span style="float:left;"><h5 class="card-title">Taken</h5></span><span style="float:right;" v-on:click="getTaskList()">vernieuwen</span>
+            <span v-if="loadingTaskList" style="float:left">Taken worden geladen, even geduld a.u.b.</span>
         </div>
         <div class="card-body" style="height: 600px; overflow:auto;">
-          <span v-if="loadingTaskList">Taken worden geladen, even geduld a.u.b.</span>
           <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
               <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
               [[task.component.id]] - [[task.component.title]]<br>
@@ -73,10 +73,6 @@
               </li>
           </span>
         </div>
-
-        <form>
-            TO-DO: Task search
-        </form>
         </div>
     </div>
 
