@@ -294,14 +294,64 @@ def import_nhgbepalingen_task():
             component_id=row[0],
         )
         obj.component_title = row[4]
+        
+        # Check status van NHG term
         if str(row[12])[-1:] == "V": 
             vervallen = "Bepaling is vervallen"
         else:
             vervallen = "Bepaling is actief"
+
+        # Check soort van NHG term
+        if str(row[13]) == "L":
+            soort = "Laboratorium bepaling"
+        elif str(row[13]) == "D":
+            soort = "Diagnostische bepaling, algemeen"
+        elif str(row[13]) == "P":
+            soort = "Protocol specifieke diagnostische bepaling"
+        else:
+            soort = str(row[13])
+
+        # Check groep van NHG term
+        if str(row[9]) == "AA": groep = "Anamnese"
+        elif str(row[9]) == "AL": groep = "Allergologie"
+        elif str(row[9]) == "AU": groep = "Auscultatie"
+        elif str(row[9]) == "AL": groep = "Allergologie"
+        elif str(row[9]) == "BA": groep = "Bacteriologie"
+        elif str(row[9]) == "BM": groep = "Biometrie"
+        elif str(row[9]) == "BO": groep = "Beeldvormend onderzoek"
+        elif str(row[9]) == "BV": groep = "Bevolkingsonderzoek"
+        elif str(row[9]) == "CO": groep = "Comorbiditeit"
+        elif str(row[9]) == "CY": groep = "Cytologie"
+        elif str(row[9]) == "DD": groep = "DNA diagnostiek"
+        elif str(row[9]) == "FA": groep = "Familieanamnese"
+        elif str(row[9]) == "FO": groep = "Functieonderzoek"
+        elif str(row[9]) == "FT": groep = "Farmacologie/toxicologie"
+        elif str(row[9]) == "HA": groep = "Eigen praktijk huisarts"
+        elif str(row[9]) == "HE": groep = "Hematologie"
+        elif str(row[9]) == "IM": groep = "Immunologie/serologie"
+        elif str(row[9]) == "IN": groep = "Inspectie"
+        elif str(row[9]) == "KC": groep = "Klinische chemie"
+        elif str(row[9]) == "LO": groep = "Lichamelijk onderzoek"
+        elif str(row[9]) == "PA": groep = "Pathologie"
+        elif str(row[9]) == "PP": groep = "Palpatie"
+        elif str(row[9]) == "PS": groep = "Parasitologie"
+        elif str(row[9]) == "SG": groep = "Socio-grafische gegevens"
+        elif str(row[9]) == "ST": groep = "Stollingslab"
+        elif str(row[9]) == "TH": groep = "Therapie"
+        elif str(row[9]) == "VG": groep = "Voorgeschiedenis"
+        elif str(row[9]) == "VI": groep = "Virologie"
+        elif str(row[9]) == "XX": groep = "Overig"
+        elif str(row[9]) == "ZE": groep = "Patiënt zelf"
+        elif str(row[9]) == "ZP": groep = "Zorgproces"
+        else: groep = "Onbekend"
+        groep = str(row[9]+' - '+groep)
+
         extra = {
             'Omschrijving' : row[4],
             'Bepaling nummer' : row[0],
             'Aanvraag/Uitslag/Beide' : row[6],
+            'Soort' : soort,
+            'Groep' : groep,
             'Materiaal NHG' : row[2],
             'Materiaal voorstel Snomed' : voorstel_materiaal,
             'Vraagtype' : row[14],
