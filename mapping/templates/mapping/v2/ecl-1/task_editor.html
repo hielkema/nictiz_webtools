@@ -328,7 +328,7 @@ var vuePosts = new Vue({
         getGeneralData: function() {
           var that = this
           $.ajax({
-              url: '/mapping/api/general/get/',
+              url: '/mapping/api/general/get/{{current_project.id}}',
               method: 'GET'
           }).then(function(response) {
           if (response.error) {
@@ -336,6 +336,7 @@ var vuePosts = new Vue({
           } else {
               console.log(response);
               that.currentUser = response.current_user
+              that.statusList = response.status_list
           }
           }).catch(function(err) {
               console.error(err);
