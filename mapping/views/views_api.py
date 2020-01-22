@@ -616,34 +616,6 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                             'version' : task.source_component.codesystem_id.codesystem_version,
                         },
                         'extra' : extra_dict,
-                        'extra_1' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_1,
-                            'value' : task.source_component.component_extra_1,
-                        },
-                        'extra_2' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_2,
-                            'value' : task.source_component.component_extra_2,
-                        },
-                        'extra_3' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_3,
-                            'value' : task.source_component.component_extra_3,
-                        },
-                        'extra_4' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_4,
-                            'value' : task.source_component.component_extra_4,
-                        },
-                        'extra_5' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_5,
-                            'value' : task.source_component.component_extra_5,
-                        },
-                        'extra_6' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_6,
-                            'value' : task.source_component.component_extra_6,
-                        },
-                        'extra_7' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_7,
-                            'value' : task.source_component.component_extra_7,
-                        },
                     },
                     'status' : {
                         'id' : task.status.id,
