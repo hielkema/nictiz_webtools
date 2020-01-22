@@ -5,7 +5,8 @@ from django.shortcuts import render
 # howdy/views.py
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
-from django.http import HttpResponseRedirect, HttpResponse
+from django.conf import settings
+from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
 from django.template.defaultfilters import linebreaksbr
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from urllib.request import urlopen, Request
@@ -86,3 +87,66 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
         }
 
         return render(request, 'termspace/searchcomments.html', context=context)
+
+#### API request
+class api_SearchcommentsPageView(UserPassesTestMixin, TemplateView):
+    '''
+    Class used search comments.
+    Only usable with Snomed tree view rights
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        if settings.DEBUG == True:
+            return True
+
+        return self.request.user.groups.filter(name='HTML tree').exists()
+
+    def get(self, request, **kwargs):
+        term = str(kwargs.get('term'))
+        print(request)
+        # Get results for searchterm        
+        query = None ## Query to search for every search term
+        terms = term.split(' ')
+        print('Searching for:',term)
+        for term in terms:
+            or_query = None ## Query to search for a given term in each field
+            for field_name in ['comment', 'assignee', 'fsn', 'folder', 'concept']:
+                q = Q(**{"%s__icontains" % field_name: term})
+                if or_query is None:
+                    or_query = q
+                else:
+                    or_query = or_query | q
+            if query is None:
+                query = or_query
+            else:
+                query = query & or_query
+
+        # results = comments_found = TermspaceComments.objects.annotate(search=SearchVector('comment',),).filter(search__icontains=term)        
+        comments_found = TermspaceComments.objects.filter(
+                            query
+                        )
+        print(query)
+        results = []
+        if comments_found.count() == 0:
+            print('Geen resultaten')
+        for comment in comments_found:
+            results.append({
+                'id' : comment.concept,
+                'author' : comment.assignee,
+                'folder' : comment.folder,
+                'status' : comment.status,
+                'comment' : comment.comment,
+                'fsn' : comment.fsn,
+            })
+
+        # print('---------')
+
+        sep = " "
+        context = {
+            'searchterm' : sep.join(terms),
+            'num_results' : len(results),
+            'results': results,
+        }
+
+        return JsonResponse(context)

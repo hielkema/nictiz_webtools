@@ -19,7 +19,7 @@
             <v-icon>mdi-settings</v-icon>
           </v-list-item-action>
           <v-list-item-content>
-            <router-link to="/about"><v-list-item-title>About</v-list-item-title></router-link>
+            <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
         <v-list-item link>
@@ -71,7 +71,7 @@
       drawer: null,
     }),
     created () {
-      this.$vuetify.theme.dark = true
+      this.$vuetify.theme.dark = false
     },
   }
 </script>

@@ -37,8 +37,8 @@ export default {
         }
     },
     created() {
-        this.$store.dispatch('getPatientList')
-        this.$store.dispatch('getCsrfToken')
+        this.$store.dispatch('Epd/getPatientList')
+        this.$store.dispatch('Epd/getCsrfToken')
     }
 }
 </script>

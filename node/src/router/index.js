@@ -16,6 +16,11 @@ const routes = [
     component: () => import('../views/Epd/index.vue')
   },
   {
+    path: '/terminologie/searchComments',
+    name: 'searchComments',
+    component: () => import('../views/Terminologie/index.vue')
+  },
+  {
     path: '/about',
     name: 'about',
     // route level code-splitting

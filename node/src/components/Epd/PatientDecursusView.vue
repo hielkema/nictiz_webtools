@@ -252,7 +252,7 @@ export default {
       dialogDeleteDecursus: false,
       dialogDeleteDecursusData: {
         decursusId: null,
-        patientId: this.$store.state.currentPatient.id
+        patientId: this.$store.state.Epd.currentPatient.id
       },
       dialogProblem: false,
       dialogProblemData: {},
@@ -268,24 +268,24 @@ export default {
   methods: {
     setCurrentPatient: function (event) {
       this.$store.state.currentPatient = event
-      this.$store.dispatch('getDecursus',this.$store.state.currentPatient.id)
+      this.$store.dispatch('Epd/getDecursus',this.$store.state.Epd.currentPatient.id)
     },
     addNewDecursus: function(){
-      this.$store.dispatch('newDecursus',this.$store.state.currentPatient.id)
+      this.$store.dispatch('Epd/newDecursus',this.$store.state.Epd.currentPatient.id)
     },
     deleteDecursusDialog: function(decursusId) {
       this.dialogDeleteDecursus = true
       this.dialogDeleteDecursusData.decursusId = decursusId
     },
     deleteDecursus: function(){
-      this.$store.dispatch('deleteDecursus',this.dialogDeleteDecursusData.decursusId)
+      this.$store.dispatch('Epd/deleteDecursus',this.dialogDeleteDecursusData.decursusId)
       this.dialogDeleteDecursus = false
     },
     openEditDialogDecursus: function(decursusId) {
       // Empty data object for decursus dialog
       this.dialogDecursusData = {}
       // Get data
-      this.$store.dispatch('getDecursusDetail',decursusId)
+      this.$store.dispatch('Epd/getDecursusDetail',decursusId)
       // Open dialog
       this.dialogDecursus = true
     },
@@ -303,8 +303,8 @@ export default {
         'decursus':this.dialogDecursusData
         }
       // Dispatch post
-      this.$store.dispatch('postDecursus',payload)
-      this.$store.dispatch('getDecursus',this.$store.state.currentPatient.id)
+      this.$store.dispatch('Epd/postDecursus',payload)
+      this.$store.dispatch('Epd/getDecursus',this.$store.state.Epd.currentPatient.id)
       // Clear decursus dialog data
       this.dialogDecursusData = {}
     },
@@ -313,25 +313,25 @@ export default {
       this.dialogProblem = false
       var payload = {
         'action':'new',
-        'patientId':this.$store.state.currentPatient.id,
+        'patientId':this.$store.state.Epd.currentPatient.id,
         'problem':this.dialogProblemData
         }
       // Dispatch post
-      this.$store.dispatch('postProblem',payload)
-      this.$store.dispatch('getDecursus',this.$store.state.currentPatient.id)
+      this.$store.dispatch('Epd/postProblem',payload)
+      this.$store.dispatch('Epd/getDecursus',this.$store.state.Epd.currentPatient.id)
       // Clear decursus dialog data
       this.dialogProblemData = {}
     }
   },
   computed: {
     currentPatient(){
-      return this.$store.state.currentPatient;
+      return this.$store.state.Epd.currentPatient;
     },
     currentPatientDecursus(){
-      return this.$store.state.currentPatientDecursus;
+      return this.$store.state.Epd.currentPatientDecursus;
     },
     dialogDecursusData(){
-      return this.$store.state.dialogDecursusData;
+      return this.$store.state.Epd.dialogDecursusData;
     }
   }
 }

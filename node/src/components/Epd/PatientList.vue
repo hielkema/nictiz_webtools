@@ -34,16 +34,16 @@ export default {
   },
   methods: {
     setCurrentPatient: function (patientid) {
-      this.$store.dispatch('getPatientData', patientid)
-      this.$store.dispatch('getDecursus',patientid)
+      this.$store.dispatch('Epd/getPatientData', patientid)
+      this.$store.dispatch('Epd/getDecursus',patientid)
     }
   },
   computed: {
     patients(){
-      return this.$store.state.patientList;
+      return this.$store.state.Epd.patientList;
     },
     currentPatient(){
-      return this.$store.state.currentPatient;
+      return this.$store.state.Epd.currentPatient;
     }
   }
 }
