@@ -81,8 +81,8 @@ def load_termspace_comments():
     for task in tasks:
         print('Task:',task.get('_id'))
         for comment in task.get('comments'):
-            print('all:',comment)
-            print('Comment:',comment.get('text'))
+            # print('all:',comment)
+            # print('Comment:',comment.get('text'))
             obj = TermspaceComments.objects.get_or_create(
                 concept = task.get('terminologyComponent').get('id'),
                 task_id = task.get('_id'),
