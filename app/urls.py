@@ -28,6 +28,7 @@ urlpatterns = [
     path(r'snomed_list/', include('snomed_list_generator.urls')), 
     path(r'mapping/', include('mapping.urls')), 
     path(r'epd/', include('epd.urls')), 
+    path(r'termspace/', include('termspace.urls')), 
     url(r'^select2/', include('django_select2.urls')),
     path(r'', include('homepage.urls')),
 ]

@@ -45,6 +45,12 @@ def import_snomed_async(focus=None):
         extra = {
             'Preferred term' : str(concept['pt']['term']),
         }
+
+        obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+        obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+        obj.descendants = json.dumps(list(snowstorm.getDescendants(id=conceptid)))
+        # TODO - ancestors
+
         obj.component_extra_dict = json.dumps(extra)
         # Save
         obj.save()
@@ -198,13 +204,6 @@ def import_nhgverrichtingen_task():
         )
         # Add data not used for matching
         obj.component_title     = row[1]
-        obj.component_extra_1   = row[2]
-        obj.component_extra_2   = row[3]
-        obj.component_extra_3   = row[4]
-        obj.component_extra_4   = row[5]
-        obj.component_extra_5   = row[6]
-        obj.component_extra_6   = row[7]
-        obj.component_extra_7   = row[8]
 
         extra = {
             'Rubriek' : row[2],

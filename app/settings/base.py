@@ -61,6 +61,7 @@ INSTALLED_APPS = (
     'django_select2',
     'mapping',
     'epd',
+    'termspace',
 )
 
 MIDDLEWARE = (
