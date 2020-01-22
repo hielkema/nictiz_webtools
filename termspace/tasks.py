@@ -62,6 +62,7 @@ def load_termspace_comments():
         if len(result) == 0: break
         # DEBUG
         # if len(tasks) > 100: break
+        print('Interval: got {tasks}.'.format(tasks=len(tasks)))
 
     start = 0
     limit = 30000
@@ -74,25 +75,28 @@ def load_termspace_comments():
         if len(result) == 0: break
         # DEBUG
         # if len(tasks) > 100: break
+        print('Interval: got {tasks}.'.format(tasks=len(tasks)))
 
     retrieved_tasks = len(tasks)
 
     # Add to db
     for task in tasks:
-        print('Task:',task.get('_id'))
-        for comment in task.get('comments',{}):
-            # print('all:',comment)
-            # print('Comment:',comment.get('text'))
-            obj = TermspaceComments.objects.get_or_create(
-                concept = task.get('terminologyComponent').get('id'),
-                task_id = task.get('_id'),
-                fsn = task.get('terminologyComponent').get('name'),
-                assignee = comment.get('author'),
-                comment = comment.get('text'),
-                time = comment.get('time'),
-                folder = task.get('folder'),
-                status = task.get('workflowState'),
-            )
+        # print('Task:',task.get('_id'))
+        comments = task.get('comments',[])
+        if len(comments) > 0:
+            for comment in comments:
+                # print('all:',comment)
+                # print('Comment:',comment.get('text'))
+                obj = TermspaceComments.objects.get_or_create(
+                    concept = task.get('terminologyComponent').get('id'),
+                    task_id = task.get('_id'),
+                    fsn = task.get('terminologyComponent').get('name'),
+                    assignee = comment.get('author'),
+                    comment = comment.get('text'),
+                    time = comment.get('time'),
+                    folder = task.get('folder'),
+                    status = task.get('workflowState'),
+                )
     print('Got',retrieved_tasks,'tasks from termspace.')
 
     pass

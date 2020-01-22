@@ -47,7 +47,7 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
         print('Searching for:',term)
         for term in terms:
             or_query = None ## Query to search for a given term in each field
-            for field_name in ['comment']:
+            for field_name in ['comment', 'assignee']:
                 q = Q(**{"%s__icontains" % field_name: term})
                 if or_query is None:
                     or_query = q
