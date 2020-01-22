@@ -82,7 +82,8 @@ def load_termspace_comments():
     # Add to db
     for task in tasks:
         # print('Task:',task.get('_id'))
-        if task.get('comments',None) not None:
+        comments = task.get('comments',None)
+        if comments:
             for comment in comments:
                 # print('all:',comment)
                 # print('Comment:',comment.get('text'))
