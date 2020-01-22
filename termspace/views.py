@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template.defaultfilters import linebreaksbr
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin
 from urllib.request import urlopen, Request
 import urllib.parse
 from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
