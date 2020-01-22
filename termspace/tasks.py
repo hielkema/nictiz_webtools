@@ -80,7 +80,7 @@ def load_termspace_comments():
     # Add to db
     for task in tasks:
         print('Task:',task.get('_id'))
-        for comment in task.get('comments',{}):
+        for comment in task.get('comments',[]):
             # print('all:',comment)
             # print('Comment:',comment.get('text'))
             obj = TermspaceComments.objects.get_or_create(
