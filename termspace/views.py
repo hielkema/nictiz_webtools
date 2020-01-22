@@ -3,7 +3,7 @@ from django.shortcuts import render
 # Create your views here.
 
 # howdy/views.py
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 from django.http import HttpResponseRedirect, HttpResponse
 from django.template.defaultfilters import linebreaksbr
@@ -47,7 +47,7 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
         print('Searching for:',term)
         for term in terms:
             or_query = None ## Query to search for a given term in each field
-            for field_name in ['comment', 'assignee']:
+            for field_name in ['comment', 'assignee', 'fsn', 'folder']:
                 q = Q(**{"%s__icontains" % field_name: term})
                 if or_query is None:
                     or_query = q
@@ -62,13 +62,16 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
         comments_found = TermspaceComments.objects.filter(
                             query
                         )
-
+        print(query)
         results = []
         if comments_found.count() == 0:
             print('Geen resultaten')
         for comment in comments_found:
             results.append({
                 'id' : comment.concept,
+                'author' : comment.assignee,
+                'folder' : comment.folder,
+                'status' : comment.status,
                 'comment' : comment.comment,
                 'fsn' : comment.fsn,
             })
@@ -79,6 +82,7 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
         context = {
             'searchterm' : sep.join(terms),
             'results': results,
+            'num_results' : len(results),
         }
 
         return render(request, 'termspace/searchcomments.html', context=context)
