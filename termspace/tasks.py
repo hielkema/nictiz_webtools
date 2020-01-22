@@ -52,7 +52,7 @@ def load_termspace_comments():
             print('Error in retrieving tasks', e)
             return None
     start = 0
-    limit = 300
+    limit = 30000
     while True:
         result = load_tasks(token=token, skip=start, limit=limit, published='false')
         for item in result:
@@ -64,7 +64,7 @@ def load_termspace_comments():
         # if len(tasks) > 100: break
 
     start = 0
-    limit = 300
+    limit = 30000
     while True: 
         result = load_tasks(token=token, skip=start, limit=limit, published='true')
         for item in result:
@@ -78,7 +78,7 @@ def load_termspace_comments():
     retrieved_tasks = len(tasks)
 
     # Add to db
-    for task in tasks[0:5]:
+    for task in tasks:
         print('Task:',task.get('_id'))
         for comment in task.get('comments'):
             print('all:',comment)
