@@ -75,15 +75,14 @@ def load_termspace_comments():
         if len(result) == 0: break
         # DEBUG
         # if len(tasks) > 100: break
-        print('Interval: got {tasks}.'.format(tasks=len(tasks)))
+        print('Interval: got {tasks} tasks.'.format(tasks=len(tasks)))
 
     retrieved_tasks = len(tasks)
 
     # Add to db
     for task in tasks:
         # print('Task:',task.get('_id'))
-        comments = task.get('comments',[])
-        if len(comments) > 0:
+        if task.get('comments',None) not None:
             for comment in comments:
                 # print('all:',comment)
                 # print('Comment:',comment.get('text'))
