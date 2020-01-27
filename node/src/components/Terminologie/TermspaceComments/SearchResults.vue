@@ -10,7 +10,7 @@
         dense
       ></v-text-field>
     </v-card-title>
-    <v-data-table dense multi-sort :headers="headers" :items="searchResults" :search="search" item-key="id" class="elevation-1"></v-data-table>
+    <v-data-table dense multi-sort :headers="headers" :items="searchResults" :search="search" item-key="id+comment+user"></v-data-table>
   </div>
 </template>
 
@@ -20,6 +20,7 @@ export default {
     return {
       search: '',
       headers: [
+        { 'text' : 'ID', value: 'id', filterable: true },
         { 'text' : 'FSN', value: 'fsn', filterable: true },
         { 'text' : 'Status', value: 'status' },
         { 'text' : 'User', value: 'author' },

@@ -18,7 +18,11 @@ from .forms import *
 from .models import *
 import time
 import environ
-# from atc_lookup.tasks import send_post_signup_email
+
+from rest_framework import viewsets
+from .serializers import *
+from rest_framework import views
+from rest_framework.response import Response
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -26,6 +30,7 @@ env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
 # Create your views here.
+# LEGACY
 class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
     '''
     Class used search comments.
@@ -88,22 +93,19 @@ class SearchcommentsPageView(UserPassesTestMixin, TemplateView):
 
         return render(request, 'termspace/searchcomments.html', context=context)
 
-#### API request
-class api_SearchcommentsPageView(UserPassesTestMixin, TemplateView):
-    '''
-    Class used search comments.
-    Only usable with Snomed tree view rights
-    '''
-    def handle_no_permission(self):
-        return redirect('login')
-    def test_func(self):
-        if settings.DEBUG == True:
-            return True
+# Model viewset for comments from Termspace
+class termspaceComments(viewsets.ModelViewSet):
+    queryset = TermspaceComments.objects.filter(assignee="mertens")#.all()
+    serializer_class = TermspaceCommentSerializer
 
-        return self.request.user.groups.filter(name='HTML tree').exists()
-
-    def get(self, request, **kwargs):
-        term = str(kwargs.get('term'))
+# Search termspace comments
+class searchTermspaceComments(viewsets.ViewSet):
+    # def list(self, request):
+    #     yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
+    #     results = testEndPointSerializer(yourdata, many=True).data
+    #     return Response(results)
+    def retrieve(self, request, pk=None):
+        term = str(pk)
         print(request)
         # Get results for searchterm        
         query = None ## Query to search for every search term
@@ -122,10 +124,7 @@ class api_SearchcommentsPageView(UserPassesTestMixin, TemplateView):
             else:
                 query = query & or_query
 
-        # results = comments_found = TermspaceComments.objects.annotate(search=SearchVector('comment',),).filter(search__icontains=term)        
-        comments_found = TermspaceComments.objects.filter(
-                            query
-                        )
+        comments_found = TermspaceComments.objects.filter(query)
         print(query)
         results = []
         if comments_found.count() == 0:
@@ -140,13 +139,40 @@ class api_SearchcommentsPageView(UserPassesTestMixin, TemplateView):
                 'fsn' : comment.fsn,
             })
 
-        # print('---------')
-
         sep = " "
         context = {
             'searchterm' : sep.join(terms),
             'num_results' : len(results),
             'results': results,
         }
+        return Response(context)
+    # def create(self, request):
+    #     return Response('succes')
 
-        return JsonResponse(context)
+
+# LIST endpoint
+class testEndPoint(viewsets.ViewSet):
+    def list(self, request):
+        yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
+        results = testEndPointSerializer(yourdata, many=True).data
+        return Response(results)
+    def retrieve(self, request, pk=None):
+        yourdata = pk
+        # results = testEndPointSerializer(yourdata, many=True).data
+        return Response(yourdata)
+    def create(self, request):
+        return Response('succes')
+# CUSTOM endpoint
+class TestCustomView(views.APIView):
+    permission_classes = []
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email', None)
+        url = request.data.get('url', None)
+        if email and url:
+            return Response({"success": True, "email":email,"url":url})
+        else:
+            return Response({"success": False})
+    def get(self, request):
+        yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
+        results = testEndPointSerializer(yourdata, many=True).data
+        return Response(results)

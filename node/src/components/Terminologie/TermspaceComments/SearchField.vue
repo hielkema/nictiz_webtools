@@ -34,6 +34,7 @@ export default {
   },
   methods: {
     searchForThis: function (searchTerm) {
+      console.error(process.env.APIURL)
       this.$store.dispatch('TermspaceComments/getResults',searchTerm)
     }
   },

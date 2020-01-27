@@ -1,5 +1,7 @@
 import axios from 'axios'
+// import { jwtHeader } from '@/helpers';
 // import Vue from 'vue'
+// import router from '@/router/index.js' //or whatever your router.js path is
 
 const state = {
     // baseUrl: 'http://localhost/',
@@ -23,8 +25,9 @@ const state = {
     // Get results
     getResults: (context, term) => {
       axios
-      .get(context.state.baseUrl+'termspace/api/search_comments/'+term+'/')
+      .get(context.state.baseUrl+'termspace/search_comments/'+term+'/')//,{'headers':jwtHeader()})
       .then((response) => {
+        // alert('Respons getResults: '+response.data)
         context.commit('setResults',response.data)
         return true;
       })

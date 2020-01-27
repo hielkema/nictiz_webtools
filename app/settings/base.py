@@ -49,7 +49,9 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
     'django.core.management',
     'django_celery_beat',
+    'rest_framework',
     'corsheaders',
+    "jwtauth",
 
     # Nictiz apps
     'atc_lookup',
@@ -77,6 +79,15 @@ MIDDLEWARE = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+REST_FRAMEWORK = {                          
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],                          
+    "DEFAULT_PARSER_CLASSES":["rest_framework.parsers.JSONParser",],
+    "DEFAULT_AUTHENTICATION_CLASSES": 
+        [
+            "rest_framework.authentication.SessionAuthentication",
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+        ],
+    }
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
