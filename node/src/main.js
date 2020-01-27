@@ -35,7 +35,7 @@ axios.interceptors.response.use((response) => {
 
   // alert(error.response.status)
   
-  if (error.response.status === 403 && originalRequest.url === 'http://localhost/jwtauth/token/') {
+  if (error.response.status === 403 && originalRequest.url === 'https://termservice.test-nictiz.nl/jwtauth/token/') {
       router.push('/login');
       return Promise.reject(error);
   }
@@ -45,7 +45,7 @@ axios.interceptors.response.use((response) => {
       originalRequest._retry = true;
       const tokenStorage = JSON.parse(localStorage.getItem('user'));
       // alert('Refreshtoken: '+ tokenStorage)
-      return axios.post('http://localhost/jwtauth/refresh/',
+      return axios.post('https://termservice.test-nictiz.nl/jwtauth/refresh/',
           {
               "refresh": tokenStorage.refresh
           })
