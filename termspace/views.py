@@ -113,7 +113,7 @@ class searchTermspaceComments(viewsets.ViewSet):
         print('Searching for:',term)
         for term in terms:
             or_query = None ## Query to search for a given term in each field
-            for field_name in ['comment', 'assignee', 'fsn', 'folder', 'concept']:
+            for field_name in ['comment', 'assignee', 'folder', 'concept']:
                 q = Q(**{"%s__icontains" % field_name: term})
                 if or_query is None:
                     or_query = q
