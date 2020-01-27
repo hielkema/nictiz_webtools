@@ -1,11 +1,27 @@
 <template>
   <v-app id="inspire">
+    <link href="https://fonts.googleapis.com/css?family=Material+Icons" rel="stylesheet">
     <v-navigation-drawer
       v-model="drawer"
       app
       clipped
     >
       <v-list dense>
+        <v-list-item link>
+          <v-list-item-action>
+            <v-icon>mdi-account-key</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <v-list-item-title><router-link to="/login">
+              <span v-if="loggedIn">
+              Inloggen
+              </span>
+              <span v-else>
+              Uitloggen
+              </span>
+            </router-link></v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
         <v-list-item link>
           <v-list-item-action>
             <v-icon>mdi-view-dashboard</v-icon>
@@ -72,6 +88,11 @@
     }),
     created () {
       this.$vuetify.theme.dark = false
+    },
+    computed: {
+        loggedIn () {
+            return this.$store.state.authentication.status.loggedIn;
+        }
     },
   }
 </script>

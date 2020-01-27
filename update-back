@@ -1,0 +1,5 @@
+#!/bin/bash
+git pull
+docker-compose -f prod-frontend.yml build #--no-cache
+docker-compose -f prod-frontend.yml up -d
+docker-compose -f prod-frontend.yml logs -f

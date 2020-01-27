@@ -3,7 +3,6 @@ volumes:
   pgdata:
   static_files:
   pgadmin:
-  node_modules:
 services:
   postgres:
     image: postgres:10.3
@@ -114,28 +113,6 @@ services:
     #   - LETSENCRYPT_EMAIL=${EMAIL}
     networks:
       - webtools
-      - proxy
-  nodejs:
-    build:
-      context: './node'
-      dockerfile: 'Dockerfile_prod'
-    volumes:
-      - './node:/usr/src/app'
-      - 'node_modules:/usr/src/app/node_modules'
-    environment:
-      - VIRTUAL_HOST=${NODE_DOMAIN}
-      - VIRTUAL_PORT=${NODE_PORT}
-      - LETSENCRYPT_HOST=${NODE_DOMAIN}
-      - LETSENCRYPT_EMAIL=${EMAIL}
-
-      - CHOKIDAR_USEPOLLING=true
-    # ports:
-    #   - '9123:8080'
-    expose:
-      - 8080
-    links:
-      - python
-    networks:
       - proxy
 networks:
   webtools:
