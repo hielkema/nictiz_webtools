@@ -10,7 +10,7 @@
         dense
       ></v-text-field>
     </v-card-title>
-    <v-data-table dense multi-sort :headers="headers" :items="searchResults" :search="search" item-key="id+comment+user"></v-data-table>
+    <v-data-table group-by="id" dense multi-sort :headers="headers" :items="searchResults" :search="search" item-key="id+comment+user"></v-data-table>
   </div>
 </template>
 
