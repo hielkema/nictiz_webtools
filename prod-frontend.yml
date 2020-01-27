@@ -20,8 +20,6 @@ services:
     #   - '9123:8080'
     expose:
       - 8080
-    links:
-      - python
     networks:
       - proxy
 networks:
