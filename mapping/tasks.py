@@ -25,7 +25,7 @@ logger = get_task_logger(__name__)
 def import_snomed_async(focus=None):
     snowstorm = Snowstorm(
         baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=True,
+        debug=False,
         preferredLanguage="nl",
         defaultBranchPath="MAIN/SNOMEDCT-NL",
     )
@@ -48,7 +48,7 @@ def import_snomed_async(focus=None):
 
         obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
         obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
-        obj.descendants = json.dumps(list(snowstorm.getDescendants(id=conceptid)))
+        obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
         # TODO - ancestors
 
         obj.component_extra_dict = json.dumps(extra)
