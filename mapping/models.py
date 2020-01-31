@@ -6,7 +6,8 @@ class MappingProject(models.Model):
     title = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
     created = models.DateTimeField(default=timezone.now)
-    status_complete = models.ForeignKey('MappingTaskStatus', on_delete=models.PROTECT, blank=True, null=True, default=None)
+    status_complete = models.ForeignKey('MappingTaskStatus', related_name="status_complete", on_delete=models.PROTECT, blank=True, null=True, default=None)
+    status_rejected = models.ForeignKey('MappingTaskStatus', related_name="status_rejected", on_delete=models.PROTECT, blank=True, null=True, default=None)
 
     project_types_options = [
         # (code, readable)

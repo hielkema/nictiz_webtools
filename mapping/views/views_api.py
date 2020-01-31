@@ -428,13 +428,15 @@ class api_User_get(UserPassesTestMixin,TemplateView):
         # Lookup edit rights for mapping      
         users = User.objects.filter().order_by('username')
         user_list = []
+        tasks = MappingTask.objects.all()
+        # For each user
         for user in users:
-            if user.groups.filter(name='mapping | access').exists():    
+            # Check if they have access, or have any tasks to their name. If so, add to list.
+            if tasks.filter(user=user).exists() or user.groups.filter(name='mapping | access').exists():
                 user_list.append({
                     'id' : user.id,
                     'username' : user.username,
-                })
-        
+                })        
         # Return JSON
         return JsonResponse(user_list,safe=False)
 
@@ -836,7 +838,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
             current_user = User.objects.get(id=request.user.id)
             project_list = MappingProject.objects.filter(active=True)
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
-            tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+            tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             
             status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id)
             tasks_per_status_labels = []
