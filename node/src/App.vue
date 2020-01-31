@@ -14,10 +14,10 @@
           <v-list-item-content>
             <v-list-item-title><router-link to="/login">
               <span v-if="loggedIn">
-              Inloggen
+              Uitloggen
               </span>
               <span v-else>
-              Uitloggen
+              Inloggen
               </span>
             </router-link></v-list-item-title>
           </v-list-item-content>

@@ -429,10 +429,11 @@ class api_User_get(UserPassesTestMixin,TemplateView):
         users = User.objects.filter().order_by('username')
         user_list = []
         for user in users:
-            user_list.append({
-                'id' : user.id,
-                'username' : user.username,
-            })
+            if user.groups.filter(name='mapping | access').exists():    
+                user_list.append({
+                    'id' : user.id,
+                    'username' : user.username,
+                })
         
         # Return JSON
         return JsonResponse(user_list,safe=False)
