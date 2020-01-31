@@ -1177,10 +1177,11 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             tasks = MappingTask.objects.filter(project_id=project).order_by('id')
             data = []
             for task in tasks:
-                audits = MappingTaskAudit.objects.filter(task=task)
-                if audits.count() > 0:
-                    for audit in audits:
-                        data.append(audit)
+                if task.status.id is not task.project_id.status_rejected.id:
+                    audits = MappingTaskAudit.objects.filter(task=task)
+                    if audits.count() > 0:
+                        for audit in audits:
+                            data.append(audit)
 
             audits_total = len(tasks)
             audits_max_page = 50
