@@ -847,9 +847,9 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
             tasks_per_user_labels = []
             tasks_per_user_values = []
             for user in user_list:
-                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                 if num_tasks > 0:
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                     tasks_per_user_labels.append(user.username)
                     tasks_per_user_values.append(num_tasks)
             for status in status_list:            
@@ -972,10 +972,10 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         current_user = User.objects.get(id=request.user.id)
         project_list = MappingProject.objects.filter(active=True)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
-        tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+        tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
         total_num_tasks = len(tasks)
         if tasks.count() == 0:    
-            tasks = MappingTask.objects.filter(project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+            tasks = MappingTask.objects.filter(project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             total_num_tasks = 0
                 
         # print(task_list) # DEBUG
