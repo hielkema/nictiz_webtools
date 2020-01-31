@@ -2,8 +2,8 @@ import axios from '../../../node_modules/axios'
 import Vue from 'vue'
 
 const state = {
-    baseUrl: 'http://localhost/',
-    // baseUrl: 'https://termservice.test-nictiz.nl/',
+    // baseUrl: 'http://localhost/',
+    baseUrl: 'https://termservice.test-nictiz.nl/',
     currentPatient: {},
     patientList: [],
     currentPatientDecursus: [],

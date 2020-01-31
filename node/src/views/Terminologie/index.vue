@@ -14,7 +14,6 @@
             </v-row>
             <v-row v-if="numResults > 0">
                 <v-col class="col-12">
-                    Resultaten
                     <SearchResults />
                 </v-col>
             </v-row>
