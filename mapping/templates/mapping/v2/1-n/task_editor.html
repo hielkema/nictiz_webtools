@@ -62,7 +62,7 @@
         </div>
         <div class="card">
         <div class="card-header text-white bg-info">
-            <span style="float:left;"><h5 class="card-title">Taken</h5></span><br>
+            <span style="float:left;"><h5 class="card-title">Taken<span v-if="tasksFiltered.length > 0">: [[tasksFiltered.length]] in selectie</span></h5></span><br>
             <button v-if="!loadingTaskList" style="float:left;" class="form-control" v-on:click="getTaskList()">Vernieuwen</button>
             <button v-if="loadingTaskList" style="float:left;" class="form-control">Taken worden geladen, even geduld a.u.b.</button>
         </div>
