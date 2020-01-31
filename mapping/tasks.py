@@ -54,6 +54,7 @@ def import_snomed_async(focus=None):
         obj.component_extra_dict = json.dumps(extra)
         # Save
         obj.save()
+    
 
 @shared_task
 def import_labcodeset_async():
