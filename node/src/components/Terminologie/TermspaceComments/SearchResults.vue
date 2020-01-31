@@ -44,7 +44,8 @@
     <v-card class="ma-1">
       <v-data-table 
         :footer-props="pagination" 
-        group-by="id" 
+        group-by="fsn" 
+        fixed-header
         dense 
         multi-sort 
         :headers="headers" 
@@ -69,7 +70,7 @@ export default {
         { 'text' : 'Commentaar', value: 'comment' },
       ],
       pagination: {
-        "items-per-page-options": [5,10,25]
+        "items-per-page-options": [5,10,25,50]
       },
       filters: {
         status: [],
@@ -80,7 +81,7 @@ export default {
   },
   methods: {
     columnValueList(val) {
-      return this.$store.state.TermspaceComments.results.map(d => d[val])
+      return this.$store.state.TermspaceComments.results.map(d => d[val]).sort()
     }
   },
   computed: {

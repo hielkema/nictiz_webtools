@@ -18,7 +18,7 @@ const routes = [
   {
     path: '/terminologie/searchComments',
     name: 'searchComments',
-    component: () => import('../views/Terminologie/index.vue')
+    component: () => import('../views/Terminologie/TermspaceComments.vue')
   },
   {
     path: '/about',
