@@ -410,7 +410,11 @@ def audit_async(audit_type=None, project=None, task_id=None):
             for rule in rules:
                 # Append priority to list for analysis
                 mapping_priorities.append(rule.mappriority)
-                mapping_groups.append(rule.mapgroup)
+                if rule.mapgroup == None:
+                    mapgroup = 1
+                else:
+                    mapgroup = rule.mapgroup
+                mapping_groups.append(mapgroup)
                 mapping_targets.append(rule.target_component)
                 mapping_target_idents.append(rule.target_component.component_id)
 
