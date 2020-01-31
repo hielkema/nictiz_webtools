@@ -402,14 +402,25 @@ def audit_async(audit_type=None, project=None, task_id=None):
             logger.info('Number of rules: {0}'.format(rules.count()))
             # Create list for holding all used map priorities
             mapping_priorities = []
+            mapping_groups = []
             mapping_targets = []
             mapping_target_idents = []
+            mapping_prio_per_group = {}
             # Loop through individual rules
             for rule in rules:
                 # Append priority to list for analysis
                 mapping_priorities.append(rule.mappriority)
+                mapping_groups.append(rule.mapgroup)
                 mapping_targets.append(rule.target_component)
                 mapping_target_idents.append(rule.target_component.component_id)
+
+                if not mapping_prio_per_group.get(rule.mapgroup,False):
+                    mapping_prio_per_group.update({
+                        rule.mapgroup: [rule.mappriority]
+                    })
+                else:
+                    mapping_prio_per_group[rule.mapgroup].append(rule.mappriority)
+
                 logger.info('Rule: {0}'.format(rule))
 
 
@@ -497,32 +508,50 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             hit_reason='Taak heeft 1 mapping rule: map advice is niet Altijd'
                         )
             elif rules.count() > 1:
-                logger.info('Consecutive priorities?: {0} -> {1}'.format(mapping_priorities, checkConsecutive(mapping_priorities)))
-                if not checkConsecutive(mapping_priorities):
+                # Check for order in groups
+                logger.info('Mapping groups: {0}'.format(mapping_groups))
+                groups_ex_duplicates = list(dict.fromkeys(mapping_groups))
+                logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
+                logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
+                if not checkConsecutive(groups_ex_duplicates):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: geen opeenvolgende prioriteit'
+                            hit_reason='Taak heeft meerdere mapping groups: geen opeenvolgende prioriteit'
                         )
-                try:
-                    if sorted(mapping_priorities)[0] != 1:
+
+                print("PRIO PER GROUP",mapping_prio_per_group)
+
+                # Rest in loop door prio's uitvoeren?
+                for key in mapping_prio_per_group.items():
+                    logger.info('Checking group {}'.format(str(key[0])))
+                    priority_list = key[1]
+                    logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
+                    if not checkConsecutive(priority_list):
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
                                 audit_type=audit_type,
-                                hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
+                                hit_reason='Groep heeft meerdere mapping rules: geen opeenvolgende prioriteit'
                             )
-                except:
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type=audit_type,
-                                hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
-                            )
-                if rules.last().mapadvice != 'Anders':
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
-                        )
+                    try:
+                        if sorted(priority_list)[0] != 1:
+                            obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Groep heeft meerdere mapping rules: geen mapprioriteit 1'
+                                )
+                    except:
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
+                                )
+                    # if rules.last().mapadvice != 'Anders':
+                    #     obj, created = MappingTaskAudit.objects.get_or_create(
+                    #             task=task,
+                    #             audit_type=audit_type,
+                    #             hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
+                    #         )
             else:
                 logger.info('No rules for current task')
             
