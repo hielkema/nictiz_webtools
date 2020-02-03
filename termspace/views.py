@@ -119,6 +119,85 @@ class SnomedJSONTree(viewsets.ViewSet):
 
         return Response(children_list)
 
+
+class Mapping_Progressreport_perStatus(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def retrieve(self, request, pk=None):
+        output = []
+
+
+        print('Received request for progress report')
+        if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
+            print('Incorrect or absent secret')
+            return Response('error')
+        else:
+            progressReports = MappingProgressRecord.objects.filter(project_id=pk, name='TasksPerStatus').last()
+            status_list =[]
+            statuses = json.loads(progressReports.values)
+            for item in statuses:
+                status_list.append(item)
+
+            output.append({
+                'Project' : progressReports.project.title,
+                'Time' : progressReports.time,
+                'Progress' : status_list,
+            })
+            # Return Json response
+            return Response(output)
+
+class Mapping_Progressreport_perProject(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def retrieve(self, request, pk=None):
+        output = []
+
+        codesystem  = MappingCodesystem.objects.get(id=pk)
+        components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem)
+        projects    = MappingProject.objects.all()
+
+        print('Received request for codesystem',codesystem.codesystem_title)
+        if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
+            print('Incorrect or absent secret')
+            return Response('error')
+        else:
+            for component in components:
+                tasks = MappingTask.objects.filter(source_component = component)
+                extra = json.loads(component.component_extra_dict)
+                aub = extra.get('Aanvraag/Uitslag/Beide')
+                if aub == 'A': aub="Aanvraag"
+                if aub == 'B': aub="Aanvraag en uitslag"
+                if aub == 'U': aub="Uitslag"
+
+                if tasks.exists():
+                    for task in tasks:
+                        output.append({
+                            'id' : component.component_id,
+                            'codesystem' : component.codesystem_id.codesystem_title,
+                            # 'extra' : extra,
+                            'group' : extra.get('Groep'),
+                            'AUB' : aub,
+                            'actief' : extra.get('Actief?'),
+                            'title' : component.component_title,
+                            'aantal taken' : tasks.count(),
+                            'project' : task.project_id.title,
+                            'status' : task.status.status_title,
+                        })
+                else:
+                    output.append({
+                            'id' : component.component_id,
+                            'codesystem' : component.codesystem_id.codesystem_title,
+                            # 'extra' : extra,
+                            'group' : extra.get('Groep'),
+                            'AUB' : aub,
+                            'actief' : extra.get('Actief?'),
+                            'title' : component.component_title,
+                            'aantal taken' : tasks.count(),
+                            'project' : None,
+                            'status' : None,
+                        })
+
+            # Return Json response
+            return Response(output)
+
 # Full modelviewset
 # class componentApi(viewsets.ReadOnlyModelViewSet):
 #     queryset = MappingCodesystemComponent.objects.all()
