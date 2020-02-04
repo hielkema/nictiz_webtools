@@ -410,8 +410,9 @@ def import_icpc_task():
         if row['Versie vervallen'] != False: vervallen = 'Code is vervallen'
 
         extra = {
-            'NHG ID' : row['ID'],
-            'Actief' : vervallen,
+            'ICPC code' : row['ICPC Code'],
+            'NHG ID'    : row['ID'],
+            'Actief'    : vervallen,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
