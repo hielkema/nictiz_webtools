@@ -4,6 +4,7 @@ import axios from 'axios'
 
 import Epd from './modules/Epd'
 import TermspaceComments from './modules/Terminologie/TermspaceComments'
+import MappingComments from './modules/Terminologie/MappingComments'
 
 import { authentication } from './authentication.module';
 import { alert } from './alert.module';
@@ -21,6 +22,7 @@ export default new Vuex.Store({
   modules: {
       Epd,
       TermspaceComments,
+      MappingComments,
       authentication,
       alert,
   }

@@ -30,7 +30,7 @@
             <v-list-item-title><router-link to="/">Home</router-link></v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link>
+        <v-list-item link v-if="loggedIn">
           <v-list-item-action>
             <v-icon>mdi-settings</v-icon>
           </v-list-item-action>
@@ -38,12 +38,12 @@
             <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link>
+        <v-list-item link v-if="loggedIn">
           <v-list-item-action>
-            <v-icon>mdi-view-dashboard</v-icon>
+            <v-icon>mdi-settings</v-icon>
           </v-list-item-action>
           <v-list-item-content>
-            <router-link to="/epd"><v-list-item-title>EPD</v-list-item-title></router-link>
+            <router-link to="/terminologie/mappingComments"><v-list-item-title>Mapping tool commentaar</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
       </v-list>

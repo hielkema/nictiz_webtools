@@ -21,6 +21,11 @@ const routes = [
     component: () => import('../views/Terminologie/TermspaceComments.vue')
   },
   {
+    path: '/terminologie/mappingComments',
+    name: 'mappingComments',
+    component: () => import('../views/Terminologie/MappingComments.vue')
+  },
+  {
     path: '/about',
     name: 'about',
     // route level code-splitting

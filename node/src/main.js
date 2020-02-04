@@ -66,7 +66,11 @@ axios.interceptors.response.use((response) => {
               }
           })
           .catch(error => {
-            console.error('Error bij refresh '+Object.keys(error))
+            console.error('Uitgelogd: Error bij refresh '+Object.keys(error))
+            localStorage.removeItem('user')
+            store.state.authentication.status.loggedIn = false
+            store.state.authentication.user = null
+            router.push('login')
           })
   }else{
     console.error('Deze error? Raar.')
