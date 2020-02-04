@@ -675,9 +675,12 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
 
                         # Save
                         obj.save()
+                        created = True
 
                         # Add comment
-                        if form.cleaned_data['comment'] != "":
+                        print("Comment: ",form.cleaned_data['comment'])
+                        if form.cleaned_data['comment']:
+                            print("Adding comment")
                             user = User.objects.get(id=request.user.id)
                             comment = MappingComment.objects.get_or_create(
                                         comment_title = 'task created',
@@ -686,7 +689,6 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
                                         comment_user = user,
                                     )
 
-                        created = True
                     
                     component_id = component_obj.id
                     component_title = component_obj.component_title
