@@ -60,7 +60,13 @@
         :headers="headers" 
         :items="filteredResults" 
         :search="search" 
-        item-key="id+comment+user"></v-data-table>
+        item-key="id+comment+user">
+        
+        <template v-slot:item.task_id="{ item }">
+          <a :href="'https://termservice.test-nictiz.nl/mapping/project/' + item.project_id + '/task/' + item.task_id" target="_blank">{{ item.task_id }}</a>
+        </template>
+        
+        </v-data-table>
     </v-card>
   </div>
 </template>
