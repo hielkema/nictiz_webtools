@@ -107,6 +107,7 @@ class searchMappingComments(viewsets.ViewSet):
             results.append({
                 'comment_id' : comment.id,
                 'task_id' : comment.comment_task.id,
+                'status' : comment.comment_task.status.status_title,
                 'project' : comment.comment_task.project_id.title,
                 'codesystem' : comment.comment_task.source_component.codesystem_id.codesystem_title,
                 'component_id' : comment.comment_task.source_component.component_id,
