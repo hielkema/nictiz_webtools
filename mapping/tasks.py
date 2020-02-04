@@ -379,7 +379,7 @@ def import_nhgbepalingen_task():
             'Vraagtype' : row[14],
             'Eenheid' : row[16],
             'Versie mutatie' : row[12],
-            'Actief?' : vervallen,
+            'Actief' : vervallen,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
