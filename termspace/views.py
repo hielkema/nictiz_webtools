@@ -87,7 +87,7 @@ class searchMappingComments(viewsets.ViewSet):
         print('Searching for:',term)
         for term in terms:
             or_query = None ## Query to search for a given term in each field
-            for field_name in ['comment_body']:
+            for field_name in ['comment_body', 'comment_task__id']:
                 q = Q(**{"%s__icontains" % field_name: term})
                 if or_query is None:
                     or_query = q
@@ -98,15 +98,19 @@ class searchMappingComments(viewsets.ViewSet):
             else:
                 query = query & or_query
 
-        comments_found = MappingComment.objects.filter(query)
+        comments_found = MappingComment.objects.filter(query).order_by('comment_created')
         print(query)
         results = []
         if comments_found.count() == 0:
             print('Geen resultaten')
         for comment in comments_found:
             results.append({
-                'id' : comment.comment_task.source_component.component_id,
-                'task' : comment.comment_task.source_component.component_title,
+                'comment_id' : comment.id,
+                'task_id' : comment.comment_task.id,
+                'project' : comment.comment_task.project_id.title,
+                'codesystem' : comment.comment_task.source_component.codesystem_id.codesystem_title,
+                'component_id' : comment.comment_task.source_component.component_id,
+                'component_title' : comment.comment_task.source_component.component_title,
                 'user' : comment.comment_user.username,
                 'comment' : comment.comment_body,
                 'time' : comment.comment_created,
