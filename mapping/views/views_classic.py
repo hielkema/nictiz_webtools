@@ -616,16 +616,20 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
         form = TaskCreateForm(request.POST)
         handled = {}
         if form.is_valid():
+            print("Taken worden aangemaakt in project {} / codesystem {}".format(int(form.cleaned_data['project']), int(form.cleaned_data['codesystem'])))
+
             project = MappingProject.objects.get(id=int(form.cleaned_data['project']))
             codesystem = MappingCodesystem.objects.get(id=int(form.cleaned_data['codesystem']))
+
+            print("Gaat om project {} / codesystem {}".format(project.title, codesystem.codesystem_title))
             # user = User.objects.get(id=request.user.id) # Taken maken we nu altijd zonder gebruiker
 
             status1 = MappingTaskStatus.objects.get(project_id = form.cleaned_data['project'], status_id = 1)
    
             projects = MappingProject.objects.all()
             project_list = []
-            for project in projects:
-                project_list.append((project.id, project.title))
+            for projectIter in projects:
+                project_list.append((projectIter.id, projectIter.title))
 
             if request.POST.get('type') == "Taak maken voor alle componenten":
                 tasks_list = []
@@ -673,13 +677,14 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
                         obj.save()
 
                         # Add comment
-                        user = User.objects.get(id=request.user.id)
-                        comment = MappingComment.objects.get_or_create(
-                                    comment_title = 'task created',
-                                    comment_task = obj,
-                                    comment_body = '[Commentaar bij aanmaken taak]\n'+form.cleaned_data['comment'],
-                                    comment_user = user,
-                                )
+                        if form.cleaned_data['comment'] != "":
+                            user = User.objects.get(id=request.user.id)
+                            comment = MappingComment.objects.get_or_create(
+                                        comment_title = 'task created',
+                                        comment_task = obj,
+                                        comment_body = '[Commentaar bij aanmaken taak]\n'+form.cleaned_data['comment'],
+                                        comment_user = user,
+                                    )
 
                         created = True
                     
