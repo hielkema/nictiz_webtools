@@ -2,7 +2,7 @@
 
 <template>
     <div id="app">
-        <h1>Zoeken in commentaar</h1>
+        <h1>Zoeken in commentaar - Mapping tool</h1>
         <v-divider></v-divider>
         <v-container
         fluid

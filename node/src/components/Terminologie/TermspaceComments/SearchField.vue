@@ -22,6 +22,11 @@
       </v-card-actions>
     </v-card>
     </form>
+
+    <v-card
+      class="ma-1">
+      <v-card-text>Je kan zoeken op tekst in het commentaar, gebruiker, werklijst, status, concept ID of FSN.<br>Tip: Zoeken op FSN geeft alle commentaren van de taak - handig voor een overzicht.</v-card-text>
+    </v-card>
   </div>
 </template>
 
