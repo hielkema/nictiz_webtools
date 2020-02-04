@@ -75,6 +75,7 @@ export default {
       filters: {
         user: [],
         project: [],
+        status: [],
       }
     }
   },
