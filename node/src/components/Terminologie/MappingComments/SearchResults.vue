@@ -35,6 +35,15 @@
               </v-select>
             </td>
           </tr>
+          <tr>
+            <th>
+              Group by
+            </th>
+            <td>
+              <v-select flat dense hide-details small :items="groupByList" v-model="groupBy">
+              </v-select>
+            </td>
+          </tr>
         </tbody>
       </v-simple-table>
     </v-card>
@@ -44,7 +53,7 @@
     <v-card class="ma-1">
       <v-data-table 
         :footer-props="pagination" 
-        group-by="task_id" 
+        :group-by="groupBy"
         fixed-header
         dense 
         multi-sort 
@@ -61,6 +70,7 @@ export default {
   data() {
     return {
       search: '',
+      groupBy: null,
       headers: [
         { 'text' : 'TaakID', value: 'task_id', filterable: true },
         { 'text' : 'Project', value: 'project', filterable: true },
@@ -94,6 +104,11 @@ export default {
           return this.filters[f].length < 1 || this.filters[f].includes(d[f])
         })
       })
+    },
+    groupByList(){
+      const result = this.headers
+      // result.push('Niet groeperen')
+      return result
     }
   }
 }
