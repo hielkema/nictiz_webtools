@@ -30,31 +30,53 @@ def import_snomed_async(focus=None):
         defaultBranchPath="MAIN/SNOMEDCT-NL",
     )
     result = snowstorm.findConcepts(ecl="<<"+focus)
-    print(result)
+    print('Found {} concepts'.format(len(result)))
 
+    # Spawn task for each concept
     for conceptid, concept in result.items():
-        # Get or create based on 2 criteria (fsn & codesystem)
-        codesystem_obj = MappingCodesystem.objects.get(id='1')
-        obj, created = MappingCodesystemComponent.objects.get_or_create(
-            codesystem_id_id=codesystem_obj.id,
-            component_id=conceptid,
-        )
-        print("CREATED **** ",codesystem_obj, conceptid)
-        # Add data not used for matching
-        obj.component_title = str(concept['fsn']['term'])
-        extra = {
-            'Preferred term' : str(concept['pt']['term']),
+        payload = {
+            'conceptid' : conceptid,
+            'concept'   : concept,
         }
+        update_snomedConcept_async.delay(payload)
 
-        obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
-        obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
-        obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
-        # TODO - ancestors
-
-        obj.component_extra_dict = json.dumps(extra)
-        # Save
-        obj.save()
+@shared_task
+def update_snomedConcept_async(payload=None):
+    snowstorm = Snowstorm(
+        baseUrl="https://snowstorm.test-nictiz.nl",
+        debug=False,
+        preferredLanguage="nl",
+        defaultBranchPath="MAIN/SNOMEDCT-NL",
+    )
     
+    concept = payload.get('concept')
+    conceptid = payload.get('conceptid')
+
+    # Get or create based on 2 criteria (fsn & codesystem)
+    codesystem_obj = MappingCodesystem.objects.get(id='1')
+    obj, created = MappingCodesystemComponent.objects.get_or_create(
+        codesystem_id_id=codesystem_obj.id,
+        component_id=conceptid,
+    )
+    print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
+    # Add data not used for matching
+    obj.component_title = str(concept['fsn']['term'])
+    extra = {
+        'Preferred term' : str(concept['pt']['term']),
+        'Active'         : str(concept['active']),
+        'Effective time' : str(concept['effectiveTime']),
+        'Definition status'  : str(concept['definitionStatus']),
+    }
+
+    obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+    obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+    obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+    # TODO - ancestors
+
+    obj.component_extra_dict = json.dumps(extra)
+    # Save
+    obj.save()
+    return str(obj)
 
 @shared_task
 def import_labcodeset_async():
@@ -358,6 +380,38 @@ def import_nhgbepalingen_task():
             'Eenheid' : row[16],
             'Versie mutatie' : row[12],
             'Actief?' : vervallen,
+        }
+        # print(extra)
+        obj.component_extra_dict = json.dumps(extra)
+        obj.save()
+
+@shared_task
+def import_icpc_task():
+    df = read_csv(
+        '/webserver/mapping/resources/nhg/NHG-ICPC.txt',
+        sep='\t',
+        header = 1,
+        )
+    i=0
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+
+    # Verwerk dataset -> database
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='5')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=str(row['ICPC Code']),
+        )
+        
+        obj.component_title = row['ICPC Titel']
+
+        vervallen = 'Code is actief'
+        if row['Versie vervallen'] != False: vervallen = 'Code is vervallen'
+
+        extra = {
+            'NHG ID' : row['ID'],
+            'Actief' : vervallen,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)

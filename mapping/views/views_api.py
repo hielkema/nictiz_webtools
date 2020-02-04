@@ -268,6 +268,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             if json.loads(request.POST.get('codesystem[nhgbep]')):
                 import_nhgbepalingen_task.delay()
             
+            print('nhgICPC', json.loads(request.POST.get('codesystem[icpc]')))
+            if json.loads(request.POST.get('codesystem[icpc]')):
+                import_icpc_task.delay()
+
             context = {
                 'result': "success",
             }

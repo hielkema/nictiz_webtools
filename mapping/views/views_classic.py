@@ -743,7 +743,7 @@ class MappingIndexPageView(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).order_by('id')
         return render(request, 'mapping/index.html', {
             'page_title': 'Mapping project',
             'project_list': project_list,
