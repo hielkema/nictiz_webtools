@@ -108,6 +108,7 @@ class searchMappingComments(viewsets.ViewSet):
                 'id' : comment.comment_task.source_component.component_id,
                 'task' : comment.comment_task.source_component.component_title,
                 'user' : comment.comment_user.username,
+                'comment' : comment.comment_body,
                 'time' : comment.comment_created,
             })
 
