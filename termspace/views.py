@@ -76,6 +76,49 @@ class searchTermspaceComments(viewsets.ViewSet):
         }
         return Response(context)
 
+class searchMappingComments(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    def retrieve(self, request, pk=None):
+        term = str(pk)
+        print(request)
+        # Get results for searchterm        
+        query = None ## Query to search for every search term
+        terms = term.split(' ')
+        print('Searching for:',term)
+        for term in terms:
+            or_query = None ## Query to search for a given term in each field
+            for field_name in ['comment_body']:
+                q = Q(**{"%s__icontains" % field_name: term})
+                if or_query is None:
+                    or_query = q
+                else:
+                    or_query = or_query | q
+            if query is None:
+                query = or_query
+            else:
+                query = query & or_query
+
+        comments_found = MappingComment.objects.filter(query)
+        print(query)
+        results = []
+        if comments_found.count() == 0:
+            print('Geen resultaten')
+        for comment in comments_found:
+            results.append({
+                'id' : comment.comment_task.source_component.component_id,
+                'task' : comment.comment_task.source_component.component_title,
+                'user' : comment.comment_user.username,
+                'time' : comment.comment_created,
+            })
+
+        sep = " "
+        context = {
+            'searchterm' : sep.join(terms),
+            'num_results' : len(results),
+            'results': results,
+        }
+        return Response(context)
+
 # Snomed component endpoint
 class componentApi(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -118,7 +161,6 @@ class SnomedJSONTree(viewsets.ViewSet):
         children_list = list_children(pk)
 
         return Response(children_list)
-
 
 class Mapping_Progressreport_perStatus(viewsets.ViewSet):
     permission_classes = [AllowAny]

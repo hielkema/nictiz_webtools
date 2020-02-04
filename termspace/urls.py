@@ -13,6 +13,9 @@ router.register(r'search_comments', searchTermspaceComments, basename="termspace
 router.register(r'component_api', componentApi, basename="component_api")
 router.register(r'snomed_json_tree', SnomedJSONTree, basename="snomed_json_tree")
 
+router.register(r'mapping_comments', searchMappingComments, basename="mapping_comments")
+
+
 router.register(r'mapping_progress', Mapping_Progressreport_perProject, basename="mapping_progress")
 router.register(r'mapping_progress_per_status', Mapping_Progressreport_perStatus, basename="mapping_progress")
 
