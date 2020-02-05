@@ -111,6 +111,8 @@ services:
     #   - VIRTUAL_PORT=${FLOWER_PORT}
     #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
     #   - LETSENCRYPT_EMAIL=${EMAIL}
+    ports:
+      - ${FLOWER_PORT}:${FLOWER_PORT}
     networks:
       - webtools
       - proxy
