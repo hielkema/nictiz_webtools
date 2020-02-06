@@ -29,7 +29,7 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - static_files:/webserver/static_files
-    command: gunicorn -w 4 app.wsgi -b 0.0.0.0:8000
+    command: gunicorn -w 4 app.wsgi -b 0.0.0.0:8000 --timeout 300
     networks:
       - webtools
   
@@ -94,11 +94,11 @@ services:
       - proxy
     expose:
       - "${PGADMIN_PORT}"
-    environment:
-      - VIRTUAL_HOST=${PGADMIN_DOMAIN}
-      - VIRTUAL_PORT=${PGADMIN_PORT}
-      - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
-      - LETSENCRYPT_EMAIL=${EMAIL}
+    # environment:
+    #   - VIRTUAL_HOST=${PGADMIN_DOMAIN}
+    #   - VIRTUAL_PORT=${PGADMIN_PORT}
+    #   - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
+    #   - LETSENCRYPT_EMAIL=${EMAIL}
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
@@ -111,8 +111,8 @@ services:
     #   - VIRTUAL_PORT=${FLOWER_PORT}
     #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
     #   - LETSENCRYPT_EMAIL=${EMAIL}
-    ports:
-      - ${FLOWER_PORT}:${FLOWER_PORT}
+    # ports:
+    #   - ${FLOWER_PORT}:${FLOWER_PORT}
     networks:
       - webtools
       - proxy

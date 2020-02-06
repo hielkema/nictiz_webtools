@@ -72,7 +72,6 @@ def update_snomedConcept_async(payload=None):
     obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
     obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
     obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
-    # TODO - ancestors
 
     obj.component_extra_dict = json.dumps(extra)
     # Save

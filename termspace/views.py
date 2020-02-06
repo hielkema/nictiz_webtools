@@ -130,6 +130,11 @@ class searchMappingComments(viewsets.ViewSet):
 class componentApi(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def list(self, request):
+        # clinicalFinding = MappingCodesystemComponent.objects.get(component_id='404684003')
+        # clinicalFinding_list = json.loads(clinicalFinding.descendants)
+        # snomed = MappingCodesystem.objects.get(id=1)
+        # query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed, component_id__in=clinicalFinding_list)
+
         snomed = MappingCodesystem.objects.get(id=1)
         query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
         results = MappingComponentSerializer(query, many=True).data
