@@ -217,7 +217,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr v-if="currentUser.id == currentTask.user.id">
+                      <tr v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')">
                         <th class="input-group-text">Wijzig</th>
                         <td>
                           <v-select v-model="mapping.target.new" name="newTarget" label="name" :filterable="false" :options="options" @search="onSearch">
@@ -233,39 +233,39 @@
                       <tr v-if="mappingProjectOptions.priority">
                         <th class="input-group-text">Priority</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="priority" class="form-control" v-model="mapping.priority">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping') || !permissions.includes('mapping | edit mapping')" type="text" name="priority" class="form-control" v-model="mapping.priority">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.rule">
                         <th class="input-group-text">Rule</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="rule" class="form-control" v-model="mapping.rule">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="text" name="rule" class="form-control" v-model="mapping.rule">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.group">
                         <th class="input-group-text">Group</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="number" name="group" class="form-control" v-model="mapping.group">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="number" name="group" class="form-control" v-model="mapping.group">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.advice">
                         <th class="input-group-text">Advice</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="advice" class="form-control" v-model="mapping.advice">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="text" name="advice" class="form-control" v-model="mapping.advice">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.correlation">
                         <th class="input-group-text">Correlation</th>
                         <td>
-                          <select v-bind:disabled="currentUser.id != currentTask.user.id" name="correlation" class="form-control" v-model="mapping.correlation">
+                          <select v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" name="correlation" class="form-control" v-model="mapping.correlation">
                             <option v-for="(value, key) in mappingProjectOptions.correlation_options" :selected="mapping.correlation == key" :value="key" :key="value">[[value]]</option>
                           </select>
                         </td>
                       </tr>
-                      <tr>
+                      <tr v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')">
                         <th class="input-group-text">Verwijderen</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="checkbox" name="delete" v-model="mapping.delete">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="checkbox" name="delete" v-model="mapping.delete">
                         </td>
                       </tr>
                     </tbody>
@@ -273,7 +273,7 @@
                 </li>
               </ul>
               <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
-              <button v-if="currentUser.id == currentTask.user.id" class="form-control">Submit</button>
+              <button v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')" class="form-control">Submit</button>
           </form>
     </div>
   </div>
