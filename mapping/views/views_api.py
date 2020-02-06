@@ -816,10 +816,22 @@ class vue_MappingIndex(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True)
+        # TODO - Check if active projects exist, otherwise -> error.
+        current_user = User.objects.get(id=request.user.id)
+        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        project_dict = []
+        for project in project_list:
+            tasks = MappingTask.objects.filter(project_id=project)
+            project_dict.append({
+                'id' : project.id,
+                'title' : project.title,
+                'num_tasks': tasks.exclude(status=project.status_rejected).count(),
+                'num_open_tasks': tasks.exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+                'num_open_tasks_user': tasks.filter(user=current_user).exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+            })
         return render(request, 'mapping/v2/index.html', {
             'page_title': 'Mapping project',
-            'project_list': project_list,
+            'project_list': project_dict,
         })
 
 class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
