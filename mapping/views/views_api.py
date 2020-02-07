@@ -1335,7 +1335,7 @@ class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
     
     def get(self, request, **kwargs):
         # TODO - Check if project and task exist, otherwise -> redirect to project or homepage.
-        search_query = str(request.GET.get('term'))
+        search_query = strip(str(request.GET.get('term')))
         print(search_query)
 
         # Prepare results for vue-select request
