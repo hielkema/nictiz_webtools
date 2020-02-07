@@ -11,6 +11,8 @@ router = SimpleRouter()
 # router.register(r'termspace_comments', termspaceComments, basename="termspace_comments")
 router.register(r'search_comments', searchTermspaceComments, basename="termspace_comments")
 router.register(r'component_api', componentApi, basename="component_api")
+router.register(r'ecl_api', eclQueryApi, basename="ecl_query_api")
+
 router.register(r'snomed_json_tree', SnomedJSONTree, basename="snomed_json_tree")
 
 router.register(r'mapping_comments', searchMappingComments, basename="mapping_comments")
@@ -18,6 +20,7 @@ router.register(r'mapping_comments', searchMappingComments, basename="mapping_co
 
 router.register(r'mapping_progress', Mapping_Progressreport_perProject, basename="mapping_progress")
 router.register(r'mapping_progress_per_status', Mapping_Progressreport_perStatus, basename="mapping_progress")
+router.register(r'mapping_progress_over_time', Mapping_Progressreport_overTime, basename="mapping_progress_over_time")
 
 # router.register(r'test_post_endpoint', ShareView, basename="testpoint_post")
 

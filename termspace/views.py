@@ -25,6 +25,8 @@ from rest_framework import views
 from rest_framework.response import Response
 from rest_framework.permissions import *
 
+from snowstorm_client import Snowstorm
+
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
 # reading .env file
@@ -150,6 +152,55 @@ class componentApi(viewsets.ViewSet):
         })
         # MethodNotAllowed(method, detail=None, code=None)
 
+# ECL query results
+class eclQueryApi(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def list(self, request):
+        query = EclQueryResults.objects.filter()
+        results = EclQueryResultsSerializer(query, many=True).data
+        return Response(results)
+    def retrieve(self, request, pk=None):
+        query = EclQueryResults.objects.filter(component_id=pk)
+        results = EclQueryResultsSerializer(query, many=True).data
+        return Response(results)
+    def create(self, request):
+        snowstorm = Snowstorm(
+            # baseUrl="https://snowstorm.test-nictiz.nl",
+            baseUrl="https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct",
+            debug=True,
+            preferredLanguage="nl",
+            defaultBranchPath="MAIN/SNOMEDCT-NL",
+        )
+        payload = request.data
+        title = payload.get('title')
+        ecl_query = payload.get('query')
+
+        print("ECL query received: POST: {}\n Title {}\nQuery:{}".format(payload, title, ecl_query))
+        
+        # Get or create based on 2 criteria (fsn & codesystem)
+        obj, created = EclQueryResults.objects.get_or_create(
+            component_id=str(time.time()).replace(".",""),
+            component_title=title,
+        )
+        # Add data not used for matching
+        current_user = User.objects.get(id=request.user.id)
+        extra = {
+            'Query' : str(ecl_query),
+            'UserID': current_user.id,
+            'User'  : current_user.username,
+        }
+        obj.component_extra_dict = extra
+        # obj.parents     = json.dumps(list(snowstorm.findConcepts(ecl='>!'+ecl_query)))
+        # obj.children    = json.dumps(list(snowstorm.findConcepts(ecl='<!'+ecl_query)))
+        obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl=ecl_query)))
+        # obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+ecl_query)))
+        obj.save()
+
+        query = EclQueryResults.objects.filter(component_id=obj.component_id)
+        results = EclQueryResultsSerializer(query, many=True).data
+        return Response(results)
+        # MethodNotAllowed(method, detail=None, code=None)
+
 class SnomedJSONTree(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def retrieve(self, request, pk=None):
@@ -260,6 +311,66 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
 
             # Return Json response
             return Response(output)
+
+class Mapping_Progressreport_overTime(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def list(self, request, pk=None):
+        output = []
+
+        completed_tasks = 0
+        all_tasks = 0
+
+        print('Received request for progress report over time')
+        if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
+            print('Incorrect or absent secret')
+            return Response('error')
+        else:
+            projects = MappingProject.objects.all()
+            tasks = MappingTask.objects.all()
+            daily_report = {}
+
+            records = MappingProgressRecord.objects.filter(name="TasksPerStatus")
+            for record in records:
+                project = MappingProject.objects.get(id=record.project.id)
+                date = record.time
+                date = date.strftime("%Y-%m-%d")
+
+                if not daily_report.get(str(date), False):
+                    daily_report[str(date)] = {
+                        "complete" : 0,
+                        "Nieuw" : 0,
+                        "NHG review" : 0,
+                        "total" : 0,
+                    }
+
+                for item in json.loads(record.values):
+                    if item.get('status') != str(project.status_rejected.status_title):
+                        daily_report[str(date)]['total'] += item.get('num_tasks')
+                    if item.get('status') == "Nieuw":
+                        daily_report[str(date)]['Nieuw'] += item.get('num_tasks')
+                    if item.get('status') == "NHG review":
+                        daily_report[str(date)]['NHG review'] += item.get('num_tasks')
+                    if item.get('status') == project.status_complete.status_title:
+                        daily_report[str(date)]['complete'] += item.get('num_tasks')
+                        completed_tasks += item.get('num_tasks')
+
+                    # for key, value in item.items():
+                    #     print("*",key, value)
+                    #     if key == "NHG review":
+                    #         print(value)
+                    #         daily_report[str(date)]['NHG review'] += value
+                    #     if key != str(project.status_rejected.status_title):
+                    #         if key == "num_tasks":
+                    #             daily_report[str(date)]['total'] += value
+                    #         if key == project.status_complete.status_title:
+                    #             daily_report[str(date)]['complete'] += value
+
+
+            # Return Json response
+            return Response({
+                "reports":daily_report,
+                "completed":completed_tasks,
+            })
 
 # Full modelviewset
 # class componentApi(viewsets.ReadOnlyModelViewSet):
