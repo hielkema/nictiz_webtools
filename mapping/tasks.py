@@ -63,7 +63,7 @@ def update_snomedConcept_async(payload=None):
     obj.component_title = str(concept['fsn']['term'])
     extra = {
         'Preferred term' : str(concept['pt']['term']),
-        'Active'         : str(concept['active']),
+        'Actief'         : str(concept['active']),
         'Effective time' : str(concept['effectiveTime']),
         'Definition status'  : str(concept['definitionStatus']),
     }
@@ -244,7 +244,7 @@ def import_nhgverrichtingen_task():
 @shared_task
 def import_nhgbepalingen_task():
     df = read_csv(
-        '/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie 31 - bepaling.txt',
+        '/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie 32 - bepaling.txt',
         sep='\t',
         header = 1,
         )
@@ -319,9 +319,9 @@ def import_nhgbepalingen_task():
         
         # Check status van NHG term
         if str(row[12])[-1:] == "V": 
-            vervallen = "Bepaling is vervallen"
+            actief_component = "False"
         else:
-            vervallen = "Bepaling is actief"
+            actief_component = "True"
 
         # Check soort van NHG term
         if str(row[13]) == "L":
@@ -379,7 +379,7 @@ def import_nhgbepalingen_task():
             'Vraagtype' : row[14],
             'Eenheid' : row[16],
             'Versie mutatie' : row[12],
-            'Actief' : vervallen,
+            'Actief' : actief_component,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
@@ -406,13 +406,13 @@ def import_icpc_task():
         
         obj.component_title = row['ICPC Titel']
 
-        vervallen = 'Code is actief'
-        if row['Versie vervallen'] != False: vervallen = 'Code is vervallen'
+        actief_concept = 'True'
+        if row['Versie vervallen'] != False: actief_concept = 'False'
 
         extra = {
             'ICPC code' : row['ICPC Code'],
             'NHG ID'    : row['ID'],
-            'Actief'    : vervallen,
+            'Actief'    : actief_concept,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
@@ -451,6 +451,19 @@ def audit_async(audit_type=None, project=None, task_id=None):
             # Delete all old audit hits for this task if not whitelisted
             delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
             logger.info(delete)
+
+            # Checks for the entire task
+            # If source component contains active/deprecated designation ->
+            extra_dict = json.loads(task.source_component.component_extra_dict)
+            if extra_dict.get('Actief',False):
+                # If source code is deprecated ->
+                if extra_dict.get('Actief') == "False":
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Item in bron-codesystem is vervallen',
+                            )
+
 
             # Get all mapping rules for the current task
             rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
@@ -503,6 +516,17 @@ def audit_async(audit_type=None, project=None, task_id=None):
                                 audit_type=audit_type,
                                 hit_reason='Regel mapt naar zichzelf',
                             )
+
+                # If Target component contains active/deprecated designation ->
+                extra_dict = json.loads(rule.target_component.component_extra_dict)
+                if extra_dict.get('Actief',False):
+                    # If source code is deprecated ->
+                    if extra_dict.get('Actief') == "False":
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Item in target-codesystem is vervallen',
+                                )
 
             # For project 3 (NHG diag -> LOINC/SNOMED):
             if (task.project_id.id == 3) and rules.count() > 0:
@@ -613,4 +637,3 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     #         )
             else:
                 logger.info('No rules for current task')
-            
