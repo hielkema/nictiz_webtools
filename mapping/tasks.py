@@ -11,6 +11,12 @@ from .forms import *
 from .models import *
 import urllib.request
 from pandas import read_excel, read_csv
+import environ
+
+# Import environment variables
+env = environ.Env(DEBUG=(bool, False))
+# reading .env file
+environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
 # Get latest snowstorm client. Set master or develop
 # branch = "develop"

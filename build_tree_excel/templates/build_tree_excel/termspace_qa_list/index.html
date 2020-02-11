@@ -1,0 +1,36 @@
+<!-- howdy/templates/index.html -->
+{% extends 'bootstrap_base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">De lijst wordt gezocht in de termspace database. <br>Bij het downloaden van het bestand wordt het bestand van de server verwijderd om schijfruimte te besparen.<br>De pagina zal elke 10 seconden automatisch herladen.</h4>
+    </div>
+    <div class="card-body mb-3">
+        {% if form %}
+        <form action="{% url "build_tree_excel:qa_index" %}" method="post">
+            {% csrf_token %}
+            <p>{{ form }} <input type="submit" value="ZOEK"></p>
+            <p></p>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h6 class="card-title">Bestanden</h6>
+    </div>
+    <div class="card-body mb-3">
+        {% for item in files %}
+        <li>
+        <a href="{% url "build_tree_excel:qa_index" %}download/{{item}}">{{item}}</a>
+        </li>
+        {% endfor %}
+    </div>
+</div>
+
+
+
+
+{% endblock content %}
