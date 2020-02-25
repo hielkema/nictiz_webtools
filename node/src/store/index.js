@@ -25,5 +25,11 @@ export default new Vuex.Store({
       MappingComments,
       authentication,
       alert,
+  },
+  actions: {
+    getPermissions: (context) => {
+      axios
+      .get(context.state.baseUrl+'termspace/component_api/74400008/')
+    }
   }
 })

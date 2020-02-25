@@ -87,7 +87,8 @@
       drawer: null,
     }),
     created () {
-      this.$vuetify.theme.dark = false
+      this.$vuetify.theme.dark = false;
+      this.$store.dispatch('getPermissions')
     },
     computed: {
         loggedIn () {
