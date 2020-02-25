@@ -15,9 +15,8 @@ router.register(r'ecl_api', eclQueryApi, basename="ecl_query_api")
 
 router.register(r'snomed_json_tree', SnomedJSONTree, basename="snomed_json_tree")
 
+router.register(r'mapping_json', jsonMappingExport, basename="mapping_export_json")
 router.register(r'mapping_comments', searchMappingComments, basename="mapping_comments")
-
-
 router.register(r'mapping_progress', Mapping_Progressreport_perProject, basename="mapping_progress")
 router.register(r'mapping_progress_per_status', Mapping_Progressreport_perStatus, basename="mapping_progress")
 router.register(r'mapping_progress_over_time', Mapping_Progressreport_overTime, basename="mapping_progress_over_time")

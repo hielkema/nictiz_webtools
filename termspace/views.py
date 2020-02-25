@@ -372,6 +372,130 @@ class Mapping_Progressreport_overTime(viewsets.ViewSet):
                 "completed":completed_tasks,
             })
 
+
+
+class jsonMappingExport(viewsets.ViewSet):
+    """
+    Draft for exporting FHIR ConceptMap.
+    Currently only valid for project NHG diagnostische bepalingen -> labcodeset [3]
+    -> /termspace/mapping_json/3/
+    Will currently only export the first 100 mapping rules
+    """
+    permission_classes = [AllowAny]
+    def list(self, request, pk=None):
+        conceptmap = []
+        # Return Json response
+        return Response({
+            "codesystems" : conceptmap
+        })
+    def retrieve(self, request, pk=None):
+        project = MappingProject.objects.get(id=pk)
+        elements = []
+        error = []
+        correlation_options = [
+            # [code, readable]
+            ['447559001', 'Broad to narrow'],
+            ['447557004', 'Exact match'],
+            ['447558009', 'Narrow to broad'],
+            ['447560006', 'Partial overlap'],
+            ['447556008', 'Not mappable'],
+            ['447561005', 'Not specified'],
+        ]
+        # JSON export for project NHG diagn -> labcodeset + SNOMED
+        if project.id == 3:
+            message = "NHG diagnostische bepalingen -> labcodeset + SNOMED"
+
+            # Find mapping tasks
+            tasks = MappingTask.objects.filter(project_id = project)
+            # Filter rejected tasks
+            tasks = tasks.exclude(status = project.status_rejected)
+
+            for task in tasks[:100]:
+                targets = []
+                product_list = []
+                # Find mapping rules for current task
+                rules = MappingRule.objects.filter(source_component = task.source_component)
+
+                # Find Snomed material
+                products = rules.filter(target_component__codesystem_id = 1)
+                if products.count() > 1:
+                    error.append({
+                        "type" : "Multiple materials. Add priorities / correlation to products or accept as both?",
+                        "task" : task.id,
+                    })
+
+                for single_product in products:
+                    product_list.append({
+                        "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
+                        "system" : single_product.target_component.codesystem_id.codesystem_title, # TODO - add FHIR URI to model instead
+                        "code" : single_product.target_component.component_id,
+                        "display" : single_product.target_component.component_title,
+                    })
+
+                # Append target
+                for rule in rules:
+                    equivalence = rule.mapcorrelation
+                    for code, readable in correlation_options:
+                        equivalence = equivalence.replace(code, readable)
+                    targets.append({
+                        "code" : rule.target_component.component_id,
+                        "display" : rule.target_component.component_title,
+                        "equivalence" : equivalence,
+                        "comment" : rule.mapadvice,
+                        "product" : product_list,
+                    })
+
+                # Append element
+                elements.append({
+                    # "[DEBUG]task.id" : task.id,
+                    # "[DEBUG]task.status" : task.status.status_title,
+                    "code" : task.source_component.component_id,
+                    "display" : task.source_component.component_title,
+                    "target" : targets,
+                })
+
+            return Response({
+                "[DEBUG] errors" : error,
+                "[DEBUG] project" : project.title,
+                "[DEBUG] message" : message,
+
+                "resourceType" : "ConceptMap",
+                "url" : "TODO",
+                
+                "id" : "nhg-tabel-45-to-labcodeset",
+                "name" : "NHG Tabel 45 naar Nederlandse Labcodeset",
+                "description" : "TODO",
+                
+                "version" : "draft",
+                "status" : "draft",
+                "experimental" : True,
+
+                "date" : "TODO",
+                "publisher" : "Nictiz",
+                "contact" : {
+                    "telecom" : [
+                        {
+                            "system" : "url",
+                            "name" : "https://www.nictiz.nl",
+                        }
+                    ]
+                },
+                "copyright" : "Nictiz - NHG - NVMM - NVKC",
+                "sourceCanonical" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
+                "targetCanonical" : "http://loinc.org",
+                "group" : {
+                    "source" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
+                    "sourceVersion" : "TODO", # NHG versie
+                    "target" : "http://loinc.org",
+                    "targetVersion" : "TODO", # LOINC versie
+                    "element" : elements,
+                    "unmapped" : [] # TODO
+                }
+            })
+        else:
+            message = "Geen exportregels bekend voor dit project"
+
+
 # Full modelviewset
 # class componentApi(viewsets.ReadOnlyModelViewSet):
 #     queryset = MappingCodesystemComponent.objects.all()
