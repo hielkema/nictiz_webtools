@@ -30,6 +30,7 @@ class MappingProject(models.Model):
 class MappingCodesystem(models.Model):
     codesystem_title    = models.CharField(max_length=50)
     codesystem_version  = models.CharField(max_length=50)
+    codesystem_fhir_uri = models.CharField(max_length=150, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
     codesystem_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)

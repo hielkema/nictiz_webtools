@@ -396,6 +396,18 @@ class jsonMappingExport(viewsets.ViewSet):
             "codesystems" : conceptmap
         })
     def retrieve(self, request, pk=None):
+        #### Export metadata - TODO move to model?
+        if int(pk) == 4: # NHG diagn -> labcodeset
+            metadata = {
+                'id' : "nhg-tabel-45-to-labcodeset",
+                'name' : "NHG Tabel 45 naar Nederlandse Labcodeset",
+                'description' : "FHIR ConceptMap NHG -> Labcodeset + SNOMED",
+                'date' : str(time.time()),
+                'copyright' : "Nictiz - NHG - NVMM - NVKC",
+            }
+        else:
+            metadata = {}
+
         codesystem = MappingCodesystem.objects.get(id=pk)
         elements = []
         error = []
@@ -424,8 +436,8 @@ class jsonMappingExport(viewsets.ViewSet):
 
             #### FHIR ConceptMap rules for NHG tabel 45 Diagnostische Bepalingen
             if project.id == 3:
-                #### START project
-                for task in tasks_in_project:
+                #### START project TBL 45 -> LOINC
+                for task in tasks_in_project[:20]:
                     targets = []
                     product_list = []
                     ##### Find mapping rules using the source component of the task as source, part of this project
@@ -443,7 +455,7 @@ class jsonMappingExport(viewsets.ViewSet):
                     for single_product in products:
                         product_list.append({
                             "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
-                            "system" : single_product.target_component.codesystem_id.codesystem_title, # TODO - add FHIR URI to model instead
+                            "system" : single_product.target_component.codesystem_id.codesystem_fhir_uri,
                             "code" : single_product.target_component.component_id,
                             "display" : single_product.target_component.component_title,
                         })
@@ -465,40 +477,42 @@ class jsonMappingExport(viewsets.ViewSet):
 
                     # Append element to element list
                     elements.append({
-                        "[DEBUG] task.id" : task.id,
-                        "[DEBUG] task.status" : task.status.status_title,
+                        "DEBUG.task.id" : task.id,
+                        "DEBUG.task.status" : task.status.status_title,
                         "code" : task.source_component.component_id,
                         "display" : task.source_component.component_title,
                         "target" : targets,
                     })
                 # Add all elements from current project to one group
+                source = MappingCodesystem.objects.get(id=4) # NHG
+                target = MappingCodesystem.objects.get(id=3) # labcodeset
                 groups.append({
-                    "[DEBUG] project" : project.title,
-                    "source" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
-                    "sourceVersion" : "TODO", # NHG versie
-                    "target" : "http://loinc.org",
-                    "targetVersion" : "TODO", # LOINC versie
+                    "DEBUG.project.title" : project.title,
+                    "source" : source.codesystem_fhir_uri,
+                    "sourceVersion" : source.codesystem_version,
+                    "target" : target.codesystem_fhir_uri,
+                    "targetVersion" : target.codesystem_version,
                     "element" : elements,
                     "unmapped" : [] # TODO
                 })
-                ##### END project
+                ##### END project TBL 45 -> LOINC
 
-        #### START output
+        #### START output for all groups
         return Response({
-            "[DEBUG] errors" : error,
+            "DEBUG.errors" : error,
 
             "resourceType" : "ConceptMap",
-            "url" : "TODO",
+            "url" : "https://termservice.test-nictiz.nl/termspace/mapping_json/"+pk+"/",
             
-            "id" : "nhg-tabel-45-to-labcodeset",
-            "name" : "NHG Tabel 45 naar Nederlandse Labcodeset",
-            "description" : "TODO",
+            "id" : metadata.get('id'),
+            "name" : metadata.get('name'),
+            "description" : metadata.get('description'),
             
-            "version" : "draft",
-            "status" : "draft",
+            "version" : "developmentPath",
+            "status" : "developmentPath",
             "experimental" : True,
 
-            "date" : "TODO",
+            "date" : metadata.get('date'),
             "publisher" : "Nictiz",
             "contact" : {
                 "telecom" : [
@@ -508,8 +522,8 @@ class jsonMappingExport(viewsets.ViewSet):
                     }
                 ]
             },
-            "copyright" : "Nictiz - NHG - NVMM - NVKC",
-            "sourceCanonical" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
+            "copyright" : metadata.get('copyright'),
+            "sourceCanonical" : codesystem.codesystem_fhir_uri,
 
             "group" : groups,
         })
