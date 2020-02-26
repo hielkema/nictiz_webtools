@@ -437,7 +437,7 @@ class jsonMappingExport(viewsets.ViewSet):
             #### FHIR ConceptMap rules for NHG tabel 45 Diagnostische Bepalingen
             if project.id == 3:
                 #### START project TBL 45 -> LOINC
-                for task in tasks_in_project[:20]:
+                for task in tasks_in_project:
                     targets = []
                     product_list = []
                     ##### Find mapping rules using the source component of the task as source, part of this project
