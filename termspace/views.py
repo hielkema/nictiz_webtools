@@ -255,62 +255,67 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         output = []
 
-        codesystem  = MappingCodesystem.objects.get(id=pk)
-        components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem)
-        projects    = MappingProject.objects.all()
-
-        print('Received request for codesystem',codesystem.codesystem_title)
+        print('Received request for progress report per project')
         if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
             print('Incorrect or absent secret')
             return Response('error')
         else:
-            for component in components:
-                tasks = MappingTask.objects.filter(source_component = component)
-                extra = json.loads(component.component_extra_dict)
-                aub = extra.get('Aanvraag/Uitslag/Beide')
-                if aub == 'A': aub="Aanvraag"
-                if aub == 'B': aub="Aanvraag en uitslag"
-                if aub == 'U': aub="Uitslag"
+            codesystem  = MappingCodesystem.objects.get(id=pk)
+            components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem)
+            projects    = MappingProject.objects.all()
 
-                if tasks.exists():
-                    for task in tasks:
-                        if task.project_id.project_type == "1": task_type = 'Source'
-                        if task.project_id.project_type == "2": task_type = 'Target'
-                        if task.project_id.project_type == "3": task_type = '?'
-                        if task.project_id.project_type == "4": task_type = 'Target'
+            print('Received request for codesystem',codesystem.codesystem_title)
+            if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
+                print('Incorrect or absent secret')
+                return Response('error')
+            else:
+                for component in components:
+                    tasks = MappingTask.objects.filter(source_component = component)
+                    extra = json.loads(component.component_extra_dict)
+                    aub = extra.get('Aanvraag/Uitslag/Beide')
+                    if aub == 'A': aub="Aanvraag"
+                    if aub == 'B': aub="Aanvraag en uitslag"
+                    if aub == 'U': aub="Uitslag"
 
+                    if tasks.exists():
+                        for task in tasks:
+                            if task.project_id.project_type == "1": task_type = 'Source'
+                            if task.project_id.project_type == "2": task_type = 'Target'
+                            if task.project_id.project_type == "3": task_type = '?'
+                            if task.project_id.project_type == "4": task_type = 'Target'
+
+                            output.append({
+                                'id' : component.component_id,
+                                'codesystem' : component.codesystem_id.codesystem_title,
+                                # 'extra' : extra,
+                                'group' : extra.get('Groep'),
+                                'AUB' : aub,
+                                'actief' : extra.get('Actief'),
+                                'soort' : extra.get('Soort'),
+                                'title' : component.component_title,
+                                'aantal taken' : tasks.count(),
+                                'project' : task.project_id.title,
+                                'source or target' : task_type,
+                                'status' : task.status.status_title,
+                            })
+                    else:
                         output.append({
-                            'id' : component.component_id,
-                            'codesystem' : component.codesystem_id.codesystem_title,
-                            # 'extra' : extra,
-                            'group' : extra.get('Groep'),
-                            'AUB' : aub,
-                            'actief' : extra.get('Actief'),
-                            'soort' : extra.get('Soort'),
-                            'title' : component.component_title,
-                            'aantal taken' : tasks.count(),
-                            'project' : task.project_id.title,
-                            'source or target' : task_type,
-                            'status' : task.status.status_title,
-                        })
-                else:
-                    output.append({
-                            'id' : component.component_id,
-                            'codesystem' : component.codesystem_id.codesystem_title,
-                            # 'extra' : extra,
-                            'group' : extra.get('Groep'),
-                            'AUB' : aub,
-                            'actief' : extra.get('Actief'),
-                            'soort' : extra.get('Soort'),
-                            'title' : component.component_title,
-                            'aantal taken' : tasks.count(),
-                            'project' : None,
-                            'source or target' : None,
-                            'status' : None,
-                        })
+                                'id' : component.component_id,
+                                'codesystem' : component.codesystem_id.codesystem_title,
+                                # 'extra' : extra,
+                                'group' : extra.get('Groep'),
+                                'AUB' : aub,
+                                'actief' : extra.get('Actief'),
+                                'soort' : extra.get('Soort'),
+                                'title' : component.component_title,
+                                'aantal taken' : tasks.count(),
+                                'project' : None,
+                                'source or target' : None,
+                                'status' : None,
+                            })
 
-            # Return Json response
-            return Response(output)
+                # Return Json response
+                return Response(output)
 
 class Mapping_Progressreport_overTime(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -372,14 +377,16 @@ class Mapping_Progressreport_overTime(viewsets.ViewSet):
                 "completed":completed_tasks,
             })
 
-
-
 class jsonMappingExport(viewsets.ViewSet):
+
+    #### TODO : Alle concepten van een codesystem loopen. Output voor ieder element per project bepalen?
+    # dan kan een hele NHG tabel in 1x geëxporteerd worden, anders moet je per project eigen regels bepalen.
+
     """
     Draft for exporting FHIR ConceptMap.
-    Currently only valid for project NHG diagnostische bepalingen -> labcodeset [3]
-    -> /termspace/mapping_json/3/
-    Will currently only export the first 100 mapping rules
+    Currently only valid for codesystem NHG Diagnostische Bepalingen [4]
+    -> /termspace/mapping_json/4/
+    Will currently only export the first 10 mapping rules from each project with an export format
     """
     permission_classes = [AllowAny]
     def list(self, request, pk=None):
@@ -389,9 +396,10 @@ class jsonMappingExport(viewsets.ViewSet):
             "codesystems" : conceptmap
         })
     def retrieve(self, request, pk=None):
-        project = MappingProject.objects.get(id=pk)
+        codesystem = MappingCodesystem.objects.get(id=pk)
         elements = []
         error = []
+        groups = []
         correlation_options = [
             # [code, readable]
             ['447559001', 'Broad to narrow'],
@@ -401,99 +409,110 @@ class jsonMappingExport(viewsets.ViewSet):
             ['447556008', 'Not mappable'],
             ['447561005', 'Not specified'],
         ]
-        # JSON export for project NHG diagn -> labcodeset + SNOMED
-        if project.id == 3:
-            message = "NHG diagnostische bepalingen -> labcodeset + SNOMED"
 
-            # Find mapping tasks
-            tasks = MappingTask.objects.filter(project_id = project)
-            # Filter rejected tasks
-            tasks = tasks.exclude(status = project.status_rejected)
+        # Find mapping tasks
+        tasks = MappingTask.objects.filter(source_component__codesystem_id = codesystem)
+        # Find projects
+        projects = MappingProject.objects.all()
+        # Loop through all projects
+        for project in projects:
+            # Find all tasks in the current project
+            tasks_in_project = tasks.filter(project_id__id = project.id)
+            # Filter out rejected tasks
+            # TODO - Eventually this should be changed to only including completed tasks
+            tasks_in_project = tasks_in_project.exclude(status = project.status_rejected)
 
-            for task in tasks[:100]:
-                targets = []
-                product_list = []
-                # Find mapping rules for current task
-                rules = MappingRule.objects.filter(source_component = task.source_component)
+            #### FHIR ConceptMap rules for NHG tabel 45 Diagnostische Bepalingen
+            if project.id == 3:
+                #### START project
+                for task in tasks_in_project:
+                    targets = []
+                    product_list = []
+                    ##### Find mapping rules using the source component of the task as source, part of this project
+                    rules = MappingRule.objects.filter(source_component = task.source_component, project_id = project)
 
-                # Find Snomed material
-                products = rules.filter(target_component__codesystem_id = 1)
-                if products.count() > 1:
-                    error.append({
-                        "type" : "Multiple materials. Add priorities / correlation to products or accept as both?",
-                        "task" : task.id,
+                    ##### Handle products
+                    # Find rules in current task pointing to Snomed
+                    products = rules.filter(target_component__codesystem_id = 1)
+                    if products.count() > 1:
+                        error.append({
+                            "type" : "Multiple materials. Add priorities / correlation to products or accept as both?",
+                            "task" : task.id,
+                        })
+                    # Save products in product list
+                    for single_product in products:
+                        product_list.append({
+                            "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
+                            "system" : single_product.target_component.codesystem_id.codesystem_title, # TODO - add FHIR URI to model instead
+                            "code" : single_product.target_component.component_id,
+                            "display" : single_product.target_component.component_title,
+                        })
+
+                    ##### Loop through rules, excluding rules pointing to Snomed
+                    for rule in rules.exclude(target_component__codesystem_id = 1):
+                        # Replace Snomed equivalence code with readable text
+                        equivalence = rule.mapcorrelation
+                        for code, readable in correlation_options:
+                            equivalence = equivalence.replace(code, readable)
+                        # Append mapping target to target list
+                        targets.append({
+                            "code" : rule.target_component.component_id,
+                            "display" : rule.target_component.component_title,
+                            "equivalence" : equivalence,
+                            "comment" : rule.mapadvice,
+                            "product" : product_list,
+                        })
+
+                    # Append element to element list
+                    elements.append({
+                        "[DEBUG] task.id" : task.id,
+                        "[DEBUG] task.status" : task.status.status_title,
+                        "code" : task.source_component.component_id,
+                        "display" : task.source_component.component_title,
+                        "target" : targets,
                     })
-
-                for single_product in products:
-                    product_list.append({
-                        "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
-                        "system" : single_product.target_component.codesystem_id.codesystem_title, # TODO - add FHIR URI to model instead
-                        "code" : single_product.target_component.component_id,
-                        "display" : single_product.target_component.component_title,
-                    })
-
-                # Append target
-                for rule in rules:
-                    equivalence = rule.mapcorrelation
-                    for code, readable in correlation_options:
-                        equivalence = equivalence.replace(code, readable)
-                    targets.append({
-                        "code" : rule.target_component.component_id,
-                        "display" : rule.target_component.component_title,
-                        "equivalence" : equivalence,
-                        "comment" : rule.mapadvice,
-                        "product" : product_list,
-                    })
-
-                # Append element
-                elements.append({
-                    # "[DEBUG]task.id" : task.id,
-                    # "[DEBUG]task.status" : task.status.status_title,
-                    "code" : task.source_component.component_id,
-                    "display" : task.source_component.component_title,
-                    "target" : targets,
-                })
-
-            return Response({
-                "[DEBUG] errors" : error,
-                "[DEBUG] project" : project.title,
-                "[DEBUG] message" : message,
-
-                "resourceType" : "ConceptMap",
-                "url" : "TODO",
-                
-                "id" : "nhg-tabel-45-to-labcodeset",
-                "name" : "NHG Tabel 45 naar Nederlandse Labcodeset",
-                "description" : "TODO",
-                
-                "version" : "draft",
-                "status" : "draft",
-                "experimental" : True,
-
-                "date" : "TODO",
-                "publisher" : "Nictiz",
-                "contact" : {
-                    "telecom" : [
-                        {
-                            "system" : "url",
-                            "name" : "https://www.nictiz.nl",
-                        }
-                    ]
-                },
-                "copyright" : "Nictiz - NHG - NVMM - NVKC",
-                "sourceCanonical" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
-                "targetCanonical" : "http://loinc.org",
-                "group" : {
+                # Add all elements from current project to one group
+                groups.append({
+                    "[DEBUG] project" : project.title,
                     "source" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
                     "sourceVersion" : "TODO", # NHG versie
                     "target" : "http://loinc.org",
                     "targetVersion" : "TODO", # LOINC versie
                     "element" : elements,
                     "unmapped" : [] # TODO
-                }
-            })
-        else:
-            message = "Geen exportregels bekend voor dit project"
+                })
+                ##### END project
+
+        #### START output
+        return Response({
+            "[DEBUG] errors" : error,
+
+            "resourceType" : "ConceptMap",
+            "url" : "TODO",
+            
+            "id" : "nhg-tabel-45-to-labcodeset",
+            "name" : "NHG Tabel 45 naar Nederlandse Labcodeset",
+            "description" : "TODO",
+            
+            "version" : "draft",
+            "status" : "draft",
+            "experimental" : True,
+
+            "date" : "TODO",
+            "publisher" : "Nictiz",
+            "contact" : {
+                "telecom" : [
+                    {
+                        "system" : "url",
+                        "name" : "https://www.nictiz.nl",
+                    }
+                ]
+            },
+            "copyright" : "Nictiz - NHG - NVMM - NVKC",
+            "sourceCanonical" : "https://referentiemodel.nhg.org/tabellen/nhg-tabel-45-diagnostische-bepalingen", # NHG diagn bep
+
+            "group" : groups,
+        })
 
 
 # Full modelviewset
