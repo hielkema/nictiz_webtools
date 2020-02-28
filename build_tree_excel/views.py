@@ -12,7 +12,8 @@ from celery.result import AsyncResult
 from .build_tree import *
 from .models import taskRecordBuildFlat
 import time
-from .tasks import build_flat_tree_async
+from .tasks import *
+import glob
 import os
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -103,4 +104,57 @@ class BuildTreeView(UserPassesTestMixin, TemplateView):
             'form': form,
             'tasksPerUser': tasksPerUser,
             'totalRunTime': totalRunTime,
+        })
+
+class TermspaceQaDownload(UserPassesTestMixin, TemplateView):
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        #return self.request.user.has_perm('Build_Tree.make_taskRecordBuildFlat')
+        return self.request.user.groups.filter(name='HTML tree').exists()
+    
+    def get(self, request, **kwargs):
+        downloadfileName = str(kwargs.get('downloadfile'))
+        filename = "/webserver/static_files/termspace_qa/{}.xlsx".format(downloadfileName)
+        response = HttpResponse(open(filename, 'rb').read())
+        response['Content-Type'] = 'text/plain'
+        response['Content-Disposition'] = 'attachment; filename=termspace-QA-{}.xlsx'.format(downloadfileName)
+
+        os.remove(filename)
+        return response
+
+class TermspaceQaOverview(UserPassesTestMixin, TemplateView):
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        #return self.request.user.has_perm('Build_Tree.make_taskRecordBuildFlat')
+        return self.request.user.groups.filter(name='HTML tree').exists() # TODO
+    
+    # Handle POST data if present
+    def post(self, request, **kwargs):
+        if request.method == 'POST':
+            form = QaForm(request.POST)
+            if form.is_valid():
+                tasklist = str(form.cleaned_data['concepts'])
+
+                # Get task.id for tracking purposes
+                task = termspace_audit.delay(tasklist)
+                task_id = task.id
+
+                return HttpResponseRedirect(reverse('build_tree_excel:qa_index'))
+
+    # if a GET (or any other method) create a blank form
+    def get(self, request, **kwargs):
+        
+        form = QaForm()
+
+        files = glob.glob('/webserver/static_files/termspace_qa/*')
+        file_list = []
+        for file in files:
+            file_list.append(str(file).split("/")[-1])
+
+        return render(request, 'build_tree_excel/termspace_qa_list/index.html', {
+            'page_title': 'Termspace QA',
+            'form': form,
+            'files' : list(reversed(file_list)),
         })

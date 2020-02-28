@@ -1,0 +1,28 @@
+version: '3'
+volumes:
+  node_modules:
+services:
+  nodejs:
+    build:
+      context: './node'
+      dockerfile: 'Dockerfile_prod'
+    volumes:
+      - './node:/usr/src/app'
+      - 'node_modules:/usr/src/app/node_modules'
+    environment:
+      - VIRTUAL_HOST=${NODE_DOMAIN}
+      - VIRTUAL_PORT=${NODE_PORT}
+      - LETSENCRYPT_HOST=${NODE_DOMAIN}
+      - LETSENCRYPT_EMAIL=${EMAIL}
+
+      - CHOKIDAR_USEPOLLING=true
+    # ports:
+    #   - '9123:8080'
+    expose:
+      - 8080
+    networks:
+      - proxy
+networks:
+  webtools:
+  proxy:
+    external: true

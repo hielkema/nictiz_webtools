@@ -23,8 +23,10 @@ urlpatterns = [
     url(r'api/mapping/get/(?P<task>\w+)', views.api_Mapping_get.as_view(), name='mapping'),
     url(r'api/mapping/put/', views.api_Mapping_post.as_view(), name='mapping'),
     
-    url(r'api/general/get/', views.api_GeneralData_get.as_view(), name='general_data'),
+    url(r'api/general/get/(?P<project>\w+)', views.api_GeneralData_get.as_view(), name='general_data'),
     
+    url(r'api/hashtag/post/', views.api_hashtag_post.as_view(), name='api_hashtag_post'),
+
     url(r'api/audit/get/(?P<task>\w+)', views.api_GetAudit_get.as_view(), name='get_audit'),
     url(r'api/audit/post/', views.api_WhitelistAudit_post.as_view(), name='whitelist_audit'),
 

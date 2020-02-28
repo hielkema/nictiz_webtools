@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row card m-1">
-    <div class="card-header text-white bg-info"><h5 class="card-title">Projecten</h5></div>
+    <div class="card-header text-white bg-info"><h5 class="card-title">Audit resultaten (exclusief <i>rejected</i> taken)</h5></div>
     <div class="card-body">
         <div class="card">
             <div class="card-header text-white bg-info">
@@ -33,7 +33,7 @@
             <th>Taak ID</th>
             <th>Taak bron</th>
             <th>Reden voor audit hit</th>
-            <th>Commentaar</th>
+            <th>Whitelisted</th>
             <th>Open taak</th>
         </thead>
         <tbody>
@@ -42,7 +42,7 @@
                 <td>{{ hit.task.id }}</td>
                 <td>{{ hit.task.source_component.component_title }}</td>
                 <td>{{ hit.hit_reason }}</td>
-                <td>{{ hit.comment }}</td>
+                <td>{{ hit.ignore }} {% if hit.ignore %} ({{hit.ignore_user.username}}) {% endif %}</td>
                 <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{hit.task.id}}" target="_blank">[open]</a></td>
             </tr>
             {% endfor %}

@@ -14,3 +14,6 @@ openpyxl
 django_select2
 django-environ
 xmltodict
+djangorestframework
+djangorestframework_simplejwt
+django-cors-headers

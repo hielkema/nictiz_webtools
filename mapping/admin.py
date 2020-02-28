@@ -13,4 +13,3 @@ admin.site.register(MappingComment)
 admin.site.register(MappingEventLog)
 admin.site.register(MappingTaskAudit)
 admin.site.register(MappingProgressRecord)
-

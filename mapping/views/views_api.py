@@ -268,6 +268,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             if json.loads(request.POST.get('codesystem[nhgbep]')):
                 import_nhgbepalingen_task.delay()
             
+            print('nhgICPC', json.loads(request.POST.get('codesystem[icpc]')))
+            if json.loads(request.POST.get('codesystem[icpc]')):
+                import_icpc_task.delay()
+
             context = {
                 'result': "success",
             }
@@ -298,6 +302,38 @@ class api_DelComment_post(UserPassesTestMixin,TemplateView):
             current_user = User.objects.get(id=request.user.id)
             comment = MappingComment.objects.get(id=payload.get('comment'), comment_user=current_user)
             comment.delete()
+
+            context = {
+                'result': "success",
+            }
+            # Return JSON
+            return JsonResponse(context,safe=False)
+        except Exception as e:
+            print(type(e), e, kwargs)
+
+class api_hashtag_post(UserPassesTestMixin,TemplateView):
+    '''
+    Receives requests to place a new comment
+    Only allowed with place comments rights.
+    '''
+    def handle_no_permission(self):
+        return redirect('login')
+    def test_func(self):
+        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
+        return self.request.user.groups.filter(name='mapping | place comments').exists()
+
+    def post(self, request, **kwargs):
+        try:
+            payload = request.POST
+            print(payload)
+            task = MappingTask.objects.get(id=payload.get('task'))
+            current_user = User.objects.get(id=request.user.id)
+            MappingComment.objects.create(
+                comment_title='hashtag',
+                comment_task=task,
+                comment_body='#'+payload.get('tag'),
+                comment_user=current_user
+            )
 
             context = {
                 'result': "success",
@@ -394,14 +430,17 @@ class api_User_get(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         # Get data
         # Lookup edit rights for mapping      
-        users = User.objects.filter()
+        users = User.objects.filter().order_by('username')
         user_list = []
+        tasks = MappingTask.objects.all()
+        # For each user
         for user in users:
-            user_list.append({
-                'id' : user.id,
-                'username' : user.username,
-            })
-        
+            # Check if they have access, or have any tasks to their name. If so, add to list.
+            if tasks.filter(user=user).exists() or user.groups.filter(name='mapping | access').exists():
+                user_list.append({
+                    'id' : user.id,
+                    'username' : user.username,
+                })        
         # Return JSON
         return JsonResponse(user_list,safe=False)
 
@@ -584,34 +623,6 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                             'version' : task.source_component.codesystem_id.codesystem_version,
                         },
                         'extra' : extra_dict,
-                        'extra_1' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_1,
-                            'value' : task.source_component.component_extra_1,
-                        },
-                        'extra_2' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_2,
-                            'value' : task.source_component.component_extra_2,
-                        },
-                        'extra_3' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_3,
-                            'value' : task.source_component.component_extra_3,
-                        },
-                        'extra_4' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_4,
-                            'value' : task.source_component.component_extra_4,
-                        },
-                        'extra_5' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_5,
-                            'value' : task.source_component.component_extra_5,
-                        },
-                        'extra_6' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_6,
-                            'value' : task.source_component.component_extra_6,
-                        },
-                        'extra_7' : {
-                            'label' : task.source_component.codesystem_id.codesystem_extra_7,
-                            'value' : task.source_component.component_extra_7,
-                        },
                     },
                     'status' : {
                         'id' : task.status.id,
@@ -805,10 +816,22 @@ class vue_MappingIndex(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True)
+        # TODO - Check if active projects exist, otherwise -> error.
+        current_user = User.objects.get(id=request.user.id)
+        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        project_dict = []
+        for project in project_list:
+            tasks = MappingTask.objects.filter(project_id=project)
+            project_dict.append({
+                'id' : project.id,
+                'title' : project.title,
+                'num_tasks': tasks.exclude(status=project.status_rejected).count(),
+                'num_open_tasks': tasks.exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+                'num_open_tasks_user': tasks.filter(user=current_user).exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+            })
         return render(request, 'mapping/v2/index.html', {
             'page_title': 'Mapping project',
-            'project_list': project_list,
+            'project_list': project_dict,
         })
 
 class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
@@ -831,7 +854,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
             current_user = User.objects.get(id=request.user.id)
             project_list = MappingProject.objects.filter(active=True)
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
-            tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+            tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             
             status_list = MappingTaskStatus.objects.filter(project_id=kwargs.get('project')).order_by('status_id')#.exclude(id=current_project.status_complete.id)
             tasks_per_status_labels = []
@@ -840,9 +863,9 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
             tasks_per_user_labels = []
             tasks_per_user_values = []
             for user in user_list:
-                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                 if num_tasks > 0:
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                     tasks_per_user_labels.append(user.username)
                     tasks_per_user_values.append(num_tasks)
             for status in status_list:            
@@ -965,10 +988,10 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         current_user = User.objects.get(id=request.user.id)
         project_list = MappingProject.objects.filter(active=True)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
-        tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+        tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
         total_num_tasks = len(tasks)
         if tasks.count() == 0:    
-            tasks = MappingTask.objects.filter(project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
+            tasks = MappingTask.objects.filter(project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             total_num_tasks = 0
                 
         # print(task_list) # DEBUG
@@ -1280,12 +1303,24 @@ class api_GeneralData_get(UserPassesTestMixin,TemplateView):
         # TODO - Check if project and task exist, otherwise -> redirect to project or homepage.
         
         user = User.objects.get(id=request.user.id)
+        project = MappingProject.objects.get(id=kwargs.get('project'))
+        statuses = MappingTaskStatus.objects.filter(project_id=project).order_by('status_id')
+        status_list = []
+        for status in statuses:
+            status_list.append({
+                'id' : status.id,
+                'status_id' : status.status_id,
+                'title' : status.status_title,
+            })
 
         # Return Json response
-        return JsonResponse({'current_user': {
-            'id' : user.id,
-            'name' : user.username,
-        }})
+        return JsonResponse({
+            'current_user': {
+                'id' : user.id,
+                'name' : user.username,
+            },
+            'status_list' : status_list,
+        })
 
 class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
     '''
@@ -1300,7 +1335,7 @@ class api_TargetSearch_get(UserPassesTestMixin,TemplateView):
     
     def get(self, request, **kwargs):
         # TODO - Check if project and task exist, otherwise -> redirect to project or homepage.
-        search_query = str(request.GET.get('term'))
+        search_query = str(request.GET.get('term')).strip()
         print(search_query)
 
         # Prepare results for vue-select request

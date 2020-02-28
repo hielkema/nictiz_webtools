@@ -62,21 +62,18 @@
         </div>
         <div class="card">
         <div class="card-header text-white bg-info">
-            <h5 class="card-title">Taken</h5>
+            <span style="float:left;"><h5 class="card-title">Taken<span v-if="tasksFiltered.length > 0">: [[tasksFiltered.length]] in selectie</span></h5></span><br>
+            <button v-if="!loadingTaskList" style="float:left;" class="form-control" v-on:click="getTaskList()">Vernieuwen</button>
+            <button v-if="loadingTaskList" style="float:left;" class="form-control">Taken worden geladen, even geduld a.u.b.</button>
         </div>
         <div class="card-body" style="height: 600px; overflow:auto;">
-          <span v-if="loadingTaskList">Taken worden geladen, even geduld a.u.b.</span>
           <span v-on:click="getTaskById(task.id)" v-for="task in tasksFiltered" style="display: block;">  
               <li v-bind:class="[{ 'list-group-item list-group-item-info': task.id == currentTask.id }, 'list-group-item list-group-item-error']">
-              [[task.component.title]]<br>
-              <small>[[task.status.title]] @ [[task.user.name]]</small>
+              [[task.component.id]] - [[task.component.title]]<br>
+              <small>[task #[[task.id]]] [[task.status.title]] @ [[task.user.name]]</small>
               </li>
           </span>
         </div>
-
-        <form>
-            TO-DO: Task search
-        </form>
         </div>
     </div>
 
@@ -147,9 +144,21 @@
               <form v-on:submit.prevent="postComment()">
                 <textarea class="form-control" v-model="newComment"></textarea>
                 <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
-                <button class="form-control">Submit</button>
+                <button class="form-control">Commentaar opslaan</button>
               </form>
-            </div>
+              
+              
+              
+              {% comment %} LOOP hashtags {% endcomment %}
+              <div class="btn-group d-flex" role="group">
+                <button v-for="tag in hashtags"  class="form-control" v-on:click="postHashtag(tag)">#[[tag]]</button>
+              </div>
+              <br>
+
+              <br>
+                <button class="form-control" v-on:click="showevents=true" v-if="showevents==false">Toon events</button>
+                <button class="form-control" v-on:click="showevents=false" v-if="showevents==true">Verberg events</button>
+
               <ul class="list-group">
                 <div v-for="event in eventList">
                   <li v-if="event.type == 'comment'" class="list-group-item">
@@ -157,14 +166,15 @@
                   [[event.action_user.name]] <small>@[[event.created]]</small>
                   <span v-if="event.action_user.id == currentUser.id" class="fa fa-trash" aria-hidden="true" v-on:click="deleteComment(event.id)"> delete</span>
                   </li>
-                  <li v-if="event.type == 'status_change'" class="list-group-item list-group-item-warning" >
+                  <li v-if="event.type == 'status_change' && showevents == true" class="list-group-item list-group-item-warning" >
                     [[event.text]] <small>@[[event.created]]</small>
                   </li>
-                  <li v-if="event.type == 'user_change'" class="list-group-item list-group-item-warning" >
+                  <li v-if="event.type == 'user_change' && showevents == true" class="list-group-item list-group-item-warning" >
                     [[event.text]] <small>@[[event.created]]</small>
                   </li>
                 </div>
               </ul>
+            </div>
         </div>
       </div>
     </div>
@@ -207,7 +217,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr v-if="currentUser.id == currentTask.user.id">
+                      <tr v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')">
                         <th class="input-group-text">Wijzig</th>
                         <td>
                           <v-select v-model="mapping.target.new" name="newTarget" label="name" :filterable="false" :options="options" @search="onSearch">
@@ -223,39 +233,39 @@
                       <tr v-if="mappingProjectOptions.priority">
                         <th class="input-group-text">Priority</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="priority" class="form-control" v-model="mapping.priority">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping') || !permissions.includes('mapping | edit mapping')" type="text" name="priority" class="form-control" v-model="mapping.priority">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.rule">
                         <th class="input-group-text">Rule</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="rule" class="form-control" v-model="mapping.rule">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="text" name="rule" class="form-control" v-model="mapping.rule">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.group">
                         <th class="input-group-text">Group</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="number" name="group" class="form-control" v-model="mapping.group">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="number" name="group" class="form-control" v-model="mapping.group">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.advice">
                         <th class="input-group-text">Advice</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="text" name="advice" class="form-control" v-model="mapping.advice">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="text" name="advice" class="form-control" v-model="mapping.advice">
                         </td>
                       </tr>
                       <tr v-if="mappingProjectOptions.correlation">
                         <th class="input-group-text">Correlation</th>
                         <td>
-                          <select v-bind:disabled="currentUser.id != currentTask.user.id" name="correlation" class="form-control" v-model="mapping.correlation">
+                          <select v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" name="correlation" class="form-control" v-model="mapping.correlation">
                             <option v-for="(value, key) in mappingProjectOptions.correlation_options" :selected="mapping.correlation == key" :value="key" :key="value">[[value]]</option>
                           </select>
                         </td>
                       </tr>
-                      <tr>
+                      <tr v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')">
                         <th class="input-group-text">Verwijderen</th>
                         <td>
-                          <input v-bind:disabled="currentUser.id != currentTask.user.id" type="checkbox" name="delete" v-model="mapping.delete">
+                          <input v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping')" type="checkbox" name="delete" v-model="mapping.delete">
                         </td>
                       </tr>
                     </tbody>
@@ -263,7 +273,7 @@
                 </li>
               </ul>
               <input type="hidden" name="csrfmiddlewaretoken" v-model="csrftoken">
-              <button v-if="currentUser.id == currentTask.user.id" class="form-control">Submit</button>
+              <button v-if="currentUser.id == currentTask.user.id && permissions.includes('mapping | edit mapping')" class="form-control">Submit</button>
           </form>
     </div>
   </div>
@@ -299,6 +309,7 @@ var vuePosts = new Vue({
     data: {
         tasks: [],
         permissions: [],
+        hashtags: ['NVKC','NVMM','monster', 'parkeren', 'wachtoprelease', 'DHD', 'IHTSDO'],
         currentTask: [],
         currentUser: [],
         audits: [],
@@ -315,12 +326,13 @@ var vuePosts = new Vue({
         loadingTaskList: false,
         loadingTargetSearch : false,
         csrftoken: Cookies.get('csrftoken'),
+        showevents: false,
     },
     methods: {
         getGeneralData: function() {
           var that = this
           $.ajax({
-              url: '/mapping/api/general/get/',
+              url: '/mapping/api/general/get/{{current_project.id}}',
               method: 'GET'
           }).then(function(response) {
           if (response.error) {
@@ -328,6 +340,7 @@ var vuePosts = new Vue({
           } else {
               console.log(response);
               that.currentUser = response.current_user
+              that.statusList = response.status_list
           }
           }).catch(function(err) {
               console.error(err);
@@ -552,6 +565,29 @@ var vuePosts = new Vue({
                   that.loading = false;
                   that.getEventList(that.currentTask.id)
                   that.newComment=''
+                  console.log(response);
+              }).catch((err) => {
+                  that.loading = false;
+                  console.log(err);
+              }).done(function(val) {
+                  that.loading = false;
+                  console.log("DONE");
+              })
+        },
+        postHashtag: function(hashtag){
+          var that = this;
+          that.loading = true;
+          $.ajax({
+                  url: '/mapping/api/hashtag/post/',
+                  type: 'post',
+                  data: {
+                      csrfmiddlewaretoken: that.csrftoken,
+                      tag: hashtag,
+                      task: that.currentTask.id,
+                  },
+              }).then((response) => {
+                  that.loading = false;
+                  that.getEventList(that.currentTask.id)
                   console.log(response);
               }).catch((err) => {
                   that.loading = false;

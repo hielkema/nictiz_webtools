@@ -22,8 +22,12 @@
       </select>
       <br>
       Taken worden gecreëerd aan de hand van de identifier in het stelsel (bv. SCTID).
-      1 regel per taak. <br><input type="submit" value="Laden"><br>
+      1 regel per taak. <br>
       {{ form.tasks }}
+      <br>
+      Commentaar:
+      {{ form.comment }}
+      <br><input type="submit" value="Laden">
       <hr>
       Alternatief kan voor elk broncomponent in het gekozen project een taak gemaakt worden. 
       Deze wordt zonder gebruiker aangemaakt, en kan later toegewezen worden via [TODO].<br>
@@ -37,14 +41,20 @@
       Takenlijst wordt ingeladen in project <b>{{project.title}}</b>
       <ul class="list-group">
       {% for value in result.values %}
-      {% if value.result == True %}
-      <li class="list-group-item list-group-item-success">
+      {% if value.created == True %}
+        <li class="list-group-item list-group-item-success">
+      {% elif value.present == True %}
+        <li class="list-group-item list-group-item-info">
       {% else %}
-      <li class="list-group-item list-group-item-danger">
+        <li class="list-group-item list-group-item-warning">
       {% endif %}
-        <p style="float:left">[Project {{value.project}}] </p>
-        <p style="float:right">{{value.component_id}} - {{value.component_title}}</p>
-        <p style="float:left">{{value.result}}</p>
+        <p style="float:left">[Project {{value.project}}] &nbsp;</p>
+        <p style="float:left">
+          {% if value.present %}Er was al een taak voor dit component aanwezig in het project [taakid = {{value.taskid}}]{% endif %}
+          {% if value.created %}Er is een nieuwe taak aangemaakt voor dit component [taakid = {{value.taskid}}] {% endif %}
+          {% if value.error %}Er is een fout opgetreden bij het aanmaken van de taak{% endif %}
+        </p>
+        <p style="float:right">Zoekterm {{value.reqid}} / gevonden: {{value.component_id}} - {{value.component_title}}</p>
         <div style="clear: both"></div>
       </li>
       {% endfor %}

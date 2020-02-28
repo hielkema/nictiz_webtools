@@ -24,6 +24,12 @@
                 </td>
             </tr>
             <tr>
+                <th width="130">NHG ICPC</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.icpc">
+                </td>
+            </tr>
+            <tr>
                 <th width="130">Snomed</th>
                 <td>
                     <input type="checkbox" v-model="codesystem.snomed">
@@ -51,6 +57,7 @@ var vuePosts = new Vue({
             'snomed' : false,
             'nhgverr' : false,
             'nhgbep' : false,
+            'icpc' : false,
         },
         csrftoken: Cookies.get('csrftoken'),
     },

@@ -3,10 +3,11 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 class MappingProject(models.Model):
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=150)
     active = models.BooleanField(default=True)
     created = models.DateTimeField(default=timezone.now)
-    status_complete = models.ForeignKey('MappingTaskStatus', on_delete=models.PROTECT, blank=True, null=True, default=None)
+    status_complete = models.ForeignKey('MappingTaskStatus', related_name="status_complete", on_delete=models.PROTECT, blank=True, null=True, default=None)
+    status_rejected = models.ForeignKey('MappingTaskStatus', related_name="status_rejected", on_delete=models.PROTECT, blank=True, null=True, default=None)
 
     project_types_options = [
         # (code, readable)
@@ -29,6 +30,7 @@ class MappingProject(models.Model):
 class MappingCodesystem(models.Model):
     codesystem_title    = models.CharField(max_length=50)
     codesystem_version  = models.CharField(max_length=50)
+    codesystem_fhir_uri = models.CharField(max_length=150, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
     codesystem_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
@@ -56,15 +58,15 @@ class MappingComment(models.Model):
 
 class MappingCodesystemComponent(models.Model):
     # codesystem_id       = models.CharField(max_length=50)
-    codesystem_id       =   models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT)
+    codesystem_id       = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT)
     component_id        = models.CharField(max_length=50)
     component_title     = models.CharField(max_length=500)
     component_created   = models.DateTimeField(default=timezone.now)
-    component_extra_dict  = models.TextField(default=None, null=True, blank=True)
-    component_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
-    component_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
-    component_extra_3  = models.CharField(max_length=500, default=None, null=True, blank=True)
-    component_extra_4  = models.CharField(max_length=500, default=None, null=True, blank=True)
+    component_extra_dict = models.TextField(default=None, null=True, blank=True)
+    parents             = models.TextField(default=None, null=True, blank=True)
+    children            = models.TextField(default=None, null=True, blank=True)
+    descendants         = models.TextField(default=None, null=True, blank=True)
+    ancestors           = models.TextField(default=None, null=True, blank=True)
     component_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)

@@ -3,6 +3,7 @@ volumes:
   pgdata:
   pgadmin:
   postgres_backup:
+  node_modules:
 services:
   # Postgres DB for Django
   postgres:
@@ -27,7 +28,7 @@ services:
     volumes:
       - ./:/webserver
     ports:
-      - 8000:8000
+      - 80:8000
     links:
       - postgres
     command: python /webserver/manage.py runserver 0.0.0.0:8000
@@ -68,3 +69,16 @@ services:
     restart: always
     ports:
       - ${FLOWER_PORT}:8888
+  nodejs:
+    build:
+      context: './node'
+      dockerfile: 'Dockerfile'
+    volumes:
+      - './node:/usr/src/app'
+      - 'node_modules:/usr/src/app/node_modules'
+    environment: 
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - '9123:8080'
+    links:
+      - python

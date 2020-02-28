@@ -7,7 +7,20 @@ SECRET_KEY = '+kbl$5-%8x4dn$l_cf%^^6kjb0+f5lm3rvlt56+z!)*#_^-5gm'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["localhost"]
+SESSION_COOKIE_DOMAIN = "localhost"
+CSRF_COOKIE_DOMAIN = 'localhost'
+
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:9123",
+    "http://127.0.0.1:9123"
+]
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_SUPPORTS_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE=None
+
 
 INSTALLED_APPS += ('debug_toolbar',)
 MIDDLEWARE     += ('debug_toolbar.middleware.DebugToolbarMiddleware',)

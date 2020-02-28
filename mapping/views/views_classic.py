@@ -616,16 +616,20 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
         form = TaskCreateForm(request.POST)
         handled = {}
         if form.is_valid():
+            print("Taken worden aangemaakt in project {} / codesystem {}".format(int(form.cleaned_data['project']), int(form.cleaned_data['codesystem'])))
+
             project = MappingProject.objects.get(id=int(form.cleaned_data['project']))
             codesystem = MappingCodesystem.objects.get(id=int(form.cleaned_data['codesystem']))
+
+            print("Gaat om project {} / codesystem {}".format(project.title, codesystem.codesystem_title))
             # user = User.objects.get(id=request.user.id) # Taken maken we nu altijd zonder gebruiker
 
             status1 = MappingTaskStatus.objects.get(project_id = form.cleaned_data['project'], status_id = 1)
    
             projects = MappingProject.objects.all()
             project_list = []
-            for project in projects:
-                project_list.append((project.id, project.title))
+            for projectIter in projects:
+                project_list.append((projectIter.id, projectIter.title))
 
             if request.POST.get('type') == "Taak maken voor alle componenten":
                 tasks_list = []
@@ -638,40 +642,73 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
             
             for component in tasks_list:
                 print("\nAttempting to find component ",component)
+                error   = False
+                created = False
+                present = False
+                component_id = None
+                component_title = None
                 try:
                     component_obj = MappingCodesystemComponent.objects.get(component_id=component, codesystem_id=codesystem)
                     print("Component found: ", component_obj)
 
-                    obj, created = MappingTask.objects.get_or_create(
+                    obj = MappingTask.objects.filter(
                         project_id=project,
                         source_component=component_obj,
                     )
-                    # Add data not used for matching
-                    # obj.source_component = component_obj.id
-                    print(component_obj)
-                    obj.source_codesystem = component_obj.codesystem_id
-                    obj.target_codesystem = component_obj.codesystem_id # Voor nu gelijk aan bron.
-                    # TODO target nog aanpassen naar optie in formulier, om een doel-codesystem af te dwingen.
-                    obj.status = status1
-                    # obj.user = user # taken worden aangemaakt zonder gebruiker
+                    if obj.count() > 0:
+                        present = True
+                        obj = obj.first()
+                    else:
+                        present = False
+                        obj = MappingTask.objects.create(
+                            project_id=project,
+                            source_component=component_obj,
+                        )
+                        # Add data not used for matching
+                        # obj.source_component = component_obj.id
+                        print(component_obj)
+                        obj.source_codesystem = component_obj.codesystem_id
+                        obj.target_codesystem = component_obj.codesystem_id # Voor nu gelijk aan bron.
+                        # TODO target nog aanpassen naar optie in formulier, om een doel-codesystem af te dwingen.
+                        obj.status = status1
+                        # obj.user = user # taken worden aangemaakt zonder gebruiker
 
-                    # Save
-                    obj.save()
-                
-                    db_hit = True
+                        # Save
+                        obj.save()
+                        created = True
 
+                        # Add comment
+                        print("Comment: ",form.cleaned_data['comment'])
+                        if form.cleaned_data['comment']:
+                            print("Adding comment")
+                            user = User.objects.get(id=request.user.id)
+                            comment = MappingComment.objects.get_or_create(
+                                        comment_title = 'task created',
+                                        comment_task = obj,
+                                        comment_body = '[Commentaar bij aanmaken taak]\n'+form.cleaned_data['comment'],
+                                        comment_user = user,
+                                    )
+
+                    
+                    component_id = component_obj.id
+                    component_title = component_obj.component_title
                     
                 except Exception as e:
                     print("Component not found, or error: ", e)
-                    db_hit = False
+                    error = True
         
                 handled.update({component : {
-                    'form' : form,
-                    'result' : db_hit,
-                    'project' : project.title,
-                    'component_id' : component_obj.id,
-                    'component_title' : component_obj.component_title,
+                    'form'      : form,
+                    'taskid'    : obj.id,
+                    'reqid'     : component,
+                    'present'   : present,
+                    'created'   : created,
+                    'error'     : error,
+                    'project'   : project.title,
+                    'component_id'      : component_id,
+                    'component_title'   : component_title,
                 }})
+                
         else:
             print("###########################\n",form.errors,"\n", form.non_field_errors)
         return render(request, 'mapping/v2/task_create.html', {
@@ -713,7 +750,7 @@ class MappingIndexPageView(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).order_by('id')
         return render(request, 'mapping/index.html', {
             'page_title': 'Mapping project',
             'project_list': project_list,
@@ -1147,10 +1184,11 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             tasks = MappingTask.objects.filter(project_id=project).order_by('id')
             data = []
             for task in tasks:
-                audits = MappingTaskAudit.objects.filter(task=task)
-                if audits.count() > 0:
-                    for audit in audits:
-                        data.append(audit)
+                if task.status.id is not task.project_id.status_rejected.id:
+                    audits = MappingTaskAudit.objects.filter(task=task)
+                    if audits.count() > 0:
+                        for audit in audits:
+                            data.append(audit)
 
             audits_total = len(tasks)
             audits_max_page = 50

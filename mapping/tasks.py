@@ -11,6 +11,12 @@ from .forms import *
 from .models import *
 import urllib.request
 from pandas import read_excel, read_csv
+import environ
+
+# Import environment variables
+env = environ.Env(DEBUG=(bool, False))
+# reading .env file
+environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
 # Get latest snowstorm client. Set master or develop
 # branch = "develop"
@@ -25,29 +31,58 @@ logger = get_task_logger(__name__)
 def import_snomed_async(focus=None):
     snowstorm = Snowstorm(
         baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=True,
+        debug=False,
         preferredLanguage="nl",
         defaultBranchPath="MAIN/SNOMEDCT-NL",
     )
     result = snowstorm.findConcepts(ecl="<<"+focus)
-    print(result)
+    print('Found {} concepts'.format(len(result)))
 
+    # Spawn task for each concept
     for conceptid, concept in result.items():
-        # Get or create based on 2 criteria (fsn & codesystem)
-        codesystem_obj = MappingCodesystem.objects.get(id='1')
-        obj, created = MappingCodesystemComponent.objects.get_or_create(
-            codesystem_id_id=codesystem_obj.id,
-            component_id=conceptid,
-        )
-        print("CREATED **** ",codesystem_obj, conceptid)
-        # Add data not used for matching
-        obj.component_title = str(concept['fsn']['term'])
-        extra = {
-            'Preferred term' : str(concept['pt']['term']),
+        payload = {
+            'conceptid' : conceptid,
+            'concept'   : concept,
         }
-        obj.component_extra_dict = json.dumps(extra)
-        # Save
-        obj.save()
+        update_snomedConcept_async.delay(payload)
+
+@shared_task
+def update_snomedConcept_async(payload=None):
+    snowstorm = Snowstorm(
+        baseUrl="https://snowstorm.test-nictiz.nl",
+        debug=False,
+        preferredLanguage="nl",
+        defaultBranchPath="MAIN/SNOMEDCT-NL",
+    )
+    
+    concept = payload.get('concept')
+    conceptid = payload.get('conceptid')
+
+    # Get or create based on 2 criteria (fsn & codesystem)
+    codesystem_obj = MappingCodesystem.objects.get(id='1')
+    obj, created = MappingCodesystemComponent.objects.get_or_create(
+        codesystem_id_id=codesystem_obj.id,
+        component_id=conceptid,
+    )
+    print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
+    # Add data not used for matching
+    obj.component_title = str(concept['fsn']['term'])
+    extra = {
+        'Preferred term' : str(concept['pt']['term']),
+        'Actief'         : str(concept['active']),
+        'Effective time' : str(concept['effectiveTime']),
+        'Definition status'  : str(concept['definitionStatus']),
+    }
+
+    obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+    obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+    obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+    obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+
+    obj.component_extra_dict = json.dumps(extra)
+    # Save
+    obj.save()
+    return str(obj)
 
 @shared_task
 def import_labcodeset_async():
@@ -198,13 +233,6 @@ def import_nhgverrichtingen_task():
         )
         # Add data not used for matching
         obj.component_title     = row[1]
-        obj.component_extra_1   = row[2]
-        obj.component_extra_2   = row[3]
-        obj.component_extra_3   = row[4]
-        obj.component_extra_4   = row[5]
-        obj.component_extra_5   = row[6]
-        obj.component_extra_6   = row[7]
-        obj.component_extra_7   = row[8]
 
         extra = {
             'Rubriek' : row[2],
@@ -222,7 +250,7 @@ def import_nhgverrichtingen_task():
 @shared_task
 def import_nhgbepalingen_task():
     df = read_csv(
-        '/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie 31 - bepaling.txt',
+        '/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie 32 - bepaling.txt',
         sep='\t',
         header = 1,
         )
@@ -236,6 +264,8 @@ def import_nhgbepalingen_task():
         # if i > 5: break
 
         # Transformeren materiaal -> Snomed koppeling
+        # Start clean
+        voorstel_materiaal = ''
         if row[2] == 'B': voorstel_materiaal = '119297000 bloed (monster)'
         if row[2] == 'BA': voorstel_materiaal = '122552005 arterieel bloed (monster)'
         if row[2] == 'BC': voorstel_materiaal = '122554006 capillair bloed (monster)'
@@ -285,27 +315,110 @@ def import_nhgbepalingen_task():
         if row[2] == 'XV': voorstel_materiaal = '258577004 fluor vaginalis (monster)'
         if row[2] == 'XP': voorstel_materiaal = '119397002 Specimen from penis (specimen)'
         if row[2] == 'YX': voorstel_materiaal = '119347001 Seminal fluid specimen (specimen)'
-        if not voorstel_materiaal: voorstel_materiaal = "Geen materiaalcode"
+        if not voorstel_materiaal: voorstel_materiaal = "Geen voorstel gevonden"
         codesystem = MappingCodesystem.objects.get(id='4')
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
             component_id=row[0],
         )
         obj.component_title = row[4]
+        
+        # Check status van NHG term
         if str(row[12])[-1:] == "V": 
-            vervallen = "Bepaling is vervallen"
+            actief_component = "False"
         else:
-            vervallen = "Bepaling lijkt actief te zijn"
+            actief_component = "True"
+
+        # Check soort van NHG term
+        if str(row[13]) == "L":
+            soort = "Laboratorium bepaling"
+        elif str(row[13]) == "D":
+            soort = "Diagnostische bepaling, algemeen"
+        elif str(row[13]) == "P":
+            soort = "Protocol specifieke diagnostische bepaling"
+        else:
+            soort = str(row[13])
+
+        # Check groep van NHG term
+        if str(row[9]) == "AA": groep = "Anamnese"
+        elif str(row[9]) == "AL": groep = "Allergologie"
+        elif str(row[9]) == "AU": groep = "Auscultatie"
+        elif str(row[9]) == "AL": groep = "Allergologie"
+        elif str(row[9]) == "BA": groep = "Bacteriologie"
+        elif str(row[9]) == "BM": groep = "Biometrie"
+        elif str(row[9]) == "BO": groep = "Beeldvormend onderzoek"
+        elif str(row[9]) == "BV": groep = "Bevolkingsonderzoek"
+        elif str(row[9]) == "CO": groep = "Comorbiditeit"
+        elif str(row[9]) == "CY": groep = "Cytologie"
+        elif str(row[9]) == "DD": groep = "DNA diagnostiek"
+        elif str(row[9]) == "FA": groep = "Familieanamnese"
+        elif str(row[9]) == "FO": groep = "Functieonderzoek"
+        elif str(row[9]) == "FT": groep = "Farmacologie/toxicologie"
+        elif str(row[9]) == "HA": groep = "Eigen praktijk huisarts"
+        elif str(row[9]) == "HE": groep = "Hematologie"
+        elif str(row[9]) == "IM": groep = "Immunologie/serologie"
+        elif str(row[9]) == "IN": groep = "Inspectie"
+        elif str(row[9]) == "KC": groep = "Klinische chemie"
+        elif str(row[9]) == "LO": groep = "Lichamelijk onderzoek"
+        elif str(row[9]) == "PA": groep = "Pathologie"
+        elif str(row[9]) == "PP": groep = "Palpatie"
+        elif str(row[9]) == "PS": groep = "Parasitologie"
+        elif str(row[9]) == "SG": groep = "Socio-grafische gegevens"
+        elif str(row[9]) == "ST": groep = "Stollingslab"
+        elif str(row[9]) == "TH": groep = "Therapie"
+        elif str(row[9]) == "VG": groep = "Voorgeschiedenis"
+        elif str(row[9]) == "VI": groep = "Virologie"
+        elif str(row[9]) == "XX": groep = "Overig"
+        elif str(row[9]) == "ZE": groep = "Patiënt zelf"
+        elif str(row[9]) == "ZP": groep = "Zorgproces"
+        else: groep = "Onbekend"
+        groep = str(row[9]+' - '+groep)
+
         extra = {
             'Omschrijving' : row[4],
             'Bepaling nummer' : row[0],
             'Aanvraag/Uitslag/Beide' : row[6],
+            'Soort' : soort,
+            'Groep' : groep,
             'Materiaal NHG' : row[2],
             'Materiaal voorstel Snomed' : voorstel_materiaal,
             'Vraagtype' : row[14],
             'Eenheid' : row[16],
             'Versie mutatie' : row[12],
-            'Actief?' : vervallen,
+            'Actief' : actief_component,
+        }
+        # print(extra)
+        obj.component_extra_dict = json.dumps(extra)
+        obj.save()
+
+@shared_task
+def import_icpc_task():
+    df = read_csv(
+        '/webserver/mapping/resources/nhg/NHG-ICPC.txt',
+        sep='\t',
+        header = 1,
+        )
+    i=0
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+
+    # Verwerk dataset -> database
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='5')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=str(row['ICPC Code']),
+        )
+        
+        obj.component_title = row['ICPC Titel']
+
+        actief_concept = 'True'
+        if row['Versie vervallen'] != False: actief_concept = 'False'
+
+        extra = {
+            'ICPC code' : row['ICPC Code'],
+            'NHG ID'    : row['ID'],
+            'Actief'    : actief_concept,
         }
         # print(extra)
         obj.component_extra_dict = json.dumps(extra)
@@ -345,19 +458,47 @@ def audit_async(audit_type=None, project=None, task_id=None):
             delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
             logger.info(delete)
 
+            # Checks for the entire task
+            # If source component contains active/deprecated designation ->
+            extra_dict = json.loads(task.source_component.component_extra_dict)
+            if extra_dict.get('Actief',False):
+                # If source code is deprecated ->
+                if extra_dict.get('Actief') == "False":
+                    obj, created = MappingTaskAudit.objects.get_or_create(
+                                task=task,
+                                audit_type=audit_type,
+                                hit_reason='Item in bron-codesystem is vervallen',
+                            )
+
+
             # Get all mapping rules for the current task
             rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
             logger.info('Number of rules: {0}'.format(rules.count()))
             # Create list for holding all used map priorities
             mapping_priorities = []
+            mapping_groups = []
             mapping_targets = []
             mapping_target_idents = []
+            mapping_prio_per_group = {}
             # Loop through individual rules
             for rule in rules:
                 # Append priority to list for analysis
                 mapping_priorities.append(rule.mappriority)
+                if rule.mapgroup == None:
+                    mapgroup = 1
+                else:
+                    mapgroup = rule.mapgroup
+                mapping_groups.append(mapgroup)
                 mapping_targets.append(rule.target_component)
                 mapping_target_idents.append(rule.target_component.component_id)
+
+                if not mapping_prio_per_group.get(rule.mapgroup,False):
+                    mapping_prio_per_group.update({
+                        rule.mapgroup: [rule.mappriority]
+                    })
+                else:
+                    mapping_prio_per_group[rule.mapgroup].append(rule.mappriority)
+
                 logger.info('Rule: {0}'.format(rule))
 
 
@@ -381,6 +522,17 @@ def audit_async(audit_type=None, project=None, task_id=None):
                                 audit_type=audit_type,
                                 hit_reason='Regel mapt naar zichzelf',
                             )
+
+                # If Target component contains active/deprecated designation ->
+                extra_dict = json.loads(rule.target_component.component_extra_dict)
+                if extra_dict.get('Actief',False):
+                    # If source code is deprecated ->
+                    if extra_dict.get('Actief') == "False":
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Item in target-codesystem is vervallen',
+                                )
 
             # For project 3 (NHG diag -> LOINC/SNOMED):
             if (task.project_id.id == 3) and rules.count() > 0:
@@ -445,32 +597,49 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             hit_reason='Taak heeft 1 mapping rule: map advice is niet Altijd'
                         )
             elif rules.count() > 1:
-                logger.info('Consecutive priorities?: {0} -> {1}'.format(mapping_priorities, checkConsecutive(mapping_priorities)))
-                if not checkConsecutive(mapping_priorities):
+                # Check for order in groups
+                logger.info('Mapping groups: {0}'.format(mapping_groups))
+                groups_ex_duplicates = list(dict.fromkeys(mapping_groups))
+                logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
+                logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
+                if not checkConsecutive(groups_ex_duplicates):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: geen opeenvolgende prioriteit'
+                            hit_reason='Taak heeft meerdere mapping groups: geen opeenvolgende prioriteit'
                         )
-                try:
-                    if sorted(mapping_priorities)[0] != 1:
+
+                print("PRIO PER GROUP",mapping_prio_per_group)
+
+                # Rest in loop door prio's uitvoeren?
+                for key in mapping_prio_per_group.items():
+                    logger.info('Checking group {}'.format(str(key[0])))
+                    priority_list = key[1]
+                    logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
+                    if not checkConsecutive(priority_list):
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
                                 audit_type=audit_type,
-                                hit_reason='Taak heeft meerdere mapping rules: geen mapprioriteit 1'
+                                hit_reason='Groep heeft meerdere mapping rules: geen opeenvolgende prioriteit'
                             )
-                except:
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type=audit_type,
-                                hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
-                            )
-                if rules.last().mapadvice != 'Anders':
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type=audit_type,
-                            hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
-                        )
+                    try:
+                        if sorted(priority_list)[0] != 1:
+                            obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Groep heeft meerdere mapping rules: geen mapprioriteit 1'
+                                )
+                    except:
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
+                                )
+                    # if rules.last().mapadvice != 'Anders':
+                    #     obj, created = MappingTaskAudit.objects.get_or_create(
+                    #             task=task,
+                    #             audit_type=audit_type,
+                    #             hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
+                    #         )
             else:
                 logger.info('No rules for current task')
-            

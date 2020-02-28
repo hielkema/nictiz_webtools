@@ -117,6 +117,7 @@ postgres_backup/*.bak
 **/*.xml
 mapping/**/*.txt
 **/*.pickle
+node/node_modules
 
 # Server specific
 reverse-proxy/

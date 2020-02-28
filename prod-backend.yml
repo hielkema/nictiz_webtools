@@ -94,11 +94,11 @@ services:
       - proxy
     expose:
       - "${PGADMIN_PORT}"
-    environment:
-      - VIRTUAL_HOST=${PGADMIN_DOMAIN}
-      - VIRTUAL_PORT=${PGADMIN_PORT}
-      - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
-      - LETSENCRYPT_EMAIL=${EMAIL}
+    # environment:
+    #   - VIRTUAL_HOST=${PGADMIN_DOMAIN}
+    #   - VIRTUAL_PORT=${PGADMIN_PORT}
+    #   - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
+    #   - LETSENCRYPT_EMAIL=${EMAIL}
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
@@ -106,11 +106,13 @@ services:
     restart: always
     expose:
       - "${FLOWER_PORT}"
-    environment:
-      - VIRTUAL_HOST=${FLOWER_DOMAIN}
-      - VIRTUAL_PORT=${FLOWER_PORT}
-      - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
-      - LETSENCRYPT_EMAIL=${EMAIL}
+    # environment:
+    #   - VIRTUAL_HOST=${FLOWER_DOMAIN}
+    #   - VIRTUAL_PORT=${FLOWER_PORT}
+    #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
+    #   - LETSENCRYPT_EMAIL=${EMAIL}
+    # ports:
+    #   - ${FLOWER_PORT}:${FLOWER_PORT}
     networks:
       - webtools
       - proxy

@@ -32,8 +32,6 @@ SECRET_KEY = env('DJANGO_SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
-
 LOGIN_REDIRECT_URL = '/'
 
 # AUTH_USER_MODEL = 'users.CustomUser'
@@ -51,6 +49,9 @@ INSTALLED_APPS = (
     'django.contrib.postgres',
     'django.core.management',
     'django_celery_beat',
+    'rest_framework',
+    'corsheaders',
+    "jwtauth",
 
     # Nictiz apps
     'atc_lookup',
@@ -61,9 +62,13 @@ INSTALLED_APPS = (
     'homepage',
     'django_select2',
     'mapping',
+    'epd',
+    'termspace',
 )
 
 MIDDLEWARE = (
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,11 +79,34 @@ MIDDLEWARE = (
     'django.middleware.security.SecurityMiddleware',
 )
 
+REST_FRAMEWORK = {                          
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],                          
+    "DEFAULT_PARSER_CLASSES":["rest_framework.parsers.JSONParser",],
+    "DEFAULT_AUTHENTICATION_CLASSES": 
+        [
+            "rest_framework.authentication.SessionAuthentication",
+            "rest_framework_simplejwt.authentication.JWTAuthentication",
+        ],
+    }
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
+
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:9123",
+    "http://127.0.0.1:9123",
+    "http://62.138.184.153:9123",
+    "https://flower.test-nictiz.nl"
+]
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_SUPPORTS_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE=None
+CSRF_COOKIE_DOMAIN = '.test-nictiz.nl'
+SESSION_COOKIE_DOMAIN = '.test-nictiz.nl'
+ALLOWED_HOSTS = ['.test-nictiz.nl']
 
 ROOT_URLCONF = 'app.urls'
 
