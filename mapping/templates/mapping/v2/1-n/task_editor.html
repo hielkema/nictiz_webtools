@@ -188,10 +188,6 @@
                 <li v-for="mapping in mappingRules" v-bind:class="[{ 'list-group-item-success': mapping.id != 'extra' }, 'list-group-item']">
                   <table style="width:100%">
                     <tbody>
-                      <tr>
-                        <th>Rule no.</th>
-                        <td>[[mapping.id]]</td>
-                      </tr>
                       <tr v-if="mapping.target.component_title != null">
                         <td colspan="2">
                           <input type="hidden" name="id" v-model="mapping.id">
@@ -265,7 +261,12 @@
                         <th class="input-group-text">Rule binding</th>
                         <td>
                           <ul v-for="dependency in mapping.dependency">
-                            <input type="checkbox" id="[[dependency.id]" v-model="dependency.binding">[[dependency.source]]
+                            <input 
+                              type="checkbox" 
+                              id="[[dependency.id]" 
+                              v-model="dependency.binding"
+                              v-bind:disabled="currentUser.id != currentTask.user.id || !permissions.includes('mapping | edit mapping') || !permissions.includes('mapping | edit mapping')">
+                              [[dependency.source]]
                           </ul>
                         </td>
                       </tr>
