@@ -34,16 +34,20 @@
             <th>Taak bron</th>
             <th>Reden voor audit hit</th>
             <th>Whitelisted</th>
+            <th>Gebruiker</th>
+            <th>Status</th>
             <th>Open taak</th>
         </thead>
         <tbody>
             {% for hit in objects %}
             <tr>
-                <td>{{ hit.task.id }}</td>
-                <td>{{ hit.task.source_component.component_title }}</td>
-                <td>{{ hit.hit_reason }}</td>
-                <td>{{ hit.ignore }} {% if hit.ignore %} ({{hit.ignore_user.username}}) {% endif %}</td>
-                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{hit.task.id}}" target="_blank">[open]</a></td>
+                <td>{{ hit.audit.task.id }}</td>
+                <td>{{ hit.audit.task.source_component.component_title }}</td>
+                <td>{{ hit.audit.hit_reason }}</td>
+                <td>{{ hit.audit.ignore }} {% if hit.audit.ignore %} ({{hit.audit.ignore_user.username}}) {% endif %}</td>
+                <td>{{hit.task.user}}</td>
+                <td>{{hit.task.status.status_title}}</td>
+                <td><a href="{% url "mapping:index" %}project/{{project_id}}/task/{{hit.audit.task.id}}" target="_blank">[open]</a></td>
             </tr>
             {% endfor %}
         </tbody>

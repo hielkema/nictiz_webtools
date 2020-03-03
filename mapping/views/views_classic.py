@@ -1177,7 +1177,7 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
             return render(request, 'mapping/v2/notice.html', {
             'page_title': 'Succes',
             'header' : 'Audit tool',
-            'notice_text': 'Alle audits worden op de achtergrond uitgevoerd. Resultaten zijn te zien via /show.',
+            'notice_text': 'Alle audits worden op de achtergrond uitgevoerd..',
             'extra' : '',
             })
         elif current_audit == "show":
@@ -1188,7 +1188,10 @@ class AuditPageView(UserPassesTestMixin,TemplateView):
                     audits = MappingTaskAudit.objects.filter(task=task)
                     if audits.count() > 0:
                         for audit in audits:
-                            data.append(audit)
+                            data.append({
+                                'audit': audit,
+                                'task': task,
+                            })
 
             audits_total = len(tasks)
             audits_max_page = 50
