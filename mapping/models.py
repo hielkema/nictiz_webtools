@@ -23,6 +23,7 @@ class MappingProject(models.Model):
     use_mapcorrelation = models.BooleanField(blank=True, null=True, default=False)
     use_mapadvice = models.BooleanField(blank=True, null=True, default=False)
     use_maprule = models.BooleanField(blank=True, null=True, default=False)
+    use_rulebinding = models.BooleanField(blank=True, null=True, default=False)
 
     def __str__(self):
         return str(self.id) + " " + self.title
@@ -124,7 +125,7 @@ class MappingRule(models.Model):
     mapcorrelation  = models.CharField(max_length=50, choices=correlation_options, default=None, blank=True, null=True)
     mapadvice       = models.CharField(max_length=500, default=None, blank=True, null=True)
     maprule         = models.CharField(max_length=500, default=None, blank=True, null=True)
-
+    mapspecifies    = models.ManyToManyField("MappingRule")
 
     active = models.BooleanField(max_length=50, null=True) # Actief of deprecated rule
 
