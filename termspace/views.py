@@ -443,29 +443,23 @@ class jsonMappingExport(viewsets.ViewSet):
                     ##### Find mapping rules using the source component of the task as source, part of this project
                     rules = MappingRule.objects.filter(source_component = task.source_component, project_id = project)
 
-                    ##### Handle products
-                    # Find rules in current task pointing to Snomed
-                    products = rules.filter(target_component__codesystem_id = 1)
-                    if products.count() > 1:
-                        error.append({
-                            "type" : "Multiple materials. Add priorities / correlation to products or accept as both?",
-                            "task" : task.id,
-                        })
-                    # Save products in product list
-                    for single_product in products:
-                        product_list.append({
-                            "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
-                            "system" : single_product.target_component.codesystem_id.codesystem_fhir_uri,
-                            "code" : single_product.target_component.component_id,
-                            "display" : single_product.target_component.component_title,
-                        })
-
                     ##### Loop through rules, excluding rules pointing to Snomed
                     for rule in rules.exclude(target_component__codesystem_id = 1):
                         # Replace Snomed equivalence code with readable text
                         equivalence = rule.mapcorrelation
                         for code, readable in correlation_options:
                             equivalence = equivalence.replace(code, readable)
+
+                        # Add mapspecifies targets to product list (known as rule binding in GUI)
+                        product_list = []
+                        for product in rule.mapspecifies.all():
+                            product_list.append({
+                                "property" : "http://snomed.info/id/"+product.target_component.component_id+"/",
+                                "system" : product.target_component.codesystem_id.codesystem_fhir_uri,
+                                "code" : product.target_component.component_id,
+                                "display" : product.target_component.component_title,
+                            })
+
                         # Append mapping target to target list
                         targets.append({
                             "code" : rule.target_component.component_id,
