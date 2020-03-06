@@ -672,7 +672,10 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
     rc.save()
     # Loop through tasks
     for task in tasks:
-        if not task.status is task.project_id.status_rejected:
+        if task.status == task.project_id.status_rejected:
+            logger.debug('Ignored a task with status rejected - should probably be removed from the dev database. Task ID:',task.id)
+        else:
+            # print(str(task.status), 'is not', str(task.project_id.status_rejected))
             # print("Exporting",task.source_component.component_id)
             rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
             for rule in rules:
