@@ -95,6 +95,7 @@ class ReleaseCandidates(viewsets.ViewSet):
                 'id' : rc.id,
                 'title' : rc.title,
                 'status' : status,
+                'finished' : rc.finished,
                 'created' : rc.created,
                 'text' : rc.title + ' [' + str(rc.created) + ']',
             })
