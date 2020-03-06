@@ -666,13 +666,13 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
 
     # Get all tasks in requested codesystem - based on the codesystem of the source component
     tasks = MappingTask.objects.filter(source_component__codesystem_id__id = id).order_by('source_component__component_id')
+    tasks = tasks.exclude(status = tasks.project_id.status_rejected)
+
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     rc.finished = False
     rc.save()
     # Loop through tasks
     for task in tasks:
-        if task.status == task.project_id.status_rejected:
-            pass
         # print("Exporting",task.source_component.component_id)
         rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
         for rule in rules:
