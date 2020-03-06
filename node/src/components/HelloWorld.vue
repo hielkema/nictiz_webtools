@@ -1,27 +1,31 @@
 <template>
-  <v-container>
-    <v-layout
-      text-center
-      wrap
-    >
-      <v-flex mb-4>
-        <h1 class="display-2 font-weight-bold mb-3">
-          Welkom
-        </h1>
-        <p class="subheading font-weight-regular">
-          
-        </p>
-      </v-flex>
-    </v-layout>
-  </v-container>
+  <div>
+    <p class="subheading font-weight-regular">
+      Permissions:
+    </p>
+    <li v-for="group in groups" v-bind:key="group">{{group}}</li>
+    <br>
+    <table>
+      <td>Mapping access</td><td><p v-if="groups.includes('mapping | access')">YES</p></td>
+    </table>
+  </div>
 </template>
 
 <script>
 export default {
   name: 'HelloWorld',
 
-  data: () => ({
-
-  })
+  data() {
+    return {
+      headers: [
+        { text: 'test', value: 'group' }
+      ]
+    }
+  },
+  computed: {
+    groups() {
+      return this.$store.state.userData.groups
+    }
+  }
 };
 </script>

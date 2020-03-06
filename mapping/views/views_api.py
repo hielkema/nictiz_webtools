@@ -21,6 +21,13 @@ import time
 import random
 import json
 import urllib.request
+
+from rest_framework import viewsets
+from ..serializers import *
+from rest_framework import views
+from rest_framework.response import Response
+from rest_framework.permissions import *
+
 # Get latest snowstorm client once on startup. Set master or develop
 branch = "develop"
 url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
@@ -30,6 +37,24 @@ from snowstorm_client import Snowstorm
 from ..tasks import *
 from ..forms import *
 from ..models import *
+
+app_name = 'mapping'
+
+class componentApi(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def list(self, request):
+        return Response({
+            'test' : 'YES',
+        })
+    def retrieve(self, request, pk=None):
+        return Response({
+            'test' : 'YES',
+        })
+    def create(self, request):
+        return Response({
+            'error' : 'Not allowed'
+        })
+        # MethodNotAllowed(method, detail=None, code=None)
 
 class api_EventList_get(UserPassesTestMixin,TemplateView):
     '''

@@ -3,8 +3,8 @@
 // import Vue from 'vue'
 
 const config = {
-    'apiUrl' : 'https://termservice.test-nictiz.nl/',
-    // 'apiUrl' : 'http://localhost/'
+    // 'apiUrl' : 'https://termservice.test-nictiz.nl/',
+    'apiUrl' : 'http://localhost/'
 }
 
 export const userService = {

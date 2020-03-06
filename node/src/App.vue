@@ -38,12 +38,20 @@
             <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link v-if="loggedIn">
+        <v-list-item link v-if="groups.includes('mapping | access')">
           <v-list-item-action>
             <v-icon>mdi-settings</v-icon>
           </v-list-item-action>
           <v-list-item-content>
             <router-link to="/terminologie/mappingComments"><v-list-item-title>Mapping tool commentaar</v-list-item-title></router-link>
+          </v-list-item-content>
+        </v-list-item>
+        <v-list-item link v-if="groups.includes('mapping | access')">
+          <v-list-item-action>
+            <v-icon>mdi-settings</v-icon>
+          </v-list-item-action>
+          <v-list-item-content>
+            <router-link to="/mapping/RcAudit"><v-list-item-title>Release candidate audit</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
       </v-list>
@@ -84,7 +92,7 @@
     },
 
     data: () => ({
-      drawer: null,
+      drawer: null
     }),
     created () {
       this.$vuetify.theme.dark = false;
@@ -93,7 +101,11 @@
     computed: {
         loggedIn () {
             return this.$store.state.authentication.status.loggedIn;
+        },
+        groups() {
+          return this.$store.state.userData.groups
         }
-    },
+    }
+    
   }
 </script>

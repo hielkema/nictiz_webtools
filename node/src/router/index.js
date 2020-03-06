@@ -26,6 +26,11 @@ const routes = [
     component: () => import('../views/Terminologie/MappingComments.vue')
   },
   {
+    path: '/mapping/RcAudit',
+    name: 'RcAudit',
+    component: () => import('../views/Mapping/RcAudit.vue')
+  },
+  {
     path: '/about',
     name: 'about',
     // route level code-splitting
