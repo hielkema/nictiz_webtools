@@ -148,7 +148,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             for task in tasks:
                 if task.status == task.project_id.status_rejected:
                     pass
-                print("Exporting",task.source_component.component_id)
+                # print("Exporting",task.source_component.component_id)
                 rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
                 for rule in rules:
                     # Handle bindings / specifications / products
@@ -280,7 +280,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         # Loop through the unique source components to group all rules using this source
         for component in source_components[:10]:
             component_id = component
-            print('Handling component',component_id)
+            # print('Handling component',component_id)
             # Get all rules using this component as source
             rule_list = []
             filtered_rule_list = []
@@ -292,7 +292,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 mapspecifies = json.loads(rule.mapspecifies)
                 # Add ID's used as binding target to ignore list: don't show twice
                 for value in mapspecifies:
-                    print('Added',value.get('id'),'to ignore list')
+                    # print('Added',value.get('id'),'to ignore list')
                     ignore_list.append(value.get('id'))
                 # If no specifies are mentioned; false to hide rule in table
                 if len(mapspecifies) == 0:
@@ -342,12 +342,12 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             
             # Filter -> ID not in rejected list
             for single_rule in rule_list:
-                print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
+                # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
                 print(ignore_list)
                 if single_rule.get('target').get('identifier') in ignore_list:
-                    print('IGNORED')
+                    # print('IGNORED')
                 else:
-                    print("ADDED")
+                    # print("ADDED")
                     filtered_rule_list.append(single_rule)
             
             static_source_component = json.loads(rule.static_source_component)
