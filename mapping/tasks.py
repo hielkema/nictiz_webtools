@@ -666,62 +666,62 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
 
     # Get all tasks in requested codesystem - based on the codesystem of the source component
     tasks = MappingTask.objects.filter(source_component__codesystem_id__id = id).order_by('source_component__component_id')
-    tasks = tasks.exclude(status = tasks.project_id.status_rejected)
 
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     rc.finished = False
     rc.save()
     # Loop through tasks
     for task in tasks:
-        # print("Exporting",task.source_component.component_id)
-        rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
-        for rule in rules:
-            # Handle bindings / specifications / products
-            mapspecifies = []
-            for binding in rule.mapspecifies.all():
-                mapspecifies.append({
-                    'id' : binding.target_component.component_id,
-                    'title' : binding.target_component.component_title,
-                })
+        if not task.status is task.project_id.status_rejected:
+            # print("Exporting",task.source_component.component_id)
+            rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+            for rule in rules:
+                # Handle bindings / specifications / products
+                mapspecifies = []
+                for binding in rule.mapspecifies.all():
+                    mapspecifies.append({
+                        'id' : binding.target_component.component_id,
+                        'title' : binding.target_component.component_title,
+                    })
 
-            # Get all RC rules, filtered on this rule and RC
-            rc_rule = MappingReleaseCandidateRules.objects.filter(
-                export_rule = rule,
-                export_rc = rc
-            )
-            # Check if rules with this criterium exist, if so: use it
-            if rc_rule.count() == 1:
-                rc_rule = rc_rule.first()
-            elif rc_rule.count() > 1:
-                logger.info(rc_rule.all())
-                logger.info("Multiple RC rules exists for a single dev rule. PASS.")
-                pass
-            # If not, make a new one
-            else:
-                rc_rule = MappingReleaseCandidateRules.objects.create(
+                # Get all RC rules, filtered on this rule and RC
+                rc_rule = MappingReleaseCandidateRules.objects.filter(
                     export_rule = rule,
-                    export_rc = rc,
+                    export_rc = rc
                 )
-            # Add essential data to shadow copy in RC
-            rc_rule.export_rc = rc
-            rc_rule.export_user = User.objects.get(id=user_id)
-            rc_rule.export_task = task
-            rc_rule.export_rule = rule
-            rc_rule.task_status = task.status.status_title
-            rc_rule.task_user = task.user.username
-            rc_rule.source_component = rule.source_component
-            rc_rule.static_source_component_ident = rule.source_component.component_id
-            rc_rule.static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id))
-            rc_rule.target_component = rule.target_component
-            rc_rule.static_target_component_ident = rule.target_component.component_id
-            rc_rule.static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id))
-            rc_rule.mapgroup = rule.mapgroup
-            rc_rule.mappriority = rule.mappriority
-            rc_rule.mapcorrelation = rule.mapcorrelation
-            rc_rule.mapadvice = rule.mapadvice
-            rc_rule.maprule = rule.maprule
-            rc_rule.mapspecifies = json.dumps(mapspecifies)
-            rc_rule.save()
+                # Check if rules with this criterium exist, if so: use it
+                if rc_rule.count() == 1:
+                    rc_rule = rc_rule.first()
+                elif rc_rule.count() > 1:
+                    logger.info(rc_rule.all())
+                    logger.info("Multiple RC rules exists for a single dev rule. PASS.")
+                    pass
+                # If not, make a new one
+                else:
+                    rc_rule = MappingReleaseCandidateRules.objects.create(
+                        export_rule = rule,
+                        export_rc = rc,
+                    )
+                # Add essential data to shadow copy in RC
+                rc_rule.export_rc = rc
+                rc_rule.export_user = User.objects.get(id=user_id)
+                rc_rule.export_task = task
+                rc_rule.export_rule = rule
+                rc_rule.task_status = task.status.status_title
+                rc_rule.task_user = task.user.username
+                rc_rule.source_component = rule.source_component
+                rc_rule.static_source_component_ident = rule.source_component.component_id
+                rc_rule.static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id))
+                rc_rule.target_component = rule.target_component
+                rc_rule.static_target_component_ident = rule.target_component.component_id
+                rc_rule.static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id))
+                rc_rule.mapgroup = rule.mapgroup
+                rc_rule.mappriority = rule.mappriority
+                rc_rule.mapcorrelation = rule.mapcorrelation
+                rc_rule.mapadvice = rule.mapadvice
+                rc_rule.maprule = rule.maprule
+                rc_rule.mapspecifies = json.dumps(mapspecifies)
+                rc_rule.save()
     rc.finished = True
     logger.info('Finished')
     rc.save()
