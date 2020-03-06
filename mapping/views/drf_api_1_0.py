@@ -323,6 +323,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'title' : rc.title,
                 'status' : status,
                 'created' : rc.created,
+                'finished' : rc.finished,
                 'text' : rc.title + ' [' + str(rc.created) + ']',
             },
             'rules' : task_list,
