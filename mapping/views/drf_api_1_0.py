@@ -170,7 +170,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                         rc_rule = rc_rule.first()
                     elif rc_rule.count() > 1:
                         print(rc_rule.all())
-                        exit("Multiple RC rules exists for a single dev rule. Exiting.")
+                        print("Multiple RC rules exists for a single dev rule. PASS.")
+                        pass
                     # If not, make a new one
                     else:
                         rc_rule = MappingReleaseCandidateRules.objects.create(
