@@ -278,7 +278,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         print('Found',len(source_components),'distinct source components / =tasks')
         
         # Loop through the unique source components to group all rules using this source
-        for component in source_components[:10]:
+        for component in source_components:
             component_id = component
             # print('Handling component',component_id)
             # Get all rules using this component as source
