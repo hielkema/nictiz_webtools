@@ -13,7 +13,8 @@
             v-model="selectedRc"
             solo
             ></v-select>
-            Status: {{selectedRc.status}}
+            Status: {{selectedRc.status}}<br>
+            Export finished: {{selectedRc.finished}}
         </v-card>
     </div>
 </template>

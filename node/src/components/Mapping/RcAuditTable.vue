@@ -3,8 +3,12 @@
         <v-card
         class="pa-1 ma-1">
             <v-btn v-on:click="refresh()">Refresh</v-btn><br>
-            <v-card-title> {{RcRules.rc.title}} [{{RcRules.rc.created}}] - {{RcRules.rc.status}}</v-card-title>
-            <br>
+            <v-alert type="info" v-if="!RcRules.rc.finished">
+                {{RcRules.rc.title}} [{{RcRules.rc.created}}] - {{RcRules.rc.status}}
+            </v-alert>
+            <v-alert type="error" v-if="!RcRules.rc.finished">
+                Let op: de export vanuit de development database loopt nog.
+            </v-alert>
             <v-data-table
                 :headers="headers"
                 :items="RcRules.rules"
