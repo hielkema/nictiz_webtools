@@ -30,7 +30,7 @@ BASE_DIR = "/webserver"
 SECRET_KEY = env('DJANGO_SECRET')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 LOGIN_REDIRECT_URL = '/'
 
