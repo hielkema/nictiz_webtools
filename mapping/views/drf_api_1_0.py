@@ -17,6 +17,7 @@ import time
 import environ
 
 from rest_framework import viewsets
+from ..tasks import *
 from ..serializers import *
 from rest_framework import views, permissions
 from rest_framework.response import Response
@@ -122,85 +123,25 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         codesystem = int(payload.get('codesystem',False))
         id = int(payload.get('id'))
 
-        def component_dump(codesystem=None, component_id=None):
-            component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
-            output = {
-                'identifier'    : component.component_id,
-                'title'         : component.component_title,
-                'extra'         : json.loads(component.component_extra_dict),
-                'created'       : str(component.component_created),
-                'codesystem'    : {
-                    'id'        : component.codesystem_id.id,
-                    'name'      : component.codesystem_id.codesystem_title,
-                    'version'   : component.codesystem_id.codesystem_version,
-                    'fhir_uri'  : component.codesystem_id.codesystem_fhir_uri,
-                }
-            }
-            return output
-
         # TODO - move to celery task
         if selection == 'codesystem':
-            # Get all tasks in requested codesystem - based on the codesystem of the source component
-            tasks = MappingTask.objects.filter(source_component__codesystem_id__id = id).order_by('source_component__component_id')
-            rc = MappingReleaseCandidate.objects.get(id = rc_id)
-            rc.finished = False
-            rc.save()
-            # Loop through tasks
-            for task in tasks:
-                if task.status == task.project_id.status_rejected:
-                    pass
-                # print("Exporting",task.source_component.component_id)
-                rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
-                for rule in rules:
-                    # Handle bindings / specifications / products
-                    mapspecifies = []
-                    for binding in rule.mapspecifies.all():
-                        mapspecifies.append({
-                            'id' : binding.target_component.component_id,
-                            'title' : binding.target_component.component_title,
-                        })
-
-                    # Get all RC rules, filtered on this rule and RC
-                    rc_rule = MappingReleaseCandidateRules.objects.filter(
-                        export_rule = rule,
-                        export_rc = rc
-                    )
-                    # Check if rules with this criterium exist, if so: use it
-                    if rc_rule.count() == 1:
-                        rc_rule = rc_rule.first()
-                    elif rc_rule.count() > 1:
-                        print(rc_rule.all())
-                        print("Multiple RC rules exists for a single dev rule. PASS.")
-                        pass
-                    # If not, make a new one
-                    else:
-                        rc_rule = MappingReleaseCandidateRules.objects.create(
-                            export_rule = rule,
-                            export_rc = rc,
-                        )
-                    # Add essential data to shadow copy in RC
-                    rc_rule.export_rc = rc
-                    rc_rule.export_user = User.objects.get(id=request.user.id)
-                    rc_rule.export_task = task
-                    rc_rule.export_rule = rule
-                    rc_rule.task_status = task.status.status_title
-                    rc_rule.task_user = task.user.username
-                    rc_rule.source_component = rule.source_component
-                    rc_rule.static_source_component_ident = rule.source_component.component_id
-                    rc_rule.static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id))
-                    rc_rule.target_component = rule.target_component
-                    rc_rule.static_target_component_ident = rule.target_component.component_id
-                    rc_rule.static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id))
-                    rc_rule.mapgroup = rule.mapgroup
-                    rc_rule.mappriority = rule.mappriority
-                    rc_rule.mapcorrelation = rule.mapcorrelation
-                    rc_rule.mapadvice = rule.mapadvice
-                    rc_rule.maprule = rule.maprule
-                    rc_rule.mapspecifies = json.dumps(mapspecifies)
-                    rc_rule.save()
-            rc.finished = True
-            rc.save()
+            exportCodesystemToRCRules.delay(selection=selection, id=id, rc_id=rc_id, user_id=request.user.id)
         elif selection == "component" and codesystem:
+            def component_dump(codesystem=None, component_id=None):
+                component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
+                output = {
+                    'identifier'    : component.component_id,
+                    'title'         : component.component_title,
+                    'extra'         : json.loads(component.component_extra_dict),
+                    'created'       : str(component.component_created),
+                    'codesystem'    : {
+                        'id'        : component.codesystem_id.id,
+                        'name'      : component.codesystem_id.codesystem_title,
+                        'version'   : component.codesystem_id.codesystem_version,
+                        'fhir_uri'  : component.codesystem_id.codesystem_fhir_uri,
+                    }
+                }
+                return output
             # Get all tasks for requested component - based on the identifier of the source component
             tasks = MappingTask.objects.filter(source_component__component_id = id)
             rc = MappingReleaseCandidate.objects.get(id = rc_id)
@@ -263,7 +204,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 print("There are now {numrules} rules in the RC database.".format(numrules=rc_rules.count()))
 
         return Response({
-            'message' : 'Taak uitgevoerd',
+            'message' : 'Taak ontvangen',
             'selection' : selection,
             'id' : id,
         })
