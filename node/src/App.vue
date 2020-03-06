@@ -46,7 +46,7 @@
             <router-link to="/terminologie/mappingComments"><v-list-item-title>Mapping tool commentaar</v-list-item-title></router-link>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link v-if="groups.includes('mapping | access')">
+        <v-list-item link v-if="groups.includes('mapping | rc_audit')">
           <v-list-item-action>
             <v-icon>mdi-settings</v-icon>
           </v-list-item-action>

@@ -24,11 +24,10 @@ from rest_framework.response import Response
 
 class Permission_MappingAudit(permissions.BasePermission):
     """
-    Global permission check rights to use the Audit functionality.
-    TODO - create separate permissions for release audit.
+    Global permission check rights to use the RC Audit functionality.
     """
     def has_permission(self, request, view):
-        if 'mapping | audit' in request.user.groups.values_list('name', flat=True):
+        if 'mapping | rc_audit' in request.user.groups.values_list('name', flat=True):
             return True
 
 # Handle Rule review
