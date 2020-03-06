@@ -345,7 +345,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
                 print(ignore_list)
                 if single_rule.get('target').get('identifier') in ignore_list:
-                    # print('IGNORED')
+                    print('IGNORED')
                 else:
                     # print("ADDED")
                     filtered_rule_list.append(single_rule)
