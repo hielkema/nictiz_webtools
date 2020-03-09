@@ -296,6 +296,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             task_list.append({
                 'status' : rule.task_status,
                 'source' : static_source_component,
+                'project' : rule.export_rule.project_id.title,
                 'rules' : filtered_rule_list,
                 'accepted_list' : set(accepted_list),
                 'num_accepted' : len(set(accepted_list)),
