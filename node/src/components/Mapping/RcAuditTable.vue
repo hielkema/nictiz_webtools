@@ -76,7 +76,11 @@
                                     <td>{{RcRules.rc.stats.perc_in_rc}}%</td>
                                 </tr>
                                 <tr>
-                                    <th>Totaal aantal taken rejected</th>
+                                    <th>Totaal aantal taken met >= 1 fiat</th>
+                                    <td>{{RcRules.rc.stats.num_rejected}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Totaal aantal taken met >= 1 veto</th>
                                     <td>{{RcRules.rc.stats.num_rejected}}</td>
                                 </tr>
                             </tbody>
