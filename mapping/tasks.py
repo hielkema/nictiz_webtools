@@ -670,10 +670,13 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     rc.finished = False
     rc.save()
+    debug_list = []
     # Loop through tasks
     for task in tasks:
         if task.status == task.project_id.status_rejected:
             logger.debug('Ignored a task with status rejected - should probably be removed from the dev database. Task ID:',task.id)
+        
+        # TODO - for production: Only check if task is status_completed, skip all other tasks
         else:
             # print(str(task.status), 'is not', str(task.project_id.status_rejected))
             # print("Exporting",task.source_component.component_id)
@@ -690,11 +693,29 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
                 # Get all RC rules, filtered on this rule and RC
                 rc_rule = MappingReleaseCandidateRules.objects.filter(
                     export_rule = rule,
-                    export_rc = rc
+                    export_rc = rc,
+                    # rc_rule.export_user = User.objects.get(id=user_id)
+                    export_task = task,
+                    task_status = task.status.status_title,
+                    # task_user = task.user.username
+                    source_component = rule.source_component,
+                    static_source_component_ident = rule.source_component.component_id,
+                    static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                    target_component = rule.target_component,
+                    static_target_component_ident = rule.target_component.component_id,
+                    static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                    mapgroup = rule.mapgroup,
+                    mappriority = rule.mappriority,
+                    mapcorrelation = rule.mapcorrelation,
+                    mapadvice = rule.mapadvice,
+                    maprule = rule.maprule,
+                    mapspecifies = json.dumps(mapspecifies),
                 )
-                # Check if rules with this criterium exist, if so: use it
+                # Check if rules with this criterium exist, if so: let it be and go to the next rule
                 if rc_rule.count() == 1:
                     rc_rule = rc_rule.first()
+                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+
                 elif rc_rule.count() > 1:
                     logger.info(rc_rule.all())
                     logger.info("Multiple RC rules exists for a single dev rule. PASS.")
@@ -704,27 +725,27 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
                     rc_rule = MappingReleaseCandidateRules.objects.create(
                         export_rule = rule,
                         export_rc = rc,
+                        # Add essential data to shadow copy in RC
+                        export_user = User.objects.get(id=user_id),
+                        export_task = task,
+                        task_status = task.status.status_title,
+                        task_user = task.user.username,
+                        source_component = rule.source_component,
+                        static_source_component_ident = rule.source_component.component_id,
+                        static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                        target_component = rule.target_component,
+                        static_target_component_ident = rule.target_component.component_id,
+                        static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                        mapgroup = rule.mapgroup,
+                        mappriority = rule.mappriority,
+                        mapcorrelation = rule.mapcorrelation,
+                        mapadvice = rule.mapadvice,
+                        maprule = rule.maprule,
+                        mapspecifies = json.dumps(mapspecifies),
                     )
-                # Add essential data to shadow copy in RC
-                rc_rule.export_rc = rc
-                rc_rule.export_user = User.objects.get(id=user_id)
-                rc_rule.export_task = task
-                rc_rule.export_rule = rule
-                rc_rule.task_status = task.status.status_title
-                rc_rule.task_user = task.user.username
-                rc_rule.source_component = rule.source_component
-                rc_rule.static_source_component_ident = rule.source_component.component_id
-                rc_rule.static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id))
-                rc_rule.target_component = rule.target_component
-                rc_rule.static_target_component_ident = rule.target_component.component_id
-                rc_rule.static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id))
-                rc_rule.mapgroup = rule.mapgroup
-                rc_rule.mappriority = rule.mappriority
-                rc_rule.mapcorrelation = rule.mapcorrelation
-                rc_rule.mapadvice = rule.mapadvice
-                rc_rule.maprule = rule.maprule
-                rc_rule.mapspecifies = json.dumps(mapspecifies)
-                rc_rule.save()
+                    # rc_rule.save()
     rc.finished = True
     logger.info('Finished')
+    for item in debug_list:
+        print(item,'\n')
     rc.save()
