@@ -647,7 +647,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
 # Create RC shadow copy of codesystem
 @shared_task
-def exportCodesystemToRCRules(selection, id, rc_id, user_id):
+def exportCodesystemToRCRules(rc_id, user_id):
     def component_dump(codesystem=None, component_id=None):
         component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
         output = {
@@ -664,18 +664,26 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
         }
         return output
 
-    # Get all tasks in requested codesystem - based on the codesystem of the source component
-    tasks = MappingTask.objects.filter(source_component__codesystem_id__id = id).order_by('source_component__component_id')
-
+    # Selecte RC
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     rc.finished = False
     rc.save()
+    # Get all tasks in requested codesystem - based on the codesystem of the source component
+    tasks = MappingTask.objects.filter(source_component__codesystem_id__id = rc.codesystem.id).order_by('source_component__component_id')
+
+    
     debug_list = []
     # Loop through tasks
     for task in tasks:
         if task.status == task.project_id.status_rejected:
             logger.debug('Ignored a task with status rejected - should probably be removed from the dev database. Task ID:',task.id)
-        
+            # Remove all rules in the RC database originating from this task, since it is rejected.
+            rc_rules = MappingReleaseCandidateRules.objects.filter(
+                    static_source_component_ident = task.source_component.component_id,
+                    export_rc = rc,
+            )
+            rc_rules.delete()
+
         # TODO - for production: Only check if task is status_completed, skip all other tasks
         else:
             rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)

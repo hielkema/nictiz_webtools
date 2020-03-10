@@ -109,7 +109,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
     {
         'rc_id' : int, # Release candidate ID in database
         'selection' : str # 'codesystem' or 'component'
-        'id' : int, # ID of component or codesystem in database
+        ['id'] : int, # component identifier, requiered in the case of selection == component
         ['codesystem'] : int, # required in the case of selection == component
     }
     Of een GET met een RC ID voor een lijst met rules in die RC
@@ -117,14 +117,14 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingAudit]
     def create(self, request, pk=None):
         payload = request.data
-        selection = str(payload.get('selection'))
-        rc_id = int(payload.get('rc_id'))
-        codesystem = int(payload.get('codesystem',False))
-        id = int(payload.get('id'))
+        selection = str(payload.get('selection',None))
+        rc_id = int(payload.get('rc_id',0))
+        codesystem = int(payload.get('codesystem',0))
+        id = int(payload.get('id',0))
 
         # TODO - move to celery task
         if selection == 'codesystem':
-            exportCodesystemToRCRules.delay(selection=selection, id=id, rc_id=rc_id, user_id=request.user.id)
+            exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
         elif selection == "component" and codesystem:
             def component_dump(codesystem=None, component_id=None):
                 component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
@@ -163,39 +163,41 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 rc_rules_count = rc_rules.count()
                 rc_rules.delete()
                 print("Found {numrules} rules in the RC database. Deleting these.".format(numrules=rc_rules_count))
-
-                # Loop through the rules in development, and update RC database with data from the development database
-                for rule in rules:
-                    # Handle bindings / specifications / products
-                    mapspecifies = []
-                    for binding in rule.mapspecifies.all():
-                        mapspecifies.append({
-                            'id' : binding.target_component.component_id,
-                            'title' : binding.target_component.component_title,
-                        })
-                    # Create the actual rule in the RC database
-                    rc_rule = MappingReleaseCandidateRules.objects.create(
-                            export_rc = rc,
-                            export_user = User.objects.get(id=request.user.id),
-                            export_task = task,
-                            export_rule = rule,
-                            task_status = task.status.status_title,
-                            task_user = task.user.username,
-                            source_component = rule.source_component,
-                            static_source_component_ident = rule.source_component.component_id,
-                            static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
-                            target_component = rule.target_component,
-                            static_target_component_ident = rule.target_component.component_id,
-                            static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
-                            mapgroup = rule.mapgroup,
-                            mappriority = rule.mappriority,
-                            mapcorrelation = rule.mapcorrelation,
-                            mapadvice = rule.mapadvice,
-                            maprule = rule.maprule,
-                            mapspecifies = json.dumps(mapspecifies),
-                        )
-                    rc_rule.save()
-                    print("Added {rule}".format(rule=rc_rule))
+                
+                # Only continue if the task does not have status - rejected, otherwise skip re-adding the rules.
+                if task.status is not task.project_id.status_rejected:
+                    # Loop through the rules in development, and update RC database with data from the development database
+                    for rule in rules:
+                        # Handle bindings / specifications / products
+                        mapspecifies = []
+                        for binding in rule.mapspecifies.all():
+                            mapspecifies.append({
+                                'id' : binding.target_component.component_id,
+                                'title' : binding.target_component.component_title,
+                            })
+                        # Create the actual rule in the RC database
+                        rc_rule = MappingReleaseCandidateRules.objects.create(
+                                export_rc = rc,
+                                export_user = User.objects.get(id=request.user.id),
+                                export_task = task,
+                                export_rule = rule,
+                                task_status = task.status.status_title,
+                                task_user = task.user.username,
+                                source_component = rule.source_component,
+                                static_source_component_ident = rule.source_component.component_id,
+                                static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                                target_component = rule.target_component,
+                                static_target_component_ident = rule.target_component.component_id,
+                                static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                                mapgroup = rule.mapgroup,
+                                mappriority = rule.mappriority,
+                                mapcorrelation = rule.mapcorrelation,
+                                mapadvice = rule.mapadvice,
+                                maprule = rule.maprule,
+                                mapspecifies = json.dumps(mapspecifies),
+                            )
+                        rc_rule.save()
+                        print("Added {rule}".format(rule=rc_rule))
                 rc_rules = MappingReleaseCandidateRules.objects.filter(
                     export_task = task,
                     export_rc = rc,
