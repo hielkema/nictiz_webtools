@@ -678,6 +678,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
         if task.status == task.project_id.status_rejected:
             logger.debug('Ignored a task with status rejected - should probably be removed from the dev database. Task ID:',task.id)
             # Remove all rules in the RC database originating from this task, since it is rejected.
+            # TODO - for production: Should go for all tasks NOT status_completed.
             rc_rules = MappingReleaseCandidateRules.objects.filter(
                     static_source_component_ident = task.source_component.component_id,
                     export_rc = rc,
