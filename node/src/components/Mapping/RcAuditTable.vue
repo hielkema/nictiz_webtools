@@ -77,7 +77,7 @@
                                 </tr>
                                 <tr>
                                     <th>Totaal aantal taken met >= 1 fiat</th>
-                                    <td>{{RcRules.rc.stats.num_rejected}}</td>
+                                    <td>{{RcRules.rc.stats.num_accepted}}</td>
                                 </tr>
                                 <tr>
                                     <th>Totaal aantal taken met >= 1 veto</th>
