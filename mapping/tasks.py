@@ -678,9 +678,10 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
         
         # TODO - for production: Only check if task is status_completed, skip all other tasks
         else:
-            # print(str(task.status), 'is not', str(task.project_id.status_rejected))
-            # print("Exporting",task.source_component.component_id)
             rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+            
+            ## First: check if any of the rules for this task have changes
+            ## if so: delete all existing rules in RC and replace them all
             for rule in rules:
                 # Handle bindings / specifications / products
                 mapspecifies = []
@@ -711,7 +712,52 @@ def exportCodesystemToRCRules(selection, id, rc_id, user_id):
                     maprule = rule.maprule,
                     mapspecifies = json.dumps(mapspecifies),
                 )
-                # Check if rules with this criterium exist, if so: let it be and go to the next rule
+                # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
+                if rc_rule.count() == 1:
+                    rc_rule = rc_rule.first()
+                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+                else:
+                    rc_rule_todelete = MappingReleaseCandidateRules.objects.filter(
+                        source_component = task.source_component,
+                        export_rc = rc,
+                    )
+                    if rc_rule_todelete.count() > 0:
+                        debug_list.append('Found rule(s) with changes for component {} - deleting all RC rules for this task.'.format(task.source_component.component_id))
+                        rc_rule_todelete.delete()
+            ### End check for changes
+            
+            ## Now copy the new rules where needed
+            for rule in rules:
+                # Handle bindings / specifications / products
+                mapspecifies = []
+                for binding in rule.mapspecifies.all():
+                    mapspecifies.append({
+                        'id' : binding.target_component.component_id,
+                        'title' : binding.target_component.component_title,
+                    })
+
+                # Get all RC rules, filtered on this rule and RC
+                rc_rule = MappingReleaseCandidateRules.objects.filter(
+                    export_rule = rule,
+                    export_rc = rc,
+                    # rc_rule.export_user = User.objects.get(id=user_id)
+                    export_task = task,
+                    task_status = task.status.status_title,
+                    # task_user = task.user.username
+                    source_component = rule.source_component,
+                    static_source_component_ident = rule.source_component.component_id,
+                    static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                    target_component = rule.target_component,
+                    static_target_component_ident = rule.target_component.component_id,
+                    static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                    mapgroup = rule.mapgroup,
+                    mappriority = rule.mappriority,
+                    mapcorrelation = rule.mapcorrelation,
+                    mapadvice = rule.mapadvice,
+                    maprule = rule.maprule,
+                    mapspecifies = json.dumps(mapspecifies),
+                )
+                # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
                 if rc_rule.count() == 1:
                     rc_rule = rc_rule.first()
                     debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
