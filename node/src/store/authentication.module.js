@@ -51,6 +51,7 @@ export const authentication = {
         loginSuccess(state, user) {
             state.status = { loggedIn: true };
             state.user = user;
+            this.dispatch('getPermissions');
             // localStorage.setItem('user', JSON.stringify(user));
         },
         loginFailure(state) {

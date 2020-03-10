@@ -1,5 +1,47 @@
 <template>
     <div>
+    <v-card 
+        class="ma-1"
+        max-width="500"
+        >   
+        <v-simple-table
+            dense
+        >
+            <tbody>
+            <tr>
+                <th>
+                Zoek binnen resultaten
+                </th>
+                <td>
+                <v-text-field
+                    v-model="search"
+                    label="Zoek binnen resultaten"
+                    hide-details
+                    autofocus
+                    clearable
+                    dense
+                ></v-text-field>
+                </td>
+            </tr>
+            <tr
+                v-for="header in headers"
+                :key="header.text"
+            >
+                <th v-if="filters.hasOwnProperty(header.value)">
+                {{header.text}}
+                </th>
+                <td v-if="filters.hasOwnProperty(header.value)" class="text-left">
+                <v-select flat dense hide-details small multiple clearable :items="columnValueList(header.value)" v-model="filters[header.value]">     
+                </v-select>
+                </td>
+            </tr>
+            </tbody>
+        </v-simple-table>
+        </v-card>
+
+        <v-spacer></v-spacer>
+
+
         <v-card
         class="pa-1 ma-1">
             <v-btn v-on:click="refresh()">Refresh</v-btn><br>
@@ -11,8 +53,9 @@
             </v-alert>
             <v-data-table
                 :headers="headers"
-                :items="RcRules.rules"
+                :items="filteredResults"
                 :items-per-page="5"
+                :search="search"
                 :loading="loading"
                 caption="Release Candidate rule audit"
                 class="elevation-1"
@@ -58,6 +101,12 @@
                 <template v-slot:item.rejected="{ item }">
                     <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
                 </template>
+                <template v-slot:item.accepted_me="{ item }">
+                    <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
+                </template>
+                <template v-slot:item.rejected_me="{ item }">
+                    <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
+                </template>
             </v-data-table>
         </v-card>
     </div>
@@ -66,18 +115,28 @@
 export default {
     data() {
         return {
-           headers: [
-               { text: 'ID', value: 'source.identifier' },
-               { text: 'Source', value: 'source.title' },
-               { text: 'Status', value: 'status' },
-               { text: 'Rules', value: 'rules' },
-               { text: 'Actions', value: 'actions' },
-               { text: 'Rejected', value: 'rejected' },
-            //    { text: 'Target', value: 'rules.0.codesystem' },
-            //    { text: 'Title', value: 'rules.0.target.title' },
-            //    { text: 'Fiat', value: 'rules.0.accepted' },
-            //    { text: 'Veto', value: 'rules.0.rejected' },
-           ]
+            headers: [
+                { text: 'ID', value: 'source.identifier' },
+                { text: 'Source', value: 'source.title' },
+                { text: 'Status', value: 'status' },
+                { text: 'Rules', value: 'rules' },
+                { text: 'Actions', value: 'actions' },
+                { text: 'Rejected', value: 'rejected' },
+                { text: 'Rejected list', value: 'rejected_list' },
+                { text: 'Project', value: 'project', align: ' d-none' },
+                { text: 'My fiat', value: 'accepted_me', align: ' d-none' },
+                { text: 'My veto', value: 'rejected_me', align: ' d-none' },
+            ],
+            search: '',
+            groupBy: null,
+            filters: {
+                rejected: [],
+                status: [],
+                rejected_list: [],
+                project: [],
+                accepted_me: [],
+                rejected_me: [],
+            }
         }
     },
     methods: {
@@ -89,6 +148,9 @@ export default {
         },
         postRuleReview: function(rc_id, component_id, action) {
             this.$store.dispatch('RcAuditConnection/postRuleReview', {'rc_id':rc_id, 'component_id':component_id, 'action': action})
+        },
+        columnValueList(val) {
+           return this.$store.state.RcAuditConnection.RcRules.rules.map(d => d[val]).sort()
         }
     },
     computed: {
@@ -100,6 +162,21 @@ export default {
         },
         selectedRc(){
             return this.$store.state.RcAuditConnection.selectedRc
+        },
+        searchResults(){
+            return this.$store.state.MappingComments.results;
+        },
+        filteredResults() {
+            return this.$store.state.RcAuditConnection.RcRules.rules.filter(d => {
+                return Object.keys(this.filters).every(f => {
+                    return this.filters[f].length < 1 || this.filters[f].includes(d[f])
+                })
+            })
+        },
+        groupByList(){
+            const result = this.headers
+            // result.push('Niet groeperen')
+            return result
         }
     },
     created(){

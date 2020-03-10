@@ -228,6 +228,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             filtered_rule_list = []
             rejected = False
             rejected_list = []
+            fiat_me = False
+            veto_me = False
             accepted_list = []
             ignore_list = []
             for rule in rules.filter(static_source_component_ident = component_id).order_by('mapgroup', 'mappriority'):
@@ -252,7 +254,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 correlation = rule.mapcorrelation
                 for code, readable in correlation_options:
                     correlation = correlation.replace(code, readable)
-
+                
                 rule_list.append({
                     'from_project' : rule.export_rule.project_id.id,
                     'rule_id' : rule.export_rule.id,
@@ -269,8 +271,6 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     'mapadvice'     : rule.mapadvice,
                     'maprule'       : rule.maprule,
                     'mapspecifies'  : mapspecifies,
-                    'accepted'      : rule.accepted.all().values_list('username', flat=True),
-                    'rejected'      : rule.rejected.all().values_list('username'),
 
                 })
                 # TODO - not validated yet 
@@ -278,9 +278,13 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     rejected = True
                     for user in rule.rejected.values_list('username', flat=True):
                         rejected_list.append(user)
+                    if request.user.username in rejected_list:
+                        veto_me = True
                 if rule.accepted.count() > 0:
                     for user in rule.accepted.values_list('username', flat=True):
                         accepted_list.append(user)
+                    if request.user.username in accepted_list:
+                        fiat_me = True
             
             # Filter -> ID not in rejected list
             for single_rule in rule_list:
@@ -300,8 +304,10 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'rules' : filtered_rule_list,
                 'accepted_list' : set(accepted_list),
                 'num_accepted' : len(set(accepted_list)),
+                'accepted_me' : fiat_me,
                 'rejected_list' : set(rejected_list),
                 'num_rejected' : len(set(rejected_list)),
+                'rejected_me' : veto_me,
                 'rejected' : rejected,
             })
 

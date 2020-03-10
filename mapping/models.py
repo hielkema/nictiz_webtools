@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 class MappingProject(models.Model):
-    title = models.CharField(max_length=150)
+    title = models.CharField(max_length=300)
     active = models.BooleanField(default=True)
     created = models.DateTimeField(default=timezone.now)
     status_complete = models.ForeignKey('MappingTaskStatus', related_name="status_complete", on_delete=models.PROTECT, blank=True, null=True, default=None)
