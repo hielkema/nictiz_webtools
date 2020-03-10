@@ -213,6 +213,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         # Get RC
         rc = MappingReleaseCandidate.objects.get(id = id)
         print('Exporting RC',rc)
+        # Total number of components in codesystem linked to RC
+        source_codesystem = MappingCodesystemComponent.objects.filter(codesystem_id = rc.codesystem)
         # Identify all unique tasks in order to group the rules for export
         rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc)
         print('Exporting',rules.count(),'rules')
@@ -332,6 +334,13 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'status' : status,
                 'created' : rc.created,
                 'finished' : rc.finished,
+                'stats' : {
+                    'total_tasks'   : source_components.count(),
+                    'tasks_in_rc'   : len(task_list),
+                    'num_rejected'  : len(list(filter(lambda x: x['rejected'] == True, task_list))),
+                    'total_components' : source_codesystem.count(),
+                    'perc_in_rc'    :  round(source_components.count() / source_codesystem.count() * 100),
+                },
                 'text' : rc.title + ' [' + str(rc.created) + ']',
             },
             'rules' : task_list,
