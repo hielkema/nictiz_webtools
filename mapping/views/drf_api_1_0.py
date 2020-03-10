@@ -165,7 +165,9 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 print("Found {numrules} rules in the RC database. Deleting these.".format(numrules=rc_rules_count))
                 
                 # Only continue if the task does not have status - rejected, otherwise skip re-adding the rules.
-                if task.status is not task.project_id.status_rejected:
+                if task.status == task.project_id.status_rejected:
+                    print("Stop adding rules derived from now rejected task: {}".format(task.id))
+                else:
                     # Loop through the rules in development, and update RC database with data from the development database
                     for rule in rules:
                         # Handle bindings / specifications / products
