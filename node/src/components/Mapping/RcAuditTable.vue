@@ -37,12 +37,12 @@
                         </v-simple-table>
                     </v-card>
                 </v-col>
-                <v-col cols=3>
+                <v-col cols=7>
                     <v-card class="pa-1">   
                         <v-simple-table dense>
                             <tbody>
                                 <tr>
-                                    <th>Title</th>
+                                    <th>Titel RC</th>
                                     <td>{{RcRules.rc.title}}</td>
                                 </tr>
                                 <tr>
@@ -54,24 +54,26 @@
                                     <td>{{RcRules.rc.status}}</td>
                                 </tr>
                                 <tr>
-                                    <th>Export finished?</th>
-                                    <td>{{RcRules.rc.finished}}</td>
+                                    <th>Export klaar?</th>
+                                    <td>
+                                        <v-checkbox v-model="RcRules.rc.finished" class="sm-2" disabled></v-checkbox>
+                                    </td>
                                 </tr>
                                 <tr>
-                                    <th>Totaal aantal componenten voor broncodestelsel</th>
+                                    <th>Totaal aantal componenten in broncodestelsel</th>
                                     <td>{{RcRules.rc.stats.total_components}}</td>
                                 </tr>
                                 <tr>
-                                    <th>Totaal aantal taken voor broncodestelsel</th>
+                                    <th>Totaal aantal taken/componenten in development path</th>
                                     <td>{{RcRules.rc.stats.total_tasks}}</td>
                                 </tr>
                                 <tr>
-                                    <th>Totaal aantal taken in RC</th>
+                                    <th>Totaal aantal taken/componenten in release candidate</th>
                                     <td>{{RcRules.rc.stats.tasks_in_rc}}</td>
                                 </tr>
                                 <tr>
-                                    <th>% componenten uit broncodestelsel in RC</th>
-                                    <td>{{RcRules.rc.stats.perc_in_rc}}</td>
+                                    <th>% componenten uit broncodestelsel in release candidate</th>
+                                    <td>{{RcRules.rc.stats.perc_in_rc}}%</td>
                                 </tr>
                                 <tr>
                                     <th>Totaal aantal taken rejected</th>

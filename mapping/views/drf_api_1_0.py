@@ -232,6 +232,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             rejected_list = []
             fiat_me = False
             veto_me = False
+            accepted = None
             accepted_list = []
             ignore_list = []
             for rule in rules.filter(static_source_component_ident = component_id).order_by('mapgroup', 'mappriority'):
@@ -283,6 +284,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     if request.user.username in rejected_list:
                         veto_me = True
                 if rule.accepted.count() > 0:
+                    accepted = True
                     for user in rule.accepted.values_list('username', flat=True):
                         accepted_list.append(user)
                     if request.user.username in accepted_list:
@@ -312,6 +314,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'rejected_list' : set(rejected_list),
                 'num_rejected' : len(set(rejected_list)),
                 'rejected_me' : veto_me,
+                'accepted' : accepted,
                 'rejected' : rejected,
             })
 
@@ -337,6 +340,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'stats' : {
                     'total_tasks'   : source_components.count(),
                     'tasks_in_rc'   : len(task_list),
+                    'num_accepted'  : len(list(filter(lambda x: x['accepted'] == True, task_list))),
                     'num_rejected'  : len(list(filter(lambda x: x['rejected'] == True, task_list))),
                     'total_components' : source_codesystem.count(),
                     'perc_in_rc'    :  round(source_components.count() / source_codesystem.count() * 100),
