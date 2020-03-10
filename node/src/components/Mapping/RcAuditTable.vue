@@ -1,114 +1,160 @@
 <template>
     <div>
-    <v-card 
-        class="ma-1"
-        max-width="500"
-        >   
-        <v-simple-table
-            dense
-        >
-            <tbody>
-            <tr>
-                <th>
-                Zoek binnen resultaten
-                </th>
-                <td>
-                <v-text-field
-                    v-model="search"
-                    label="Zoek binnen resultaten"
-                    hide-details
-                    autofocus
-                    clearable
-                    dense
-                ></v-text-field>
-                </td>
-            </tr>
-            <tr
-                v-for="header in headers"
-                :key="header.text"
-            >
-                <th v-if="filters.hasOwnProperty(header.value)">
-                {{header.text}}
-                </th>
-                <td v-if="filters.hasOwnProperty(header.value)" class="text-left">
-                <v-select flat dense hide-details small multiple clearable :items="columnValueList(header.value)" v-model="filters[header.value]">     
-                </v-select>
-                </td>
-            </tr>
-            </tbody>
-        </v-simple-table>
-        </v-card>
-
-        <v-spacer></v-spacer>
-
-
-        <v-card
-        class="pa-1 ma-1">
-            <v-btn v-on:click="refresh()">Refresh</v-btn><br>
-            <v-alert type="info" v-if="!RcRules.rc.finished">
-                {{RcRules.rc.title}} [{{RcRules.rc.created}}] - {{RcRules.rc.status}}
-            </v-alert>
-            <v-alert type="error" v-if="!RcRules.rc.finished">
-                Let op: de export vanuit de development database loopt nog.
-            </v-alert>
-            <v-data-table
-                :headers="headers"
-                :items="filteredResults"
-                :items-per-page="5"
-                :search="search"
-                :loading="loading"
-                caption="Release Candidate rule audit"
-                class="elevation-1"
-                sort-by="source.identifier"
-                multi-sort
-                dense
-            >
-                <template v-slot:item.rules="{ item }">
-                    <!-- <ul v-for="rule in item.rules" v-bind:key="rule.rule_id">
-                        #{{rule.rule_id}} * G{{rule.mapgroup}} P{{rule.mappriority}} -> {{rule.target.title}} [{{rule.mapadvice}}]
-                    </ul> -->
-                    <table>
-                        <tr>
-                            <th width=10>Group</th><th width=10>Prio</th><th width=500>Target</th><th width=200>Advice</th><th width=150>Correlation</th>
-                        </tr>
-                        <tr v-for="rule in item.rules" v-bind:key="rule.rule_id">
-                            <td>{{rule.mapgroup}}</td>
-                            <td>{{rule.mappriority}}</td>
-                            <td>
-                                {{rule.target.title}}
-                                <li v-for="rule in rule.mapspecifies" v-bind:key="rule.id">{{rule.title}}</li>
-                            </td>
-                            <td width=10>{{rule.mapadvice}}</td>
-                            <td width=10>{{rule.mapcorrelation}}</td>
-                        </tr>
-                    </table>
-                </template>
-                <template v-slot:item.actions="{ item }">
-                    <v-tooltip bottom>
-                        <template v-slot:activator="{ on }">
-                            <v-btn small color="green lighten-2" v-on="on" v-on:click="postRuleReview(RcRules.rc.id, item.source.identifier, 'fiat')">Fiat <p v-if="item.num_accepted >0">{{item.num_accepted}}</p></v-btn> 
-                        </template>
-                        <span>{{item.accepted_list}}</span>
-                    </v-tooltip>
-                    <v-tooltip bottom>
-                        <template v-slot:activator="{ on }">
-                            <v-btn small color="red lighten-2" v-on="on" v-on:click="postRuleReview(RcRules.rc.id, item.source.identifier, 'veto')">Veto <p v-if="item.num_rejected >0">{{item.num_rejected}}</p></v-btn> 
-                        </template>
-                        <span>{{item.rejected_list}}</span>
-                    </v-tooltip>
-                    <v-btn small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)">Pull</v-btn> 
-                </template>
-                <template v-slot:item.rejected="{ item }">
-                    <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
-                </template>
-                <template v-slot:item.accepted_me="{ item }">
-                    <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
-                </template>
-                <template v-slot:item.rejected_me="{ item }">
-                    <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
-                </template>
-            </v-data-table>
-        </v-card>
+        <v-container>
+            <v-row>
+                <v-col cols=5>
+                    <v-card class="pa-1">   
+                        <v-simple-table dense>
+                            <tbody>
+                            <tr>
+                                <th>
+                                Zoek binnen resultaten
+                                </th>
+                                <td>
+                                <v-text-field
+                                    v-model="search"
+                                    label="Zoek binnen resultaten"
+                                    hide-details
+                                    autofocus
+                                    clearable
+                                    dense
+                                ></v-text-field>
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="header in headers"
+                                :key="header.text"
+                            >
+                                <th v-if="filters.hasOwnProperty(header.value)">
+                                {{header.text}}
+                                </th>
+                                <td v-if="filters.hasOwnProperty(header.value)" class="text-left">
+                                <v-select flat dense hide-details small multiple clearable :items="columnValueList(header.value)" v-model="filters[header.value]">     
+                                </v-select>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </v-simple-table>
+                    </v-card>
+                </v-col>
+                <v-col cols=3>
+                    <v-card class="pa-1">   
+                        <v-simple-table dense>
+                            <tbody>
+                                <tr>
+                                    <th>Title</th>
+                                    <td>{{RcRules.rc.title}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Aangemaakt</th>
+                                    <td>{{RcRules.rc.created}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status</th>
+                                    <td>{{RcRules.rc.status}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Export finished?</th>
+                                    <td>{{RcRules.rc.finished}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Totaal aantal componenten voor broncodestelsel</th>
+                                    <td>{{RcRules.rc.stats.total_components}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Totaal aantal taken voor broncodestelsel</th>
+                                    <td>{{RcRules.rc.stats.total_tasks}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Totaal aantal taken in RC</th>
+                                    <td>{{RcRules.rc.stats.tasks_in_rc}}</td>
+                                </tr>
+                                <tr>
+                                    <th>% componenten uit broncodestelsel in RC</th>
+                                    <td>{{RcRules.rc.stats.perc_in_rc}}</td>
+                                </tr>
+                                <tr>
+                                    <th>Totaal aantal taken rejected</th>
+                                    <td>{{RcRules.rc.stats.num_rejected}}</td>
+                                </tr>
+                            </tbody>
+                        </v-simple-table>
+                    </v-card>
+                </v-col>
+            </v-row>
+        
+            <v-row>
+                <v-col cols=12>
+                    <v-card
+                    class="pa-1">
+                        <v-btn v-on:click="refresh()">Refresh</v-btn><br>
+                        <v-alert type="info" v-if="!RcRules.rc.finished">
+                            {{RcRules.rc.title}} [{{RcRules.rc.created}}] - {{RcRules.rc.status}}
+                        </v-alert>
+                        <v-alert type="error" v-if="!RcRules.rc.finished">
+                            Let op: de export vanuit de development database loopt nog.
+                        </v-alert>
+                        <v-data-table
+                            :headers="headers"
+                            :items="filteredResults"
+                            :items-per-page="5"
+                            :search="search"
+                            :loading="loading"
+                            caption="Release Candidate rule audit"
+                            class="elevation-1"
+                            sort-by="source.identifier"
+                            multi-sort
+                            dense
+                        >
+                            <template v-slot:item.rules="{ item }">
+                                <!-- <ul v-for="rule in item.rules" v-bind:key="rule.rule_id">
+                                    #{{rule.rule_id}} * G{{rule.mapgroup}} P{{rule.mappriority}} -> {{rule.target.title}} [{{rule.mapadvice}}]
+                                </ul> -->
+                                <table>
+                                    <tr>
+                                        <th width=10>Group</th><th width=10>Prio</th><th width=500>Target</th><th width=200>Advice</th><th width=150>Correlation</th>
+                                    </tr>
+                                    <tr v-for="rule in item.rules" v-bind:key="rule.rule_id">
+                                        <td>{{rule.mapgroup}}</td>
+                                        <td>{{rule.mappriority}}</td>
+                                        <td>
+                                            {{rule.target.title}}
+                                            <li v-for="rule in rule.mapspecifies" v-bind:key="rule.id">{{rule.title}}</li>
+                                        </td>
+                                        <td width=10>{{rule.mapadvice}}</td>
+                                        <td width=10>{{rule.mapcorrelation}}</td>
+                                    </tr>
+                                </table>
+                            </template>
+                            <template v-slot:item.actions="{ item }">
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on }">
+                                        <v-btn small color="green lighten-2" v-on="on" v-on:click="postRuleReview(RcRules.rc.id, item.source.identifier, 'fiat')">Fiat <p v-if="item.num_accepted >0">{{item.num_accepted}}</p></v-btn> 
+                                    </template>
+                                    <span>{{item.accepted_list}}</span>
+                                </v-tooltip>
+                                <v-tooltip bottom>
+                                    <template v-slot:activator="{ on }">
+                                        <v-btn small color="red lighten-2" v-on="on" v-on:click="postRuleReview(RcRules.rc.id, item.source.identifier, 'veto')">Veto <p v-if="item.num_rejected >0">{{item.num_rejected}}</p></v-btn> 
+                                    </template>
+                                    <span>{{item.rejected_list}}</span>
+                                </v-tooltip>
+                                <v-btn small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)">Pull</v-btn> 
+                            </template>
+                            <template v-slot:item.rejected="{ item }">
+                                <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
+                            </template>
+                            <template v-slot:item.accepted_me="{ item }">
+                                <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
+                            </template>
+                            <template v-slot:item.rejected_me="{ item }">
+                                <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
+                            </template>
+                        </v-data-table>
+                    </v-card>
+                </v-col>
+            </v-row>
+        </v-container>
     </div>
 </template>
 <script>

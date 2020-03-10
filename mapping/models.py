@@ -200,6 +200,7 @@ class MappingReleaseCandidate(models.Model):
     # - GUI needs to allow (TODO) updating rules in the RC with a codesystem or project
     # - GUI needs to allow (TODO) updating a single rule from the production DB
     title = models.TextField(default=None, blank=True, null=True)
+    codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
     finished = models.BooleanField(default=False)
     # Perhaps status should be coming from the status DB table - text for now
     status_options = [
