@@ -118,11 +118,11 @@ export default {
             headers: [
                 { text: 'ID', value: 'source.identifier' },
                 { text: 'Source', value: 'source.title' },
+                { text: 'Groep', value: 'group' },
                 { text: 'Status', value: 'status' },
                 { text: 'Rules', value: 'rules' },
                 { text: 'Actions', value: 'actions' },
                 { text: 'Rejected', value: 'rejected' },
-                { text: 'Rejected list', value: 'rejected_list' },
                 { text: 'Project', value: 'project', align: ' d-none' },
                 { text: 'My fiat', value: 'accepted_me', align: ' d-none' },
                 { text: 'My veto', value: 'rejected_me', align: ' d-none' },
@@ -130,10 +130,10 @@ export default {
             search: '',
             groupBy: null,
             filters: {
+                project: [],
+                group: [],
                 rejected: [],
                 status: [],
-                rejected_list: [],
-                project: [],
                 accepted_me: [],
                 rejected_me: [],
             }
