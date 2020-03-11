@@ -35,7 +35,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     """
     Exports release candidate as a FHIR JSON object
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [Permission_MappingAudit]
     def retrieve(self, request, pk=None):
         # Database queries
         rc = MappingReleaseCandidate.objects.get(id=int(pk))
