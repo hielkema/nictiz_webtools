@@ -35,7 +35,9 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     """
     Exports release candidate as a FHIR JSON object
     """
-    permission_classes = [Permission_MappingAudit]
+    # permission_classes = [Permission_MappingAudit]
+    permission_classes = [permissions.AllowAny]
+    
     def retrieve(self, request, pk=None):
         # Database queries
         rc = MappingReleaseCandidate.objects.get(id=int(pk))
@@ -66,60 +68,61 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             # if project_id == 3:
             if project_id:
                 # Get all unique source components
-                tasks = rules.filter(export_task__project_id = project).order_by('static_source_component_ident').distinct()
+                tasks = rules.filter(export_task__project_id = project).values_list('static_source_component_ident',flat=True).order_by('static_source_component_ident').distinct()
                 # Loop through unique source components
                 for task in tasks:
                     targets = []
                     product_list = []
                     # Get all rules using the source component of the loop as source
-                    rules_for_task = MappingReleaseCandidateRules.objects.filter(static_source_component_ident = task.static_source_component_ident, export_task__project_id = project)
+                    rules_for_task = MappingReleaseCandidateRules.objects.filter(static_source_component_ident = task, export_task__project_id = project)
                     
                     # Put all the identifiers of products in a list for later use
                     for single_rule in rules_for_task:
                         for target in json.loads(single_rule.mapspecifies):
                             product_list.append(target.get('id'))
-                    
                     # Now loop through while ignoring id's used as product
                     for single_rule in rules_for_task:
                         target_component = json.loads(single_rule.static_target_component)
-                        
-                        # Skip if identifier in the list of used products
-                        if target_component.get('identifier') in product_list:
-                            continue
-                        # Put all the products in a list
-                        products = []
-                        for target in json.loads(single_rule.mapspecifies):
-                            # Lookup data for the target
-                            target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
-                            products.append({
-                                'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
-                                'system' : target_data.codesystem_id.codesystem_fhir_uri,
-                                'code' : target.get('id'),
-                                'display' : target.get('title'),
-                            })
 
-                        # Translate the map correlation
-                        equivalence = single_rule.mapcorrelation
-                        for code, readable in correlation_options:
-                            equivalence = equivalence.replace(code, readable)
-                        
-                        # Create output dict
-                        output = {
-                            'code' : target_component.get('identifier'),
-                            'display' : target_component.get('title'),
-                            'equivalence' : equivalence,
-                            'comment' : single_rule.mapadvice,
-                        }
-                        # Add products to output if they exist
-                        if len(products) > 0:
-                            output['product'] = products
-                        
-                        # Append result for this rule
-                        targets.append(output)
+
+                        # Skip if identifier in the list of used products
+                        if target_component.get('identifier') not in product_list:
+                            # Put all the products in a list
+                            products = []
+                            for target in json.loads(single_rule.mapspecifies):
+                                # Lookup data for the target
+                                target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
+                                products.append({
+                                    'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                    'system' : target_data.codesystem_id.codesystem_fhir_uri,
+                                    'code' : target.get('id'),
+                                    'display' : target.get('title'),
+                                })
+
+                            # Translate the map correlation
+                            equivalence = single_rule.mapcorrelation
+                            for code, readable in correlation_options:
+                                equivalence = equivalence.replace(code, readable)
+                            
+                            # Create output dict
+                            output = {
+                                'code' : target_component.get('identifier'),
+                                'display' : target_component.get('title'),
+                                'equivalence' : equivalence,
+                                'comment' : single_rule.mapadvice,
+                            }
+                            # Add products to output if they exist
+                            if len(products) > 0:
+                                output['product'] = products
+                            
+                            # Append result for this rule
+                            targets.append(output)
 
                     # Add this source component with all targets and products to the element list
                     source_component = json.loads(single_rule.static_source_component)
                     output = {
+                        'DEBUG_numrules' : rules_for_task.count(),
+                        'DEBUG_productlist' : product_list,
                         'code' : source_component.get('identifier'),
                         'display' : source_component.get('title'),
                         'target' : targets,
