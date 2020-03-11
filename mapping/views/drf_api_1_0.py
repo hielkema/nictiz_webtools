@@ -30,10 +30,221 @@ class Permission_MappingAudit(permissions.BasePermission):
         if 'mapping | rc_audit' in request.user.groups.values_list('name', flat=True):
             return True
 
+# FHIR conceptmap export from RC
+class RCFHIRConceptMap(viewsets.ViewSet):
+    """
+    Exports release candidate as a FHIR JSON object
+    """
+    permission_classes = [permissions.AllowAny]
+    def retrieve(self, request, pk=None):
+        # Database queries
+        rc = MappingReleaseCandidate.objects.get(id=int(pk))
+        rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc)
+        project_ids = rules.values_list('export_task__project_id',flat=True).distinct()
+
+        # Setup
+        elements = []
+        projects = []
+        error = []
+        groups = []
+        correlation_options = [
+            # [code, readable]
+            ['447559001', 'Broad to narrow'],
+            ['447557004', 'Exact match'],
+            ['447558009', 'Narrow to broad'],
+            ['447560006', 'Partial overlap'],
+            ['447556008', 'Not mappable'],
+            ['447561005', 'Not specified'],
+        ]
+    
+        # Loop through elements in this RC, per project
+        for project_id in project_ids:
+            elements = []
+            project = MappingProject.objects.get(id=project_id)
+            projects.append(str(project))
+            # Export rules, can be unique per project
+            # if project_id == 3:
+            if project_id:
+                # Get all unique source components
+                tasks = rules.filter(export_task__project_id = project).order_by('static_source_component_ident').distinct()
+                # Loop through unique source components
+                for task in tasks:
+                    targets = []
+                    product_list = []
+                    # Get all rules using the source component of the loop as source
+                    rules_for_task = MappingReleaseCandidateRules.objects.filter(static_source_component_ident = task.static_source_component_ident, export_task__project_id = project)
+                    
+                    # Put all the identifiers of products in a list for later use
+                    for single_rule in rules_for_task:
+                        for target in json.loads(single_rule.mapspecifies):
+                            product_list.append(target.get('id'))
+                    
+                    # Now loop through while ignoring id's used as product
+                    for single_rule in rules_for_task:
+                        target_component = json.loads(single_rule.static_target_component)
+                        
+                        # Skip if identifier in the list of used products
+                        if target_component.get('identifier') in product_list:
+                            continue
+                        # Put all the products in a list
+                        products = []
+                        for target in json.loads(single_rule.mapspecifies):
+                            # Lookup data for the target
+                            target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
+                            products.append({
+                                'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                'system' : target_data.codesystem_id.codesystem_fhir_uri,
+                                'code' : target.get('id'),
+                                'display' : target.get('title'),
+                            })
+
+                        # Translate the map correlation
+                        equivalence = single_rule.mapcorrelation
+                        for code, readable in correlation_options:
+                            equivalence = equivalence.replace(code, readable)
+                        
+                        # Create output dict
+                        output = {
+                            'code' : target_component.get('identifier'),
+                            'display' : target_component.get('title'),
+                            'equivalence' : equivalence,
+                            'comment' : single_rule.mapadvice,
+                        }
+                        # Add products to output if they exist
+                        if len(products) > 0:
+                            output['product'] = products
+                        
+                        # Append result for this rule
+                        targets.append(output)
+
+                    # Add this source component with all targets and products to the element list
+                    source_component = json.loads(single_rule.static_source_component)
+                    output = {
+                        'code' : source_component.get('identifier'),
+                        'display' : source_component.get('title'),
+                        'target' : targets,
+                    }
+                    elements.append(output)
+
+                # Add the group to the group list
+                groups.append({
+                    'DEBUG_projecttitle' : project.title,
+                    'source' : project.source_codesystem.codesystem_title,
+                    'sourceVersion' : project.source_codesystem.codesystem_version,
+                    'target' : project.target_codesystem.codesystem_title,
+                    'targetVersion': project.target_codesystem.codesystem_version,
+                    'element' : elements,
+                })
+
+    
+        return Response({
+            'resourceType' : 'ConceptMap',
+            'id' : rc.metadata_id,
+            'name' : rc.title,
+            'description' : rc.metadata_description,
+            'version' : rc.metadata_version,
+            'status' : rc.status,
+            'experimental' : rc.metadata_experimental,
+            'date' : rc.metadata_date,
+            'publisher' : rc.metadata_publisher,
+            'contact' : rc.metadata_contact,
+            'copyright' : rc.metadata_copyright,
+            'sourceCanonical' : rc.metadata_sourceCanonical,
+
+
+            'DEBUG_projects' : list(projects),
+            'groups' : groups,
+        })
+    
+    
+    def list(self, request, pk=None):
+        codesystem = MappingCodesystem.objects.get(id=pk)
+        elements = []
+        error = []
+        groups = []
+        correlation_options = [
+            # [code, readable]
+            ['447559001', 'Broad to narrow'],
+            ['447557004', 'Exact match'],
+            ['447558009', 'Narrow to broad'],
+            ['447560006', 'Partial overlap'],
+            ['447556008', 'Not mappable'],
+            ['447561005', 'Not specified'],
+        ]
+
+        # Find mapping tasks
+        tasks = MappingTask.objects.filter(source_component__codesystem_id = codesystem)
+        # Find projects
+        projects = MappingProject.objects.all()
+        # Loop through all projects
+        for project in projects:
+            # Find all tasks in the current project
+            tasks_in_project = tasks.filter(project_id__id = project.id)
+            # Filter out rejected tasks
+            # TODO - Eventually this should be changed to only including completed tasks
+            tasks_in_project = tasks_in_project.exclude(status = project.status_rejected)
+
+            #### FHIR ConceptMap rules for NHG tabel 45 Diagnostische Bepalingen
+            if project.id == 3:
+                #### START project TBL 45 -> LOINC
+                for task in tasks_in_project:
+                    targets = []
+                    product_list = []
+                    ##### Find mapping rules using the source component of the task as source, part of this project
+                    rules = MappingRule.objects.filter(source_component = task.source_component, project_id = project)
+
+                    ##### Loop through rules, excluding rules pointing to Snomed
+                    for rule in rules.exclude(target_component__codesystem_id = 1):
+                        # Replace Snomed equivalence code with readable text
+                        equivalence = rule.mapcorrelation
+                        for code, readable in correlation_options:
+                            equivalence = equivalence.replace(code, readable)
+
+                        # Add mapspecifies targets to product list (known as rule binding in GUI)
+                        product_list = []
+                        for product in rule.mapspecifies.all():
+                            product_list.append({
+                                "property" : "http://snomed.info/id/"+product.target_component.component_id+"/",
+                                "system" : product.target_component.codesystem_id.codesystem_fhir_uri,
+                                "code" : product.target_component.component_id,
+                                "display" : product.target_component.component_title,
+                            })
+
+                        # Append mapping target to target list
+                        targets.append({
+                            "code" : rule.target_component.component_id,
+                            "display" : rule.target_component.component_title,
+                            "equivalence" : equivalence,
+                            "comment" : rule.mapadvice,
+                            "product" : product_list,
+                        })
+
+                    # Append element to element list
+                    elements.append({
+                        "DEBUG.task.id" : task.id,
+                        "DEBUG.task.status" : task.status.status_title,
+                        "code" : task.source_component.component_id,
+                        "display" : task.source_component.component_title,
+                        "target" : targets,
+                    })
+                # Add all elements from current project to one group
+                source = MappingCodesystem.objects.get(id=4) # NHG
+                target = MappingCodesystem.objects.get(id=3) # labcodeset
+                groups.append({
+                    "DEBUG.project.title" : project.title,
+                    "source" : source.codesystem_fhir_uri,
+                    "sourceVersion" : source.codesystem_version,
+                    "target" : target.codesystem_fhir_uri,
+                    "targetVersion" : target.codesystem_version,
+                    "element" : elements,
+                    "unmapped" : [] # TODO
+                })
+                ##### END project TBL 45 -> LOINC
+
 # Handle Rule review
 class RCRuleReview(viewsets.ViewSet):
     """
-    
+    Veto and fiat functionality for RC audit view
     """
     permission_classes = [Permission_MappingAudit]
     def create(self, request, pk=None):
@@ -71,7 +282,7 @@ class RCRuleReview(viewsets.ViewSet):
 
         return Response('output')
 
-# Handle RC's
+# Handle RC lists
 class ReleaseCandidates(viewsets.ViewSet):
     """
     

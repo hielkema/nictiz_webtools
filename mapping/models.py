@@ -18,6 +18,9 @@ class MappingProject(models.Model):
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
+    source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
+    target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_target', default=None, blank=True, null=True)
+
     use_mapgroup = models.BooleanField(blank=True, null=True, default=False)
     use_mappriority = models.BooleanField(blank=True, null=True, default=False)
     use_mapcorrelation = models.BooleanField(blank=True, null=True, default=False)
@@ -31,7 +34,8 @@ class MappingProject(models.Model):
 class MappingCodesystem(models.Model):
     codesystem_title    = models.CharField(max_length=50)
     codesystem_version  = models.CharField(max_length=50)
-    codesystem_fhir_uri = models.CharField(max_length=150, default=None, null=True, blank=True)
+    codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
+    component_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
     codesystem_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
@@ -193,13 +197,19 @@ class MappingTaskAudit(models.Model):
     first_hit_time  = models.DateTimeField(default=timezone.now)
 
 class MappingReleaseCandidate(models.Model):
-    # Will contain a release candidate 
-    # Example would be: 
-    # - NHG tabel 45, versie 32
-    # - GUI needs to allow (TODO) adding a codesystem or project to the release candidate
-    # - GUI needs to allow (TODO) updating rules in the RC with a codesystem or project
-    # - GUI needs to allow (TODO) updating a single rule from the production DB
     title = models.TextField(default=None, blank=True, null=True)
+
+    metadata_id = models.TextField(default=None, blank=True, null=True)
+    metadata_url = models.TextField(default=None, blank=True, null=True)
+    metadata_description = models.TextField(default=None, blank=True, null=True)
+    metadata_version = models.TextField(default=None, blank=True, null=True)
+    metadata_experimental = models.BooleanField(default=True)
+    metadata_date = models.TextField(default=None, blank=True, null=True)
+    metadata_publisher = models.TextField(default=None, blank=True, null=True)
+    metadata_contact = models.TextField(default=None, blank=True, null=True)
+    metadata_copyright = models.TextField(default=None, blank=True, null=True)
+    metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
+
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
     finished = models.BooleanField(default=False)
     # Perhaps status should be coming from the status DB table - text for now
