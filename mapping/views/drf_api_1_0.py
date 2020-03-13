@@ -161,7 +161,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             'copyright' : rc.metadata_copyright,
             'sourceCanonical' : rc.metadata_sourceCanonical,
 
-            'DEBUG_projects' : list(projects),
+            # 'DEBUG_projects' : list(projects),
             'groups' : groups,
         })
     
