@@ -146,14 +146,24 @@ class RCFHIRConceptMap(viewsets.ViewSet):
                     'element' : elements,
                 })
 
-    
+        status_options = [
+                # (code, readable)
+                ('0', 'Testing'),
+                ('1', 'Experimental'),
+                ('2', 'Acceptance'),
+                ('3', 'Production'),
+            ]
+        status = rc.status
+        for code, readable in status_options:
+            status = status.replace(code, readable)
+
         return Response({
             'resourceType' : 'ConceptMap',
             'id' : rc.metadata_id,
             'name' : rc.title,
             'description' : rc.metadata_description,
             'version' : rc.metadata_version,
-            'status' : rc.status,
+            'status' : status,
             'experimental' : rc.metadata_experimental,
             'date' : rc.metadata_date,
             'publisher' : rc.metadata_publisher,
