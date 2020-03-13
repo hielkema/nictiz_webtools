@@ -57,9 +57,9 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             # ['447556008', 'Not mappable'],
             # ['447561005', 'Not specified'],
             # Suitable for FHIR spec
-            ['447559001', 'wider'],
+            ['447559001', 'narrower'],
             ['447557004', 'equal'],
-            ['447558009', 'narrower'],
+            ['447558009', 'wider'],
             ['447560006', 'inexact'],
             ['447556008', 'unmatched'],
             ['447561005', 'unmatched'],
