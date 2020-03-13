@@ -50,12 +50,19 @@ class RCFHIRConceptMap(viewsets.ViewSet):
         groups = []
         correlation_options = [
             # [code, readable]
-            ['447559001', 'Broad to narrow'],
-            ['447557004', 'Exact match'],
-            ['447558009', 'Narrow to broad'],
-            ['447560006', 'Partial overlap'],
-            ['447556008', 'Not mappable'],
-            ['447561005', 'Not specified'],
+            # ['447559001', 'Broad to narrow'],
+            # ['447557004', 'Exact match'],
+            # ['447558009', 'Narrow to broad'],
+            # ['447560006', 'Partial overlap'],
+            # ['447556008', 'Not mappable'],
+            # ['447561005', 'Not specified'],
+            # Suitable for FHIR spec
+            ['447559001', 'wider'],
+            ['447557004', 'equal'],
+            ['447558009', 'narrower'],
+            ['447560006', 'inexact'],
+            ['447556008', 'unmatched'],
+            ['447561005', 'unmatched'],
         ]
     
         # Loop through elements in this RC, per project
@@ -92,10 +99,11 @@ class RCFHIRConceptMap(viewsets.ViewSet):
                                 # Lookup data for the target
                                 target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
                                 products.append({
-                                    'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                    # Property can be added to designate the product as a sample, but this is already implicit in the used concept
+                                    # 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'code' : target.get('id'),
-                                    'display' : target.get('title'),
+                                    # 'display' : target.get('title'),
                                 })
 
                             # Translate the map correlation
@@ -106,7 +114,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
                             # Create output dict
                             output = {
                                 'code' : target_component.get('identifier'),
-                                'display' : target_component.get('title'),
+                                # 'display' : target_component.get('title'),
                                 'equivalence' : equivalence,
                                 'comment' : single_rule.mapadvice,
                             }
@@ -120,17 +128,17 @@ class RCFHIRConceptMap(viewsets.ViewSet):
                     # Add this source component with all targets and products to the element list
                     source_component = json.loads(single_rule.static_source_component)
                     output = {
-                        'DEBUG_numrules' : rules_for_task.count(),
-                        'DEBUG_productlist' : product_list,
+                        # 'DEBUG_numrules' : rules_for_task.count(),
+                        # 'DEBUG_productlist' : product_list,
                         'code' : source_component.get('identifier'),
-                        'display' : source_component.get('title'),
+                        # 'display' : source_component.get('title'),
                         'target' : targets,
                     }
                     elements.append(output)
 
                 # Add the group to the group list
                 groups.append({
-                    'DEBUG_projecttitle' : project.title,
+                    # 'DEBUG_projecttitle' : project.title,
                     'source' : project.source_codesystem.codesystem_title,
                     'sourceVersion' : project.source_codesystem.codesystem_version,
                     'target' : project.target_codesystem.codesystem_title,
@@ -152,7 +160,6 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             'contact' : rc.metadata_contact,
             'copyright' : rc.metadata_copyright,
             'sourceCanonical' : rc.metadata_sourceCanonical,
-
 
             'DEBUG_projects' : list(projects),
             'groups' : groups,
