@@ -157,6 +157,15 @@ class RCFHIRConceptMap(viewsets.ViewSet):
         for code, readable in status_options:
             status = status.replace(code, readable)
 
+        contact = {
+            "telecom": [
+                {
+                    "system": "url",
+                    "name": rc.metadata_contact,
+                }
+            ]
+        }
+
         return Response({
             'resourceType' : 'ConceptMap',
             'id' : rc.metadata_id,
@@ -167,7 +176,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             'experimental' : rc.metadata_experimental,
             'date' : rc.metadata_date,
             'publisher' : rc.metadata_publisher,
-            'contact' : json.loads(rc.metadata_contact),
+            'contact' : contact,
             'copyright' : rc.metadata_copyright,
             'sourceCanonical' : rc.metadata_sourceCanonical,
 
