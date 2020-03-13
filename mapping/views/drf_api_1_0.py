@@ -157,7 +157,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             'experimental' : rc.metadata_experimental,
             'date' : rc.metadata_date,
             'publisher' : rc.metadata_publisher,
-            'contact' : rc.metadata_contact,
+            'contact' : json.loads(rc.metadata_contact),
             'copyright' : rc.metadata_copyright,
             'sourceCanonical' : rc.metadata_sourceCanonical,
 
