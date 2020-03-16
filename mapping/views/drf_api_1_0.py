@@ -30,6 +30,42 @@ class Permission_MappingAudit(permissions.BasePermission):
         if 'mapping | rc_audit' in request.user.groups.values_list('name', flat=True):
             return True
 
+# List of cached FHIR conceptmaps
+class RCFHIRConceptMapList(viewsets.ViewSet):
+    """
+    Provides a list of cached FHIR conceptmaps.
+    List = all
+    Retrieve = filtered on RC foreign key id.
+    """
+    permission_classes = [Permission_MappingAudit]
+    def list(self, request):
+        output = []
+        cache = MappingReleaseCandidateFHIRConceptMap.objects.all()
+        for fhirmap in cache:
+            output.append({
+                'id' : fhirmap.id,
+                'title' : fhirmap.title,
+                'rc_id' : fhirmap.rc.id,
+                'codesystem' : str(fhirmap.codesystem),
+                'deprecated' : str(fhirmap.deprecated),
+                'created' : str(fhirmap.created),
+            })
+        return Response(output)
+    def retrieve(self, request, pk=None):
+        output = []
+        cache = MappingReleaseCandidateFHIRConceptMap.objects.filter(rc__id=pk)
+        for fhirmap in cache:
+            output.append({
+                'id' : fhirmap.id,
+                'title' : fhirmap.title,
+                'rc_id' : fhirmap.rc.id,
+                'codesystem' : str(fhirmap.codesystem),
+                'deprecated' : str(fhirmap.deprecated),
+                'created' : str(fhirmap.created),
+            })
+        return Response(output)
+
+
 # FHIR conceptmap export from RC
 class RCFHIRConceptMap(viewsets.ViewSet):
     """
@@ -65,16 +101,17 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     def list(self, request):
         cached = MappingReleaseCandidateFHIRConceptMap.objects.all().order_by('-created')
         rc_list = []
-        for rc in cached:
+        for conceptmap in cached:
             rc_list.append({
-                'id' : rc.id,
-                'type' : rc.data.get('resourceType'),
-                'experimental' : rc.data.get('experimental'),
-                'deprecated' : rc.deprecated,
-                'title' : rc.title,
-                'release_notes' : rc.release_notes,
-                'codesystem' : str(rc.codesystem),
-                'created' : str(rc.created),
+                'id' : conceptmap.id,
+                'rc_id' : conceptmap.rc.id,
+                'type' : conceptmap.data.get('resourceType'),
+                'experimental' : conceptmap.data.get('experimental'),
+                'deprecated' : conceptmap.deprecated,
+                'title' : conceptmap.title,
+                'release_notes' : conceptmap.release_notes,
+                'codesystem' : str(conceptmap.codesystem),
+                'created' : str(conceptmap.created),
             })
         return Response(rc_list)
 
