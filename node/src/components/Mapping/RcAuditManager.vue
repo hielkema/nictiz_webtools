@@ -61,6 +61,7 @@ export default {
         },
         loadSelectedRc: function() {
             this.$store.dispatch('RcAuditConnection/getRcRules', this.selectedRc.id)
+            this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
         },
         loadFHIRmapsList: function() {
             this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
