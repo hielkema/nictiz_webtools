@@ -94,11 +94,6 @@ services:
       - proxy
     expose:
       - "${PGADMIN_PORT}"
-    # environment:
-    #   - VIRTUAL_HOST=${PGADMIN_DOMAIN}
-    #   - VIRTUAL_PORT=${PGADMIN_PORT}
-    #   - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
-    #   - LETSENCRYPT_EMAIL=${EMAIL}
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
