@@ -32,6 +32,12 @@ def permissions(request):
         groups.append(str(item))
     return response.Response({
         'id' : request.user.id,
+        'username' : request.user.username,
+        'details' : {
+            'first_name' : request.user.first_name,
+            'last_name' : request.user.first_name,
+            'email' : request.user.email,
+        },
         'permissions' : permissions,
         'groups' : groups,
     })
