@@ -62,9 +62,15 @@ export default {
         loadSelectedRc: function() {
             this.$store.dispatch('RcAuditConnection/getRcRules', this.selectedRc.id)
             this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
+            setInterval(function () {
+                this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
+            }.bind(this), 3000); 
         },
         loadFHIRmapsList: function() {
             this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
+            setInterval(function () {
+                this.$store.dispatch('RcAuditConnection/getFHIRconceptMaps', this.selectedRc.id)
+            }.bind(this), 3000); 
         },
         loadRcs: function() {
             this.$store.dispatch('RcAuditConnection/getRcs')
