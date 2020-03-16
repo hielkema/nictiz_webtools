@@ -4,8 +4,6 @@ import axios from 'axios'
 // import router from '@/router/index.js' //or whatever your router.js path is
 
 const state = {
-    // baseUrl: 'http://localhost/',
-    baseUrl: 'https://termservice.test-nictiz.nl/',
     searchTerm: '',
     results: [],
     numResults: 0,
@@ -25,7 +23,7 @@ const state = {
     // Get results
     getResults: (context, term) => {
       axios
-      .get(context.state.baseUrl+'termspace/search_comments/'+term+'/')//,{'headers':jwtHeader()})
+      .get(context.rootState.baseUrl+'termspace/search_comments/'+term+'/')//,{'headers':jwtHeader()})
       .then((response) => {
         // alert('Respons getResults: '+response.data)
         context.commit('setResults',response.data)

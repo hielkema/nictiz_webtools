@@ -1,11 +1,8 @@
 // import { jwtHeader } from '@/helpers';
 // import config from 'config';
 // import Vue from 'vue'
-
-const config = {
-    'apiUrl' : 'https://termservice.test-nictiz.nl/',
-    // 'apiUrl' : 'http://localhost/'
-}
+// import Vuex from 'vuex'
+import store from '@/store/index.js'
 
 export const userService = {
     login,
@@ -18,8 +15,7 @@ function login(username, password) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
     };
-
-    return fetch(`${config.apiUrl}jwtauth/token/`, requestOptions)
+    return fetch(`${store.state.baseUrl}jwtauth/token/`, requestOptions)
         .then(handleResponse)
         .then(user => {
             // login successful if there's a jwt token in the response

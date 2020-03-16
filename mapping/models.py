@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 
 class MappingProject(models.Model):
     title = models.CharField(max_length=300)
@@ -222,7 +224,17 @@ class MappingReleaseCandidate(models.Model):
     ]
     status = models.CharField(default=None, max_length=50, blank=True, null=True, choices=status_options)
     created = models.DateTimeField(default=timezone.now)
-    # TODO - add date, copyright, contact info, source/target version etc etc
+
+class MappingReleaseCandidateFHIRConceptMap(models.Model):
+    title = models.TextField(default=None, blank=True, null=True)
+    release_notes = models.TextField(default=None, blank=True, null=True)
+
+    codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_for_rc', default=None, blank=True, null=True)
+    created = models.DateTimeField(default=timezone.now)
+
+    deprecated = models.BooleanField(default=False)
+
+    data = JSONField(encoder=DjangoJSONEncoder)
 
 class MappingReleaseCandidateRules(models.Model):
     # Contains the individual rules to be included in the MappingReleaseCandidate

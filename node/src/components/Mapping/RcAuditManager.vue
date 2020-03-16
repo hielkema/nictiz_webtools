@@ -12,7 +12,7 @@
             v-model="selectedRc"
             solo
             ></v-select>
-            <v-btn v-on:click="loadSelectedRc()">Load selected RC</v-btn>
+            <v-btn v-on:click="loadSelectedRc()" :loading="loading">Load selected RC</v-btn>
         </v-card>
     </div>
 </template>

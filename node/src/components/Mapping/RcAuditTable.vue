@@ -107,7 +107,8 @@
                             Release candidate audit
                         </v-card-title>
                         <v-card-actions>
-                            <v-btn v-on:click="refresh()">Ververs gehele tabel</v-btn><br>
+                            <v-btn v-on:lick="refresh()">Ververs gehele tabel</v-btn><br>
+                            <v-btn v-on:click="createCacheSelectedRc()">Create cached version from opened RC</v-btn>
                         </v-card-actions>
                         <v-card-text>
                             <v-alert type="info" v-if="!RcRules.rc.finished">
@@ -219,6 +220,9 @@ export default {
         },
         columnValueList(val) {
            return this.$store.state.RcAuditConnection.RcRules.rules.map(d => d[val]).sort()
+        },
+        createCacheSelectedRc: function() {
+            this.$store.dispatch('RcAuditConnection/createCacheSelectedRc', this.selectedRc)
         }
     },
     computed: {

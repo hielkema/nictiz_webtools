@@ -2,8 +2,6 @@ import axios from 'axios'
 import Vue from 'vue'
 
 const state = {
-    // baseUrl: 'http://localhost/',
-    baseUrl: 'https://termservice.test-nictiz.nl/',
     RcRules: {},
     RcList: [],
     selectedRc: null,
@@ -26,7 +24,7 @@ const state = {
       // context.state.RcRules = {}
       context.state.loading = true
       axios
-      .get(context.state.baseUrl+'mapping/api/1.0/export_rc_rules/'+ rc_id + '/')
+      .get(context.rootState.baseUrl+'mapping/api/1.0/export_rc_rules/'+ rc_id + '/')
       .then((response) => {
           console.log(response.data)
           context.commit('setRcRules',response.data)
@@ -37,7 +35,7 @@ const state = {
     },
     getRcs: (context) => {
       axios
-      .get(context.state.baseUrl+'mapping/api/1.0/export_rcs/')
+      .get(context.rootState.baseUrl+'mapping/api/1.0/export_rcs/')
       .then((response) => {
           context.commit('setRcs',response.data)
           return true;
@@ -49,7 +47,7 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'mapping/api/1.0/export_rc_rules/', {
+      .post(context.rootState.baseUrl+'mapping/api/1.0/export_rc_rules/', {
         'selection' : 'component',
         'id' : payload.component_id,
         'codesystem' : payload.codesystem,
@@ -67,13 +65,28 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'mapping/api/1.0/rc_rule_review/', {
+      .post(context.rootState.baseUrl+'mapping/api/1.0/rc_rule_review/', {
         'action' : payload.action,
         'component_id' : payload.component_id,
         'rc_id' : payload.rc_id
       },auth)
       .then(() => {
         context.dispatch('getRcRules',context.state.selectedRc)
+        return true;
+        }
+      )
+    },
+    createCacheSelectedRc: (context, payload) => {
+      const auth = {
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        withCredentials: true
+      }
+      axios
+      .post(context.rootState.baseUrl+'mapping/api/1.0/rc_export_fhir_json/', {
+        'action' : 'save',
+        'rc_id' : payload
+      },auth)
+      .then(() => {
         return true;
         }
       )
