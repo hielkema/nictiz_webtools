@@ -6,6 +6,7 @@ const state = {
     RcList: [],
     selectedRc: null,
     loading: false,
+    FHIRconceptMaps: false,
   }
 
   //// ---- Mutations
@@ -15,6 +16,9 @@ const state = {
     },
     setRcs: (state, payload) => {
       state.RcList = payload
+    },
+    setFHIRconceptMaps: (state, payload) => {
+      state.FHIRconceptMaps = payload
     }
   }
 
@@ -38,6 +42,14 @@ const state = {
       .get(context.rootState.baseUrl+'mapping/api/1.0/export_rcs/')
       .then((response) => {
           context.commit('setRcs',response.data)
+          return true;
+      })
+    },
+    getFHIRconceptMaps: (context, rc_id) => {
+      axios
+      .get(context.rootState.baseUrl+'mapping/api/1.0/fhir_conceptmap_list/'+rc_id+'/')
+      .then((response) => {
+          context.commit('setFHIRconceptMaps',response.data)
           return true;
       })
     },

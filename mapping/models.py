@@ -229,6 +229,8 @@ class MappingReleaseCandidateFHIRConceptMap(models.Model):
     title = models.TextField(default=None, blank=True, null=True)
     release_notes = models.TextField(default=None, blank=True, null=True)
 
+    rc = models.ForeignKey('MappingReleaseCandidate', on_delete=models.PROTECT, default=None, blank=True, null=True)
+    
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_for_rc', default=None, blank=True, null=True)
     created = models.DateTimeField(default=timezone.now)
 

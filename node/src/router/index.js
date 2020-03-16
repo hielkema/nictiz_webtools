@@ -12,22 +12,22 @@ const routes = [
   },
   {
     path: '/epd',
-    name: 'epd',
+    name: 'EPD',
     component: () => import('../views/Epd/index.vue')
   },
   {
     path: '/terminologie/searchComments',
-    name: 'searchComments',
+    name: 'Zoek commentaar in Termspace',
     component: () => import('../views/Terminologie/TermspaceComments.vue')
   },
   {
     path: '/terminologie/mappingComments',
-    name: 'mappingComments',
+    name: 'Zoek commentaar in mappingtool',
     component: () => import('../views/Terminologie/MappingComments.vue')
   },
   {
     path: '/mapping/RcAudit',
-    name: 'RcAudit',
+    name: 'Mapping release candidate audit',
     component: () => import('../views/Mapping/RcAudit.vue')
   },
   {

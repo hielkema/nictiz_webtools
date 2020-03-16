@@ -11,6 +11,7 @@ app_name = 'mapping'
 router_1_0 = SimpleRouter()
 router_1_0.register(r'export_rc_rules', api_1_0.exportReleaseCandidateRules, basename="export_rc_rules")
 router_1_0.register(r'rc_export_fhir_json', api_1_0.RCFHIRConceptMap, basename="RC FHIR ConceptMap")
+router_1_0.register(r'fhir_conceptmap_list', api_1_0.RCFHIRConceptMapList, basename="RC_FHIR_ConceptMap_List")
 router_1_0.register(r'export_rcs', api_1_0.ReleaseCandidates, basename="export_rcs")
 router_1_0.register(r'rc_rule_review', api_1_0.RCRuleReview, basename="rc_rule_review")
 

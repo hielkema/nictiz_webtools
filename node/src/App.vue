@@ -30,30 +30,57 @@
             <v-list-item-title><router-link to="/">Home</router-link></v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-        <v-list-item link v-if="loggedIn">
-          <v-list-item-action>
-            <v-icon>mdi-settings</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
-          </v-list-item-content>
-        </v-list-item>
-        <v-list-item link v-if="groups.includes('mapping | access')">
-          <v-list-item-action>
-            <v-icon>mdi-settings</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <router-link to="/terminologie/mappingComments"><v-list-item-title>Mapping tool commentaar</v-list-item-title></router-link>
-          </v-list-item-content>
-        </v-list-item>
-        <v-list-item link v-if="groups.includes('mapping | rc_audit')">
-          <v-list-item-action>
-            <v-icon>mdi-settings</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <router-link to="/mapping/RcAudit"><v-list-item-title>Release candidate audit</v-list-item-title></router-link>
-          </v-list-item-content>
-        </v-list-item>
+
+        <!-- Groep Termspace tools -->
+        <v-list-group
+          prepend-icon="account_circle"
+          :value="true"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title>Termspace</v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <!-- Link 1 in subgroep -->
+          <v-list-item>
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
+          <!-- Link 2 in subgroep -->
+        </v-list-group>
+        <!-- EIND Groep Termspace tools -->
+
+        <!-- Groep Mapping tools -->
+        <v-list-group
+          prepend-icon="account_circle"
+          :value="false"
+          v-if="groups.includes('mapping | access')"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title>Mapping tools</v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <!-- Link 1 in subgroep -->
+          <v-list-item v-if="groups.includes('mapping | access')">
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/terminologie/mappingComments"><v-list-item-title>Mapping commentaar</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
+          <!-- Link 2 in subgroep -->
+          <v-list-item v-if="groups.includes('mapping | rc_audit')">
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/mapping/RcAudit"><v-list-item-title>Release candidate audit</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+        <!-- EIND Groep Mapping tools -->
       </v-list>
     </v-navigation-drawer>
 
@@ -73,6 +100,7 @@
           no-gutters
         >
           <v-col>
+            {{routeName}}
             <router-view />
           </v-col>
         </v-row>
@@ -104,6 +132,9 @@
         },
         groups() {
           return this.$store.state.userData.groups
+        },
+        routeName() {
+          return this.$route.name
         }
     }
     

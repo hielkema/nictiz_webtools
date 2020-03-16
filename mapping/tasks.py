@@ -964,6 +964,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
         
         obj = MappingReleaseCandidateFHIRConceptMap.objects.create(
             title = payload.get('title'),
+            rc = rc,
             release_notes = payload.get('rc_notes'),
             codesystem = rc.codesystem,
             deprecated=True,

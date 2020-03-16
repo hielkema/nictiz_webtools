@@ -49,6 +49,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
                 'codesystem' : str(fhirmap.codesystem),
                 'deprecated' : str(fhirmap.deprecated),
                 'created' : str(fhirmap.created),
+                'status' : fhirmap.data.get('status'),
             })
         return Response(output)
     def retrieve(self, request, pk=None):
@@ -62,6 +63,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
                 'codesystem' : str(fhirmap.codesystem),
                 'deprecated' : str(fhirmap.deprecated),
                 'created' : str(fhirmap.created),
+                'status' : fhirmap.data.get('status'),
             })
         return Response(output)
 

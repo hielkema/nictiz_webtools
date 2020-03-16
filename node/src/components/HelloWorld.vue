@@ -1,13 +1,9 @@
 <template>
   <div>
     <p class="subheading font-weight-regular">
-      Permissions:
+      Welkom <b v-if="user.details.first_name">{{user.details.first_name}}</b><b v-else>{{user.username}}</b>!<br>
+      Kies in het menu een module om te beginnen.
     </p>
-    <li v-for="group in groups" v-bind:key="group">{{group}}</li>
-    <br>
-    <table>
-      <td>Mapping access</td><td><p v-if="groups.includes('mapping | access')">YES</p></td>
-    </table>
   </div>
 </template>
 
@@ -17,14 +13,12 @@ export default {
 
   data() {
     return {
-      headers: [
-        { text: 'test', value: 'group' }
-      ]
+      
     }
   },
   computed: {
-    groups() {
-      return this.$store.state.userData.groups
+    user() {
+      return this.$store.state.userData
     }
   }
 };
