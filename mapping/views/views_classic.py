@@ -550,9 +550,9 @@ class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
                 tasks_per_user_values = []
                 tasks_per_user_dict = []
                 for user in user_list:
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                     if num_tasks > 0:
-                        num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).count()
+                        num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
                         tasks_per_user_labels.append(user.username)
                         tasks_per_user_values.append(num_tasks)
                         tasks_per_user_dict.append({
@@ -560,7 +560,7 @@ class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
                         'num_tasks' : num_tasks,
                         })
                 for status in status_list:            
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).count()
+                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).exclude(status=current_project.status_rejected).count()
                     tasks_per_status_labels.append(status.status_title)
                     tasks_per_status_values.append(num_tasks)
                     tasks_per_status_dict.append({
