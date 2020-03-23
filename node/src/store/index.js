@@ -26,8 +26,8 @@ Vue.use(axios)
 
 export default new Vuex.Store({
   state: {
-    // baseUrl: 'https://termservice.test-nictiz.nl/',
-    baseUrl: 'http://localhost/',
+    baseUrl: 'https://termservice.test-nictiz.nl/',
+    // baseUrl: 'http://localhost/',
     userData: {
       'id': null,
       'groups' : [],
