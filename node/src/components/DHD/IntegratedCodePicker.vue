@@ -30,21 +30,21 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Zoekresultaten</td><td>
+                                <td>Zoekresultaten ({{hide_no_dt.searchResults}})</td><td>
                                     <v-btn-toggle>
                                         <v-btn v-on:click="setResultsFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setResultsFilter(false)" color=red>Toon alles</v-btn>
                                     </v-btn-toggle>
                                 </td>
                             </tr>
                             <tr>
-                                <td>Parents</td><td>
+                                <td>Parents ({{hide_no_dt.parents}})</td><td>
                                     <v-btn-toggle>
                                         <v-btn v-on:click="setParentsFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setParentsFilter(false)" color=red>Toon alles</v-btn>
                                     </v-btn-toggle>
                                 </td>
                             </tr>
                             <tr>
-                                <td>Children</td><td>
+                                <td>Children ({{hide_no_dt.children}})</td><td>
                                     <v-btn-toggle>
                                         <v-btn v-on:click="setChildrenFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setChildrenFilter(false)" color=red>Toon alles</v-btn>
                                     </v-btn-toggle>
@@ -183,7 +183,7 @@ export default {
     return {
       searchterm: '',
       hide_no_dt: {
-          'searchResults' : true,
+          'searchResults' : false,
           'parents' : true,
           'children' : true,
       },
