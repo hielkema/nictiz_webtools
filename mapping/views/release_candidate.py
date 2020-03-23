@@ -11,7 +11,6 @@ from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
 from django.utils import timezone
 from django.db.models import Q
 import json
-from ..forms import *
 from ..models import *
 import time
 import environ
@@ -22,7 +21,7 @@ from ..serializers import *
 from rest_framework import status, views, permissions
 from rest_framework.response import Response
 
-class Permission_MappingAudit(permissions.BasePermission):
+class Permission_MappingRcAudit(permissions.BasePermission):
     """
     Global permission check rights to use the RC Audit functionality.
     """
@@ -37,7 +36,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
     List = all
     Retrieve = filtered on RC foreign key id.
     """
-    permission_classes = [Permission_MappingAudit]
+    permission_classes = [Permission_MappingRcAudit]
     def list(self, request):
         output = []
         cache = MappingReleaseCandidateFHIRConceptMap.objects.all()
@@ -67,7 +66,6 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
             })
         return Response(output)
 
-
 # FHIR conceptmap export from RC
 class RCFHIRConceptMap(viewsets.ViewSet):
     """
@@ -75,7 +73,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     For retrieve, use PK
     For create, use rc_id, action='save', title, rc_notes (releasenotes)
     """
-    permission_classes = [Permission_MappingAudit]
+    permission_classes = [Permission_MappingRcAudit]
     def create(self, request):
         payload = request.data
         print(payload)
@@ -117,13 +115,12 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             })
         return Response(rc_list)
 
-
 # Handle Rule review
 class RCRuleReview(viewsets.ViewSet):
     """
     Veto and fiat functionality for RC audit view
     """
-    permission_classes = [Permission_MappingAudit]
+    permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
         payload = request.data
         component_id = str(payload.get('component_id'))
@@ -164,7 +161,7 @@ class ReleaseCandidates(viewsets.ViewSet):
     """
     
     """
-    permission_classes = [Permission_MappingAudit]
+    permission_classes = [Permission_MappingRcAudit]
     def list(self, request, pk=None):
         rc_list = MappingReleaseCandidate.objects.all().order_by('-created')
         output = []
@@ -202,7 +199,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
     }
     Of een GET met een RC ID voor een lijst met rules in die RC
     """
-    permission_classes = [Permission_MappingAudit]
+    permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
         payload = request.data
         selection = str(payload.get('selection',None))

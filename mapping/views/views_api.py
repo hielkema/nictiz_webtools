@@ -233,6 +233,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
 
     def post(self, request, **kwargs):
         try:
+            print('Diagnosethesaurus', json.loads(request.POST.get('codesystem[diagnosethesaurus]')))
+            if json.loads(request.POST.get('codesystem[diagnosethesaurus]')):
+                import_diagnosethesaurus_task.delay()
+            
             print('Labcode', json.loads(request.POST.get('codesystem[labcode]')))
             if json.loads(request.POST.get('codesystem[labcode]')):
                 import_labcodeset_async.delay()
@@ -698,7 +702,7 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
             statuses = MappingTaskStatus.objects.filter(project_id=project).order_by('status_id')
             # print(statuses)
             try:
-                extra_dict = json.loads(task.source_component.component_extra_dict)
+                extra_dict = task.source_component.component_extra_dict
             except:
                 extra_dict = ''
             task = ({

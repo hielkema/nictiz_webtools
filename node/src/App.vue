@@ -34,7 +34,7 @@
         <!-- Groep Termspace tools -->
         <v-list-group
           prepend-icon="account_circle"
-          :value="true"
+          :value="false"
         >
           <template v-slot:activator>
             <v-list-item-content>
@@ -79,6 +79,15 @@
                 <router-link to="/mapping/RcAudit"><v-list-item-title>Release candidate audit</v-list-item-title></router-link>
             </v-list-item-content>
           </v-list-item>
+          <!-- Link 3 in subgroep -->
+          <v-list-item v-if="groups.includes('mapping | taskmanager')">
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/mapping/TaskManager"><v-list-item-title>Taskmanager</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
+
+          
         </v-list-group>
         <!-- EIND Groep Mapping tools -->
       </v-list>
@@ -100,7 +109,6 @@
           no-gutters
         >
           <v-col>
-            {{routeName}}
             <router-view />
           </v-col>
         </v-row>

@@ -8,29 +8,31 @@
                             Filters en zoeken
                         </v-card-title>   
                         <v-card-text>
-                            <v-simple-table dense>
+                            <v-table dense>
                                 <tbody>
                                 <tr>
-                                    <th>
-                                    Zoek binnen resultaten
+                                    <th 
+                                    width=180
+                                    align="left">
+                                        Zoek binnen resultaten
                                     </th>
                                     <td>
-                                    <v-text-field
-                                        v-model="search"
-                                        label="Zoek binnen resultaten"
-                                        hide-details
-                                        autofocus
-                                        clearable
-                                        dense
-                                    ></v-text-field>
+                                        <v-text-field
+                                            v-model="search"
+                                            label="Zoek binnen resultaten"
+                                            hide-details
+                                            autofocus
+                                            clearable
+                                            dense></v-text-field>
                                     </td>
                                 </tr>
                                 <tr
                                     v-for="header in headers"
-                                    :key="header.text"
-                                >
-                                    <th v-if="filters.hasOwnProperty(header.value)">
-                                    {{header.text}}
+                                    :key="header.text">
+                                    <th 
+                                        v-if="filters.hasOwnProperty(header.value)"
+                                        align="left">
+                                    {{header.text}} 
                                     </th>
                                     <td v-if="filters.hasOwnProperty(header.value)" class="text-left">
                                     <v-select flat dense hide-details small multiple clearable :items="columnValueList(header.value)" v-model="filters[header.value]">     
@@ -38,7 +40,7 @@
                                     </td>
                                 </tr>
                                 </tbody>
-                            </v-simple-table>
+                            </v-table>
                         </v-card-text>
                     </v-card>
                 </v-col>
@@ -108,7 +110,10 @@
                         </v-card-title>
                         <v-card-actions>
                             <v-btn v-on:lick="refresh()">Ververs gehele tabel</v-btn><br>
-                            <v-btn v-on:click="createCacheSelectedRc()">Genereer een FHIR ConceptMap</v-btn>
+                            <v-btn 
+                                v-if="user.groups.includes('mapping | audit')"
+                                v-on:click="createCacheSelectedRc()"
+                                >Genereer een FHIR ConceptMap</v-btn>
                         </v-card-actions>
                         <v-card-text>
                             <v-alert type="info" v-if="!RcRules.rc.finished">
@@ -143,8 +148,8 @@
                                                 {{rule.target.title}}
                                                 <li v-for="rule in rule.mapspecifies" v-bind:key="rule.id">{{rule.title}}</li>
                                             </td>
-                                            <td width=10>{{rule.mapadvice}}</td>
                                             <td width=10>{{rule.mapcorrelation}}</td>
+                                            <td width=10>{{rule.mapadvice}}</td>
                                         </tr>
                                     </table>
                                 </template>
@@ -161,7 +166,10 @@
                                         </template>
                                         <span>{{item.rejected_list}}</span>
                                     </v-tooltip>
-                                    <v-btn small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)">Pull</v-btn> 
+                                    <v-btn
+                                        v-if="user.groups.includes('mapping | audit')"
+                                        small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)"
+                                        >Pull</v-btn> 
                                 </template>
                                 <template v-slot:item.rejected="{ item }">
                                     <v-simple-checkbox v-model="item.rejected" disabled></v-simple-checkbox>
@@ -185,7 +193,7 @@ export default {
     data() {
         return {
             headers: [
-                { text: 'ID', value: 'source.identifier' },
+                { text: 'Code', value: 'source.identifier' },
                 { text: 'Source', value: 'source.title' },
                 { text: 'Groep', value: 'group' },
                 { text: 'Status', value: 'status' },
@@ -249,6 +257,9 @@ export default {
             const result = this.headers
             // result.push('Niet groeperen')
             return result
+        },
+        user(){
+            return this.$store.state.userData
         }
     },
     created(){

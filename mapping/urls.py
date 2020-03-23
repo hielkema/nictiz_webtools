@@ -3,18 +3,19 @@ from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
 from . import views
-from .views import drf_api_1_0 as api_1_0
 
 app_name = 'mapping'
 
 # Define DRF URL router
 router_1_0 = SimpleRouter()
-router_1_0.register(r'export_rc_rules', api_1_0.exportReleaseCandidateRules, basename="export_rc_rules")
-router_1_0.register(r'rc_export_fhir_json', api_1_0.RCFHIRConceptMap, basename="RC FHIR ConceptMap")
-router_1_0.register(r'fhir_conceptmap_list', api_1_0.RCFHIRConceptMapList, basename="RC_FHIR_ConceptMap_List")
-router_1_0.register(r'export_rcs', api_1_0.ReleaseCandidates, basename="export_rcs")
-router_1_0.register(r'rc_rule_review', api_1_0.RCRuleReview, basename="rc_rule_review")
+router_1_0.register(r'export_rc_rules', views.exportReleaseCandidateRules, basename="export_rc_rules")
+router_1_0.register(r'rc_export_fhir_json', views.RCFHIRConceptMap, basename="RC FHIR ConceptMap")
+router_1_0.register(r'fhir_conceptmap_list', views.RCFHIRConceptMapList, basename="RC_FHIR_ConceptMap_List")
+router_1_0.register(r'export_rcs', views.ReleaseCandidates, basename="export_rcs")
+router_1_0.register(r'rc_rule_review', views.RCRuleReview, basename="rc_rule_review")
 
+router_1_0.register(r'tasks', views.MappingTasks, basename="Mapping_Tasks")
+router_1_0.register(r'change_tasks', views.ChangeMappingTasks, basename="Change_Mapping_Tasks")
 
 urlpatterns = [
     # DRF router

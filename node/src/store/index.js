@@ -2,12 +2,19 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import axios from 'axios'
 
+// Termspace tools
 import Epd from './modules/Epd'
 import TermspaceComments from './modules/Terminologie/TermspaceComments'
+
+// Mapping tools
 import MappingComments from './modules/Terminologie/MappingComments'
-
 import RcAuditConnection from './modules/Mapping/RcAuditConnection'
+import TaskManager from './modules/Mapping/TaskManagerConnection'
 
+// DHD - SNOMED integration modules
+import IntegratedCodePicker from './modules/DHD/IntegratedCodePicker'
+
+// Framework modules
 import { authentication } from './authentication.module';
 import { alert } from './alert.module';
 // import { userService } from '@/services';
@@ -19,8 +26,8 @@ Vue.use(axios)
 
 export default new Vuex.Store({
   state: {
-    baseUrl: 'https://termservice.test-nictiz.nl/',
-    // baseUrl: 'http://localhost/',
+    // baseUrl: 'https://termservice.test-nictiz.nl/',
+    baseUrl: 'http://localhost/',
     userData: {
       'id': null,
       'groups' : [],
@@ -33,6 +40,8 @@ export default new Vuex.Store({
       MappingComments,
       authentication,
       RcAuditConnection,
+      IntegratedCodePicker,
+      TaskManager,
       alert,
   },
   actions: {

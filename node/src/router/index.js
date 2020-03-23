@@ -31,6 +31,16 @@ const routes = [
     component: () => import('../views/Mapping/RcAudit.vue')
   },
   {
+    path: '/mapping/TaskManager',
+    name: 'Mapping taskmanager',
+    component: () => import('../views/Mapping/TaskManager.vue')
+  },
+  {
+    path: '/demo/Snomed-DT',
+    name: 'DT Snomed integratie',
+    component: () => import('../views/DHD/DemoIntegratie.vue')
+  },
+  {
     path: '/about',
     name: 'about',
     // route level code-splitting

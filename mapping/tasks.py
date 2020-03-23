@@ -74,12 +74,14 @@ def update_snomedConcept_async(payload=None):
         'Definition status'  : str(concept['definitionStatus']),
     }
 
+    obj.descriptions = snowstorm.getDescriptions(id='74400008').get('categorized',{})
+
     obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
     obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
     obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
     obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
 
-    obj.component_extra_dict = json.dumps(extra)
+    obj.component_extra_dict = extra
     # Save
     obj.save()
     return str(obj)
@@ -160,7 +162,7 @@ def import_labcodeset_async():
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
             obj.component_title     = term_en
-            obj.component_extra_dict   = json.dumps({
+            obj.component_extra_dict   = {
                 'Nederlands'            : term_nl,
                 'Component'             : loinc_component,
                 'Kenmerk'               : loinc_property,
@@ -170,7 +172,7 @@ def import_labcodeset_async():
                 'Klasse'                : loinc_class,
                 'Aanvraag/Resultaat'    : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
-            })
+            }
             obj.save()
 
             material_list = []
@@ -242,10 +244,68 @@ def import_nhgverrichtingen_task():
             'VO' : row[6],
             'VM' : row[7],
             'VV' : row[8],
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
         }
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         # Save
         obj.save()
+
+@shared_task
+def import_diagnosethesaurus_task():
+    thesaurusConcept    = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusConcept.csv')
+    thesaurusTerm       = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusTerm.csv')
+    thesaurusConcept    = thesaurusConcept.fillna(value=False)
+    thesaurusTerm       = thesaurusTerm.fillna(value=False)
+
+
+    # Build dictionary of concepts
+    concepts = {}
+    for index, row in thesaurusConcept.iterrows():
+        conceptid = row.get('ConceptID')
+        terms = []
+        # Add descriptions in a custom format
+        for no, term in thesaurusTerm[thesaurusTerm['ConceptID'] == row.get('ConceptID')].iterrows():
+            actief = False
+            if term['Einddatum'] == 20991231: actief = True
+            terms.append({
+                'type' : term['TypeTerm'],
+                'term' : term['Omschrijving'],
+                'actief' : actief,
+            })
+        # Check if concept is active
+        actief = False
+        if row.get('Einddatum') == 20991231: actief = True
+        # Add concept to dict of concepts
+        concepts.update({
+            conceptid : {
+                'conceptid' : str(conceptid),
+                'descriptions': terms,
+                'actief' : actief,
+                'snomedid' : str(row.get('SnomedID','')).split('.')[0],
+            }
+        })
+
+    # Loop through the dictionary of concepts and add to database
+    for key, concept in concepts.items():
+        codesystem = MappingCodesystem.objects.get(id='6')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=concept.get('conceptid'),
+        )
+        descriptions = concept.get('descriptions',{})
+        try:
+            title = list(filter(lambda x : x['type'] == 'voorkeursterm', descriptions))[0].get('term','[Geen titel]')
+        except:
+            title = "[Geen titel]"
+        obj.component_title = title
+        obj.descriptions = descriptions
+        extra = {
+            'Actief' : concept.get('actief'),
+            'snomed_mapping' : concept.get('snomedid', False),
+        }
+        obj.component_extra_dict = extra
+        obj.save()
+
 
 @shared_task
 def import_nhgbepalingen_task():
@@ -388,7 +448,7 @@ def import_nhgbepalingen_task():
             'Actief' : actief_component,
         }
         # print(extra)
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         obj.save()
 
 @shared_task
@@ -421,7 +481,7 @@ def import_icpc_task():
             'Actief'    : actief_concept,
         }
         # print(extra)
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         obj.save()
 
 @shared_task
@@ -460,7 +520,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Checks for the entire task
             # If source component contains active/deprecated designation ->
-            extra_dict = json.loads(task.source_component.component_extra_dict)
+            extra_dict = task.source_component.component_extra_dict
             if extra_dict.get('Actief',False):
                 # If source code is deprecated ->
                 if extra_dict.get('Actief') == "False":
@@ -524,7 +584,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             )
 
                 # If Target component contains active/deprecated designation ->
-                extra_dict = json.loads(rule.target_component.component_extra_dict)
+                extra_dict = rule.target_component.component_extra_dict
                 if extra_dict.get('Actief',False):
                     # If source code is deprecated ->
                     if extra_dict.get('Actief') == "False":
@@ -653,7 +713,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
         output = {
             'identifier'    : component.component_id,
             'title'         : component.component_title,
-            'extra'         : json.loads(component.component_extra_dict),
+            'extra'         : component.component_extra_dict,
             'created'       : str(component.component_created),
             'codesystem'    : {
                 'id'        : component.codesystem_id.id,

@@ -1,0 +1,32 @@
+<!-- atc_lookup/templates/medicatie.html -->
+{% extends 'bootstrap_base.html' %}
+
+
+{% block content %}
+
+<div class="well">
+  <h6>Indien token ingevuld -> ophalen data uit Termspace met token. Indien geen token -> zoeken in database.</h6>
+  <form action="{% url 'termspace:search' %}" method="post">
+    {% csrf_token %}
+    <p>Zoekterm:</p><p><textarea name="term"></textarea></p>
+    <p>Je kunt zoeken op: Concept ID / FSE / gebruikersnaam / tekst commentaar / status / folder</p>
+    <p><input type="submit" value="ZOEK"></p>
+    <p></p>
+  </form>
+</div>
+
+{% if error %}
+    <div class="alert alert-danger">Geen resultaten gevonden</div>
+{% else %}
+    <b>{{num_results}} resultaten</b><br>
+    Zoekterm: {{searchterm}}<br>
+    <hr>
+    {% for result in results %}
+    <b>Concept: {{result.id}} - {{result.fsn}}</b> - {{result.author}} - {{result.status}}<br>
+    Folder: {{result.folder}}<br>
+    Tekst: {{result.comment}}
+    <hr>
+    {% endfor %}
+{% endif %}
+
+{% endblock content %}
