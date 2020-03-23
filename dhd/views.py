@@ -60,8 +60,13 @@ class searchChipsoft(viewsets.ViewSet):
             else:
                 query = query & or_query
 
+        # TODO - add filter on descendants of disease for SNOMED results
+
         search_results = MappingCodesystemComponent.objects.filter(query).order_by('-codesystem_id__id', 'component_title')
-        # TODO - add search in descriptions
+        # TODO - after Snomed import finishes. -> search_results = search_results.exclude(component_extra_dict__Actief = False)
+        search_results = search_results.exclude(codesystem_id__id = 5)
+        # TODO - add searching in descriptions
+        
         print(query)
         results = []
         if search_results.count() == 0:
