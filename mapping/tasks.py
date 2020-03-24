@@ -770,16 +770,16 @@ def exportCodesystemToRCRules(rc_id, user_id):
                     # task_user = task.user.username
                     source_component = rule.source_component,
                     static_source_component_ident = rule.source_component.component_id,
-                    static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                     target_component = rule.target_component,
                     static_target_component_ident = rule.target_component.component_id,
-                    static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                     mapgroup = rule.mapgroup,
                     mappriority = rule.mappriority,
                     mapcorrelation = rule.mapcorrelation,
                     mapadvice = rule.mapadvice,
                     maprule = rule.maprule,
-                    mapspecifies = json.dumps(mapspecifies),
+                    mapspecifies = mapspecifies,
                 )
                 # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
                 if rc_rule.count() == 1:
@@ -815,16 +815,16 @@ def exportCodesystemToRCRules(rc_id, user_id):
                     # task_user = task.user.username
                     source_component = rule.source_component,
                     static_source_component_ident = rule.source_component.component_id,
-                    static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                     target_component = rule.target_component,
                     static_target_component_ident = rule.target_component.component_id,
-                    static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                     mapgroup = rule.mapgroup,
                     mappriority = rule.mappriority,
                     mapcorrelation = rule.mapcorrelation,
                     mapadvice = rule.mapadvice,
                     maprule = rule.maprule,
-                    mapspecifies = json.dumps(mapspecifies),
+                    mapspecifies = mapspecifies,
                 )
                 # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
                 if rc_rule.count() == 1:
@@ -847,16 +847,16 @@ def exportCodesystemToRCRules(rc_id, user_id):
                         task_user = task.user.username,
                         source_component = rule.source_component,
                         static_source_component_ident = rule.source_component.component_id,
-                        static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                         target_component = rule.target_component,
                         static_target_component_ident = rule.target_component.component_id,
-                        static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                         mapgroup = rule.mapgroup,
                         mappriority = rule.mappriority,
                         mapcorrelation = rule.mapcorrelation,
                         mapadvice = rule.mapadvice,
                         maprule = rule.maprule,
-                        mapspecifies = json.dumps(mapspecifies),
+                        mapspecifies = mapspecifies,
                     )
                     # rc_rule.save()
     rc.finished = True
@@ -920,18 +920,18 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                     
                     # Put all the identifiers of products in a list for later use
                     for single_rule in rules_for_task:
-                        for target in json.loads(single_rule.mapspecifies):
+                        for target in single_rule.mapspecifies:
                             product_list.append(target.get('id'))
                     # Now loop through while ignoring id's used as product
                     for single_rule in rules_for_task:
-                        target_component = json.loads(single_rule.static_target_component)
+                        target_component = single_rule.static_target_component
 
 
                         # Skip if identifier in the list of used products
                         if target_component.get('identifier') not in product_list:
                             # Put all the products in a list
                             products = []
-                            for target in json.loads(single_rule.mapspecifies):
+                            for target in single_rule.mapspecifies:
                                 # Lookup data for the target
                                 target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
                                 products.append({
@@ -962,7 +962,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             targets.append(output)
 
                     # Add this source component with all targets and products to the element list
-                    source_component = json.loads(single_rule.static_source_component)
+                    source_component = single_rule.static_source_component
                     output = {
                         # 'DEBUG_numrules' : rules_for_task.count(),
                         # 'DEBUG_productlist' : product_list,

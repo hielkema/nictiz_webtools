@@ -216,7 +216,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 output = {
                     'identifier'    : component.component_id,
                     'title'         : component.component_title,
-                    'extra'         : json.loads(component.component_extra_dict),
+                    'extra'         : component.component_extra_dict,
                     'created'       : str(component.component_created),
                     'codesystem'    : {
                         'id'        : component.codesystem_id.id,
@@ -272,16 +272,16 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                                 task_user = task.user.username,
                                 source_component = rule.source_component,
                                 static_source_component_ident = rule.source_component.component_id,
-                                static_source_component = json.dumps(component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id)),
+                                static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                                 target_component = rule.target_component,
                                 static_target_component_ident = rule.target_component.component_id,
-                                static_target_component = json.dumps(component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id)),
+                                static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                                 mapgroup = rule.mapgroup,
                                 mappriority = rule.mappriority,
                                 mapcorrelation = rule.mapcorrelation,
                                 mapadvice = rule.mapadvice,
                                 maprule = rule.maprule,
-                                mapspecifies = json.dumps(mapspecifies),
+                                mapspecifies = mapspecifies,
                             )
                         rc_rule.save()
                         print("Added {rule}".format(rule=rc_rule))
@@ -325,7 +325,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             accepted_list = []
             ignore_list = []
             for rule in rules.filter(static_source_component_ident = component_id).order_by('mapgroup', 'mappriority'):
-                mapspecifies = json.loads(rule.mapspecifies)
+                mapspecifies = rule.mapspecifies
                 # Add ID's used as binding target to ignore list: don't show twice
                 for value in mapspecifies:
                     # print('Added',value.get('id'),'to ignore list')
@@ -365,7 +365,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     'task_user'     : rule.task_user,
 
                     'codesystem' : rule.target_component.codesystem_id.codesystem_title,
-                    'target' : json.loads(rule.static_target_component),
+                    'target' : rule.static_target_component,
 
                     'mapgroup'      : rule.mapgroup,
                     'mappriority'   : rule.mappriority,
@@ -400,7 +400,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     # print("ADDED")
                     filtered_rule_list.append(single_rule)
             
-            static_source_component = json.loads(rule.static_source_component)
+            static_source_component = rule.static_source_component
             task_list.append({
                 'status' : rule.task_status,
                 'source' : static_source_component,

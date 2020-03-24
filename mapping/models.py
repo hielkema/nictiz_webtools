@@ -52,9 +52,9 @@ class MappingCodesystem(models.Model):
 
 
 class MappingComment(models.Model):
-    comment_title       = models.CharField(max_length=50)
+    comment_title       = models.CharField(max_length=50, default=None, null=True, blank=True)
     comment_task        = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
-    comment_body        = models.TextField(max_length=500)
+    comment_body        = models.TextField(max_length=500, default=None, null=True, blank=True)
     # comment_user        = models.ForeignKey(User, on_delete=models.CASCADE)
     comment_user        = models.ForeignKey(User, on_delete=models.PROTECT)
     comment_created     = models.DateTimeField(default=timezone.now)
@@ -255,11 +255,11 @@ class MappingReleaseCandidateRules(models.Model):
     # Denormalized source component
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'source_component', default=None, blank=True, null=True)
     static_source_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
-    static_source_component = models.TextField(default=None, blank=True, null=True)
+    static_source_component = JSONField(default=None, null=True, blank=True)
     # Denormalized target component
     target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'target_component', default=None, blank=True, null=True)
     static_target_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
-    static_target_component = models.TextField(default=None, blank=True, null=True)
+    static_target_component = JSONField(default=None, null=True, blank=True)
     # Denormalized rule components
     mapgroup        = models.IntegerField(default=None, blank=True, null=True)
     mappriority     = models.IntegerField(default=None, blank=True, null=True)
@@ -276,7 +276,7 @@ class MappingReleaseCandidateRules(models.Model):
     mapadvice       = models.CharField(max_length=500, default=None, blank=True, null=True)
     maprule         = models.CharField(max_length=500, default=None, blank=True, null=True)
     # Denormalized rule bindings
-    mapspecifies    = models.TextField(default=None, blank=True, null=True)
+    mapspecifies    = JSONField(default=None, null=True, blank=True)
     # Log accepted
     accepted = models.ManyToManyField(User, related_name="accepted_users", default=None, blank=True)
     # Log rejected
