@@ -28,6 +28,8 @@ from rest_framework.permissions import *
 
 from snowstorm_client import Snowstorm
 
+from django.db.models.functions import Cast
+
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
 # reading .env file
@@ -37,10 +39,6 @@ environ.Env.read_env(env.str('ENV_PATH', '.env'))
 class searchChipsoft(viewsets.ViewSet): 
     permission_classes = [IsAuthenticated]
     def retrieve(self, request, pk=None):
-
-        ####### TODO    If SNOMED: RETURN True/False if ANY descendants have DT mapping
-        #######         If DT: Return True
-
         term = str(pk)
         print(request)
         # Get results for searchterm        
@@ -60,17 +58,47 @@ class searchChipsoft(viewsets.ViewSet):
             else:
                 query = query & or_query
 
-        # TODO - add filter on descendants of disease for SNOMED results
+        print("Query:",query)
 
-        search_results = MappingCodesystemComponent.objects.filter(query).order_by('-codesystem_id__id', 'component_title')
-        # TODO - after Snomed import finishes. -> search_results = search_results.exclude(component_extra_dict__Actief = False)
-        search_results = search_results.exclude(codesystem_id__id = 5)
-        # TODO - add searching in descriptions
+        # Search in titles
+        search_results_title = MappingCodesystemComponent.objects.filter(query).order_by('-codesystem_id__id', 'component_title')
+        # search_results_title = search_results_title.exclude(component_extra_dict__Actief = False)
+        search_results_title = search_results_title.exclude(codesystem_id__id = 5)
+        search_results_title = search_results_title.exclude(codesystem_id__id = 4)
+        search_results_title = search_results_title.exclude(codesystem_id__id = 3)
+        search_results_title = search_results_title.exclude(codesystem_id__id = 2)
+        print(search_results_title.count(), "results op titel")
+
+        # Search in descriptions        
+        search_results_descriptions = MappingCodesystemComponent.objects.annotate(
+                            descriptions_text=Cast('descriptions', models.TextField()),
+                        ).filter(descriptions_text__icontains=str(pk))
+        print(search_results_descriptions.count(), "results op termen")
+
+        # Merge both queries
+        search_results = search_results_title | search_results_descriptions
+        print(search_results.count(), "results op beide")
+
+        # Get SNOMED results on << 'clinical finding (finding)'
+        snomed_results = search_results.filter(codesystem_id__id = 1)
+        # Get descendants of 'clinical finding'
+        concept_clinFinding = MappingCodesystemComponent.objects.get(codesystem_id__id = 1, component_id = '404684003')#64572001
+        descendants_clinFinding = json.loads(concept_clinFinding.descendants)
+        print(len(descendants_clinFinding),"aantal items in clinical findings")
+        # Apply filter descendants of 'clinical finding'
+        snomed_results = snomed_results.filter(component_id__in=descendants_clinFinding)
+        print(snomed_results.count(), "results in << clinical finding (finding)")
         
-        print(query)
+        # Get non-snomed results
+        other_results = search_results.exclude(codesystem_id__id = 1)
+        # Merge the querysets
+        search_results = snomed_results | other_results
+
         results = []
         if search_results.count() == 0:
             print('Geen resultaten')
+        else:
+            print("Resultaat:",search_results)
 
         # Handle search results
         for concept in search_results[0:20]:
@@ -146,12 +174,9 @@ class searchChipsoftChildren(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def retrieve(self, request, pk=None):
         concept = MappingCodesystemComponent.objects.get(id=pk)
+
         results = []
         skip = False
-
-
-        ##### TODO Handle children of DT and concepts with 0/None children - first convert to SNOMED and then fetch children
-        ##### TODO Generate count of children WITH and WITHOUT mapping to DT
 
         if concept.codesystem_id.codesystem_title == 'Diagnosethesaurus':
             # Refer the rest of the script to the Snomed mapped concept, if it exists. If no mapping is available - return empty list.
@@ -159,8 +184,11 @@ class searchChipsoftChildren(viewsets.ViewSet):
             skip = False
             snomedid = concept.component_extra_dict.get('snomed_mapping',False)
             if snomedid:
-                concept = MappingCodesystemComponent.objects.get(component_id=snomedid, codesystem_id_id=1)
-                children = json.loads(concept.children)
+                try:
+                    concept = MappingCodesystemComponent.objects.get(component_id=snomedid, codesystem_id_id=1)
+                    children = json.loads(concept.children)
+                except:
+                    return Response({'children' : []})
             else:
                 children = []
                 skip = True
@@ -228,6 +256,7 @@ class searchChipsoftParents(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     def retrieve(self, request, pk=None):
         concept = MappingCodesystemComponent.objects.get(id=pk)
+
         results = []
         skip = False
 
@@ -237,8 +266,11 @@ class searchChipsoftParents(viewsets.ViewSet):
             skip = False
             snomedid = concept.component_extra_dict.get('snomed_mapping',False)
             if snomedid:
-                concept = MappingCodesystemComponent.objects.get(component_id=snomedid, codesystem_id_id=1)
-                parents = json.loads(concept.parents)
+                try:
+                    concept = MappingCodesystemComponent.objects.get(component_id=snomedid, codesystem_id_id=1)
+                    parents = json.loads(concept.parents)
+                except:
+                    return Response({'parents' : []})
             else:
                 parents = []
                 skip = True

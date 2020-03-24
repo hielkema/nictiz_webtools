@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-row>
-        <v-col cols=4>
+        <v-col cols=6>
             <v-card>
                 <v-subheader>Zoeken</v-subheader>
                 <v-card-text>
@@ -57,21 +57,31 @@
         </v-col>
     </v-row>
     <v-row>
-        <v-col cols=6>
-            <v-card>
-                <v-subheader>Zoekresultaten: searchResultsFiltered na filteren - ({{searchResults.results_returned}} opgehaald / {{searchResults.results_total}} gevonden)</v-subheader>
+        <v-col cols=5>
+            <v-card
+                :loading="loading.searchResultsFiltered"
+                class="ma-1">
+                <v-toolbar
+                    color="indigo"
+                    dark
+                    >
+                    <v-toolbar-title>Zoekresultaten: searchResultsFiltered na filteren - ({{searchResults.results_returned}} opgehaald / {{searchResults.results_total}} gevonden)</v-toolbar-title>
+                </v-toolbar>
                 <v-card-text>
                     <v-list v-if="loading.searchResults">
                         <p>Loading</p>
                     </v-list>
-                    <v-list v-else>
+                    <v-list dense v-else>
                         <v-list-item
                             v-for="result in searchResultsFiltered"
                             v-bind:key="result.id"
                             v-on:click="fetchConcept(result.id)"
                             link>
+                            <v-list-item-action>
+                                <v-icon>mdi-arrow-right-bold</v-icon>
+                            </v-list-item-action>
                             <v-list-item-content>
-                                <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
+                                <v-list-item-title><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
                                 <v-list-item-subtitle>{{result.codesystem}}<span v-if="result.dt_in_descendants && hide_no_dt == false"> - Heeft DT koppeling, of kinderen met koppeling</span></v-list-item-subtitle>
                                 <!-- {{eq.codesystem}}: {{eq.title}} -->
                                 
@@ -82,19 +92,34 @@
             </v-card>
         </v-col>
 
-        <v-col cols=6>
-            <v-card>
-                <v-subheader>Parents (parentsFiltered na filteren /parents zonder filter)</v-subheader>
+        <v-col cols=7>
+            <v-card
+                v-if="(parentsFiltered.length > 0) || (loading.parents != false)" 
+                :loading="loading.parents"
+                class="ma-1">
+                <v-toolbar
+                    color="indigo"
+                    dark
+                    >
+                    <v-toolbar-title>Parents (parentsFiltered na filteren /parents zonder filter)</v-toolbar-title>
+                </v-toolbar>
                 <v-card-text>
                     <v-list v-if="loading.parents">
-                        <p>Loading</p>
+                        <p>Laden.....</p>
                     </v-list>
-                    <v-list v-else>
+                    <v-list v-else-if="(parentsFiltered.length == 0) && (loading.parents == false)">
+                        Geen parents gevonden.
+                    </v-list>
+                    <v-list dense v-else>
                         <v-list-item
+                            
                             v-for="result in parentsFiltered"
                             v-bind:key="result.id"
                             v-on:click="fetchConcept(result.id)"
                             link>
+                            <v-list-item-action>
+                                <v-icon>mdi-file-link</v-icon>
+                            </v-list-item-action>
                             <v-list-item-content>
                                 <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
                                 <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children: {{result.dt_in_descendants}})</v-list-item-subtitle>                            
@@ -103,67 +128,108 @@
                     </v-list>
                 </v-card-text>
             </v-card>
-            <v-card>
-                <v-subheader>Component</v-subheader>
+    
+
+            <v-card 
+                v-if="(currentConcept) || (loading.concept != false)" 
+                :loading="loading.concept"
+                class="ma-1">
+                <v-toolbar
+                    color="indigo"
+                    dark>
+                    <v-toolbar-title>Component</v-toolbar-title>
+                </v-toolbar>
                 <v-card-text>
                     <v-list v-if="loading.concept">
-                        <p>Loading</p>
+                        <p>Laden.....</p>
                     </v-list>
                     <v-list v-else>
-                        <v-list-item
-                            v-for="(value, key) in currentConcept"
-                            v-bind:key="key">
-                            <v-list-item-content v-if="key != 'equivalent'">
-                                <v-list-item-title><b>{{key}}</b></v-list-item-title>
-                                <v-list-item-subtitle>{{value}}</v-list-item-subtitle>
+                        <v-list-item>
+                            <v-list-item-content>
+                                <v-list-item-title><b>Codesysteem</b></v-list-item-title>
+                                <v-list-item-subtitle>{{currentConcept.codesystem}}</v-list-item-subtitle>
                             </v-list-item-content>
+                        </v-list-item>
 
-                            <!-- Equivalentie in DT indien aanwezig -->
-                            <v-list-item-content v-if="(key == 'equivalent') & (value != false)">
+                        <v-list-item>
+                            <v-list-item-content>
+                                <v-list-item-title><b>Code</b></v-list-item-title>
+                                <v-list-item-subtitle>{{currentConcept.code}}</v-list-item-subtitle>
+                            </v-list-item-content>
+                        </v-list-item>
+
+                        <v-list-item>
+                            <v-list-item-content>
+                                <v-list-item-title><b>Titel</b></v-list-item-title>
+                                <v-list-item-subtitle>{{currentConcept.title}}</v-list-item-subtitle>
+                            </v-list-item-content>
+                        </v-list-item>
+
+                        <v-list-item>
+                            <v-list-item-content>
+                                <v-list-item-title><b>Actief</b></v-list-item-title>
+                                <v-list-item-subtitle v-if="currentConcept.extra.Actief">Concept actief</v-list-item-subtitle>
+                                <v-list-item-subtitle v-if="!currentConcept.extra.Actief" class="red">Concept niet actief</v-list-item-subtitle>
+                            </v-list-item-content>
+                        </v-list-item>
+
+                        <!-- Equivalentie in DT indien aanwezig -->
+                        <v-list-item v-if="currentConcept.equivalent != false">
+                            <v-list-item-content>
                                 <v-list-item-title><b>Mapping</b></v-list-item-title>
                                 <v-list-item-subtitle>
                                     <!-- List of mappings -->
                                     <v-list>
                                         <v-list-item
-                                            v-for="target in value"
+                                            v-for="target in currentConcept.equivalent"
                                             v-bind:key="target.id"
                                             v-on:click="fetchConcept(target.id)"
                                             link>
+                                            <p><v-icon>mdi-file-link</v-icon></p>
                                             <v-list-item-content>
                                                 <v-list-item-title text-color="secondary"><v-icon small v-if="target.equivalent">mdi-link-variant</v-icon>{{target.title}}</v-list-item-title>
                                                 <v-list-item-subtitle>{{target.codesystem}}</v-list-item-subtitle>
                                             </v-list-item-content>
                                         </v-list-item>
                                     </v-list>
-
-
                                 </v-list-item-subtitle>
                             </v-list-item-content>
-                            <!-- Handle situations where mapping is not available -->
-                            <v-list-item-content v-if="(key == 'equivalent') & (value == false)">
+                        </v-list-item>
+                        <v-list-item v-if="(currentConcept.equivalent == false) && (currentConcept.codesystem != 'Snomed')">
+                            <v-list-item-content>
                                 <v-list-item-title><b>Mapping</b></v-list-item-title>
-                                <v-list-item-subtitle>
-                                    Geen mapping aanwezig
-                                </v-list-item-subtitle>
+                                    Aangezien dit concept geen SNOMED concept is en er geen mapping naar SNOMED beschikbaar is, kan er ook geen hiërarchie getoond worden.
                             </v-list-item-content>
-
-
                         </v-list-item>
                     </v-list>
                 </v-card-text>
             </v-card>
-            <v-card>
-                <v-subheader>Children (childrenFiltered na filteren /children zonder filter)</v-subheader>
+            <v-card 
+                v-if="(childrenFiltered.length > 0) || (loading.children != false)" 
+                :loading="loading.children"
+                class="ma-1">
+                <v-toolbar
+                    color="indigo"
+                    dark
+                    >
+                    <v-toolbar-title>Children (childrenFiltered na filteren /children zonder filter)</v-toolbar-title>
+                </v-toolbar>
                 <v-card-text>
                     <v-list v-if="loading.children">
-                        <p>Loading</p>
+                        <p>Laden.....</p>
                     </v-list>
-                    <v-list v-else>
+                    <v-list v-else-if="(childrenFiltered.length == 0) && (loading.children == false)">
+                        Geen children gevonden.
+                    </v-list>
+                    <v-list dense v-else>
                         <v-list-item
                             v-for="result in childrenFiltered"
                             v-bind:key="result.id"
                             v-on:click="fetchConcept(result.id)"
                             link>
+                            <v-list-item-action>
+                                <v-icon>mdi-file-link</v-icon>
+                            </v-list-item-action>
                             <v-list-item-content>
                                 <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
                                 <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children {{result.dt_in_descendants}})</v-list-item-subtitle>                            

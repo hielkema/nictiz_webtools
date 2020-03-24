@@ -69,12 +69,12 @@ def update_snomedConcept_async(payload=None):
     obj.component_title = str(concept['fsn']['term'])
     extra = {
         'Preferred term' : str(concept['pt']['term']),
-        'Actief'         : str(concept['active']),
+        'Actief'         : concept['active'],
         'Effective time' : str(concept['effectiveTime']),
         'Definition status'  : str(concept['definitionStatus']),
     }
 
-    obj.descriptions = snowstorm.getDescriptions(id='74400008').get('categorized',{})
+    obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
 
     obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
     obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
