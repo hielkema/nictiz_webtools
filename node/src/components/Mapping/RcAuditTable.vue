@@ -109,11 +109,15 @@
                             Release candidate audit
                         </v-card-title>
                         <v-card-actions>
-                            <v-btn v-on:lick="refresh()">Ververs gehele tabel</v-btn><br>
+                            <v-btn v-on:click="refresh()">Ververs gehele tabel</v-btn><br>
                             <v-btn 
-                                v-if="user.groups.includes('mapping | audit')"
+                                v-if="user.groups.includes('mapping | audit admin')"
                                 v-on:click="createCacheSelectedRc()"
-                                >Genereer een FHIR ConceptMap</v-btn>
+                                >Genereer een FHIR ConceptMap</v-btn><br>
+                            <v-btn 
+                                v-if="user.groups.includes('mapping | audit admin')"
+                                v-on:click="massPullChanges()"
+                                >Mass pull changes (needs manual refresh)</v-btn>
                         </v-card-actions>
                         <v-card-text>
                             <v-alert type="info" v-if="!RcRules.rc.finished">
@@ -154,7 +158,7 @@
                                     </table>
                                 </template>
                                 <template v-slot:item.actions="{ item }">
-                                    <v-tooltip bottom>
+                                    <v-tooltip bottom v-if="user.groups.includes('mapping | audit')">
                                         <template v-slot:activator="{ on }">
                                             <v-btn small color="green lighten-2" v-on="on" v-on:click="postRuleReview(RcRules.rc.id, item.source.identifier, 'fiat')">Fiat <p v-if="item.num_accepted >0">{{item.num_accepted}}</p></v-btn> 
                                         </template>
@@ -167,7 +171,7 @@
                                         <span>{{item.rejected_list}}</span>
                                     </v-tooltip>
                                     <v-btn
-                                        v-if="user.groups.includes('mapping | audit')"
+                                        v-if="user.groups.includes('mapping | audit admin')"
                                         small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)"
                                         >Pull</v-btn> 
                                 </template>
@@ -225,6 +229,9 @@ export default {
         },
         postRuleReview: function(rc_id, component_id, action) {
             this.$store.dispatch('RcAuditConnection/postRuleReview', {'rc_id':rc_id, 'component_id':component_id, 'action': action})
+        },
+        massPullChanges: function() {
+            this.$store.dispatch('RcAuditConnection/massPullChanges')
         },
         columnValueList(val) {
            return this.$store.state.RcAuditConnection.RcRules.rules.map(d => d[val]).sort()

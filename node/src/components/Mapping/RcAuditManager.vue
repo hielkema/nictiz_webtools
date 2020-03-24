@@ -25,7 +25,7 @@
                 </v-col>
                 <v-col cols = 7>
                     <v-card
-                        v-if="user.groups.includes('mapping | audit')"
+                        v-if="user.groups.includes('mapping | audit admin')"
                         class="pa-1 ma-1">
                         <v-data-table v-if="FHIRmapsList"
                                 caption="Generated FHIR JSON ConceptMaps"

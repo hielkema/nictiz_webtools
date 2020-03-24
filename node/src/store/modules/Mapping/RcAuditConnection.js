@@ -71,6 +71,21 @@ const state = {
         }
       )
     },
+    massPullChanges: (context) => {
+      const auth = {
+        headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},
+        withCredentials: true
+      }
+      axios
+      .post(context.rootState.baseUrl+'mapping/api/1.0/export_rc_rules/', {
+        'selection' : 'codesystem',
+        'rc_id' : context.state.selectedRc
+      },auth)
+      .then(() => {
+        return true;
+        }
+      )
+    },
     postRuleReview: (context, payload) => {
       const auth = {
         headers: {'X-CSRFToken' : Vue.$cookies.get('csrftoken')},

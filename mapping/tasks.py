@@ -730,22 +730,20 @@ def exportCodesystemToRCRules(rc_id, user_id):
     rc.save()
     # Get all tasks in requested codesystem - based on the codesystem of the source component
     tasks = MappingTask.objects.filter(source_component__codesystem_id__id = rc.codesystem.id).order_by('source_component__component_id')
-
+    print('Found',tasks.count(),'tasks.')
     
     debug_list = []
     # Loop through tasks
     for task in tasks:
-        if task.status == task.project_id.status_rejected:
-            logger.debug('Ignored a task with status rejected - should probably be removed from the dev database. Task ID:',task.id)
+        if task.status != task.project_id.status_complete:
+            logger.debug('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
             # Remove all rules in the RC database originating from this task, since it is rejected.
-            # TODO - for production: Should go for all tasks NOT status_completed.
             rc_rules = MappingReleaseCandidateRules.objects.filter(
                     static_source_component_ident = task.source_component.component_id,
                     export_rc = rc,
             )
             rc_rules.delete()
 
-        # TODO - for production: Only check if task is status_completed, skip all other tasks
         else:
             rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
             
