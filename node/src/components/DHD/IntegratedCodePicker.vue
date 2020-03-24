@@ -188,7 +188,10 @@
                                             <p><v-icon>mdi-file-link</v-icon></p>
                                             <v-list-item-content>
                                                 <v-list-item-title text-color="secondary"><v-icon small v-if="target.equivalent">mdi-link-variant</v-icon>{{target.title}}</v-list-item-title>
-                                                <v-list-item-subtitle>{{target.codesystem}}</v-list-item-subtitle>
+                                                <v-list-item-subtitle>
+                                                    {{target.codesystem}}
+                                                </v-list-item-subtitle>
+                                                <v-btn color=green v-if="target.codesystem == 'Diagnosethesaurus'">Vastleggen</v-btn>
                                             </v-list-item-content>
                                         </v-list-item>
                                     </v-list>
@@ -199,6 +202,18 @@
                             <v-list-item-content>
                                 <v-list-item-title><b>Mapping</b></v-list-item-title>
                                     Aangezien dit concept geen SNOMED concept is en er geen mapping naar SNOMED beschikbaar is, kan er ook geen hiërarchie getoond worden.
+                            </v-list-item-content>
+                        </v-list-item>
+                        <v-list-item v-if="(currentConcept.codesystem == 'Diagnosethesaurus')">
+                            <v-list-item-content>
+                                <v-btn color=green>Vastleggen</v-btn>
+                            </v-list-item-content>
+                        </v-list-item>
+                        <v-list-item v-if="(currentConcept.equivalent == false) && (currentConcept.codesystem == 'Snomed')">
+                            <v-list-item-content>
+                                <v-list-item-title><b>Aanvragen</b></v-list-item-title>
+                                    Dit SNOMED concept heeft geen koppeling met de Diagnosethesaurus, en kan dus niet geregistreerd worden.<br>
+                                    <v-btn color=primary>aanvragen</v-btn>
                             </v-list-item-content>
                         </v-list-item>
                     </v-list>
