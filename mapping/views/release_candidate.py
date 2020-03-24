@@ -145,9 +145,13 @@ class RCRuleReview(viewsets.ViewSet):
         for rule in rules:
             user = User.objects.get(id=request.user.id)
             if action == 'fiat':
+                # Add fiat
                 rule.accepted.add(user)
+                # Remove veto if it exists
+                rule.rejected.remove(user)
             elif action == 'veto':
                 rule.rejected.add(user)
+                rule.accepted.remove(user)
             rule.save()
             print('Accepted bindings for:')
             print(rule, rule.accepted.all(), rc_id, component_id, action)
