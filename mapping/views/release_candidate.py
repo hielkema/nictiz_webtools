@@ -213,7 +213,12 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
 
         # TODO - move to celery task
         if selection == 'codesystem':
-            exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
+            if 'mapping | audit mass pull changes' in request.user.groups.values_list('name', flat=True):
+                exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
+            else:
+                return Response({
+                    'message' : 'Geen toegang.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
         elif selection == "component" and codesystem:
             def component_dump(codesystem=None, component_id=None):
                 component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)

@@ -171,7 +171,7 @@
                                         <span>{{item.rejected_list}}</span>
                                     </v-tooltip>
                                     <v-btn
-                                        v-if="user.groups.includes('mapping | audit admin')"
+                                        v-if="user.groups.includes('mapping | audit mass pull changes')"
                                         small v-on:click="pullRulesFromDev(item.source.codesystem.id, item.source.identifier)"
                                         >Pull</v-btn> 
                                 </template>
