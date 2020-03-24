@@ -347,9 +347,19 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 for code, readable in correlation_options:
                     correlation = correlation.replace(code, readable)
                 
+                # Handle foreign keys that could have been removed
+                try:
+                    from_project = rule.export_rule.project_id.id
+                except:
+                    from_project = '[deleted]'
+                try:
+                    rule_id = rule.export_rule.id
+                except:
+                    rule_id = '[deleted]'
+
                 rule_list.append({
-                    'from_project' : rule.export_rule.project_id.id,
-                    'rule_id' : rule.export_rule.id,
+                    'from_project' : from_project,
+                    'rule_id' : rule_id,
 
                     'task_status'   : rule.task_status,
                     'task_user'     : rule.task_user,
