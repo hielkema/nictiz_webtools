@@ -246,18 +246,18 @@ class MappingReleaseCandidateRules(models.Model):
     export_date = models.DateTimeField(default=timezone.now)
     export_user = models.ForeignKey(User, on_delete=models.PROTECT, default=None, null=True, blank=True)
     # Foreign key bound task used for export
-    export_task = models.ForeignKey('MappingTask', on_delete=models.PROTECT, default=None, blank=True, null=True)
+    export_task = models.ForeignKey('MappingTask', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     # Foreign key bound rule used for export
-    export_rule = models.ForeignKey('MappingRule', on_delete=models.PROTECT, default=None, blank=True, null=True)
+    export_rule = models.ForeignKey('MappingRule', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     # Denormalized task data
     task_status = models.TextField(default=None, blank=True, null=True)
     task_user = models.TextField(default=None, blank=True, null=True)
     # Denormalized source component
-    source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'source_component', default=None, blank=True, null=True)
+    source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'source_component', default=None, blank=True, null=True)
     static_source_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
     static_source_component = models.TextField(default=None, blank=True, null=True)
     # Denormalized target component
-    target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT, related_name = 'target_component', default=None, blank=True, null=True)
+    target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'target_component', default=None, blank=True, null=True)
     static_target_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
     static_target_component = models.TextField(default=None, blank=True, null=True)
     # Denormalized rule components
