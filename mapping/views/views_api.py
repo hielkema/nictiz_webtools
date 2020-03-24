@@ -785,7 +785,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             # if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
             # if mapcorrelation == "447561005": mapcorrelation = "Not specified"
             try:
-                extra = json.loads(mapping.target_component.component_extra_dict)
+                extra = mapping.target_component.component_extra_dict
             except:
                 extra = ""
             
