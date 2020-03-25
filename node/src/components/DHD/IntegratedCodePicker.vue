@@ -94,43 +94,9 @@
             </v-col>
 
             <v-col cols=7 v-if="currentConcept">
-                <v-card
-                    v-if="((parentsFiltered.length > 0) || (loading.parents != false)) && (currentConcept.codesystem == 'Snomed' && currentConcept.equivalent == false)" 
-                    :loading="loading.parents"
-                    class="ma-1">
-                    <v-toolbar
-                        color="indigo"
-                        dark
-                        >
-                        <v-toolbar-title>Generiekere concepten</v-toolbar-title>
-                    </v-toolbar>
-                    <v-card-text>
-                        <v-list v-if="loading.parents">
-                            <p>Zoeken naar codes met een bredere betekenis......</p>
-                        </v-list>
-                        <v-list v-else-if="(parentsFiltered.length == 0) && (loading.parents == false)">
-                            Geen parents gevonden.
-                        </v-list>
-                        <v-list  v-else>
-                            <v-list-item
-                                
-                                v-for="result in parentsFiltered"
-                                v-bind:key="result.id"
-                                v-on:click="fetchConcept(result.id)"
-                                link>
-                                <v-list-item-action>
-                                    <v-icon>mdi-file-link</v-icon>
-                                </v-list-item-action>
-                                <v-list-item-content>
-                                    <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
-                                    <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children: {{result.dt_in_descendants}})</v-list-item-subtitle>                            
-                                </v-list-item-content>
-                            </v-list-item>
-                        </v-list>
-                    </v-card-text>
-                </v-card>
-        
 
+
+                <!-- Current concept -->
                 <v-card 
                     v-if="(currentConcept) || (loading.concept != false)" 
                     :loading="loading.concept"
@@ -213,14 +179,58 @@
                             <v-list-item v-if="(currentConcept.equivalent == false) && (currentConcept.codesystem == 'Snomed')">
                                 <v-list-item-content>
                                     <v-list-item-title><b>Aanvragen</b></v-list-item-title>
-                                        Dit SNOMED concept heeft geen koppeling met de Diagnosethesaurus, en kan dus niet geregistreerd worden.
-                                        Kies een specifieker of generieker concept om verder te zoeken.<br>
-                                        <v-btn color=primary>aanvragen</v-btn>
+                                        Dit SNOMED concept heeft geen koppeling met de Diagnosethesaurus, en kan dus niet geregistreerd worden.<br>
+                                        <br>
+                                        <v-btn color="grey lighten-2">aanvragen</v-btn>
+                                </v-list-item-content>
+                            </v-list-item>
+                            <v-list-item v-if="(currentConcept.equivalent == false) && (currentConcept.codesystem == 'Snomed')">
+                                <v-list-item-content>
+                                    <v-list-item-title><b>Kies hier onder een specifieker of generieker concept om verder te zoeken.</b></v-list-item-title>
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
                     </v-card-text>
                 </v-card>
+
+                <!-- Parents -->
+                <v-card
+                    v-if="((parentsFiltered.length > 0) || (loading.parents != false)) && (currentConcept.codesystem == 'Snomed' && currentConcept.equivalent == false)" 
+                    :loading="loading.parents"
+                    class="ma-1">
+                    <v-toolbar
+                        color="indigo"
+                        dark
+                        >
+                        <v-toolbar-title>Generiekere concepten</v-toolbar-title>
+                    </v-toolbar>
+                    <v-card-text>
+                        <v-list v-if="loading.parents">
+                            <p>Zoeken naar codes met een bredere betekenis......</p>
+                        </v-list>
+                        <v-list v-else-if="(parentsFiltered.length == 0) && (loading.parents == false)">
+                            Geen parents gevonden.
+                        </v-list>
+                        <v-list  v-else>
+                            <v-list-item
+                                
+                                v-for="result in parentsFiltered"
+                                v-bind:key="result.id"
+                                v-on:click="fetchConcept(result.id)"
+                                link>
+                                <v-list-item-action>
+                                    <v-icon>mdi-file-link</v-icon>
+                                </v-list-item-action>
+                                <v-list-item-content>
+                                    <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
+                                    <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children: {{result.dt_in_descendants}})</v-list-item-subtitle>                            
+                                </v-list-item-content>
+                            </v-list-item>
+                        </v-list>
+                    </v-card-text>
+                </v-card>
+
+                <!-- Children -->
                 <v-card 
                     v-if="(childrenFiltered.length > 0) || (loading.children != false)" 
                     :loading="loading.children"
