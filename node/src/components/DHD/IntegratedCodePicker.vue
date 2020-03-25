@@ -30,13 +30,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+                                <!-- <tr>
                                     <td>Zoekresultaten ({{hide_no_dt.searchResults}})</td><td>
                                         <v-btn-toggle>
                                             <v-btn v-on:click="setResultsFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setResultsFilter(false)" color=red>Toon alles</v-btn>
                                         </v-btn-toggle>
                                     </td>
-                                </tr>
+                                </tr> -->
                                 <tr>
                                     <td>Parents ({{hide_no_dt.parents}})</td><td>
                                         <v-btn-toggle>
@@ -58,7 +58,7 @@
             </v-col>
         </v-row>
         <v-row justify="center" alignment="center">
-            <v-col cols=5 v-if="!currentConcept">
+            <v-col cols=7 v-if="!currentConcept">
                 <v-card
                     :loading="loading.searchResultsFiltered"
                     class="ma-1">
@@ -104,6 +104,9 @@
                     <v-toolbar
                         color="indigo"
                         dark>
+                        <v-btn icon>
+                            <v-icon v-on:click="resetCurrentConcept()">mdi-backburger</v-icon>
+                        </v-btn>
                         <v-toolbar-title>Component</v-toolbar-title>
                     </v-toolbar>
                     <v-card-text>
@@ -300,6 +303,9 @@ export default {
     },
     setChildrenFilter: function(value) {
         this.hide_no_dt.children = value;
+    },
+    resetCurrentConcept(){
+        this.$store.state.IntegratedCodePicker.currentConcept = false;
     }
   },
   computed: {

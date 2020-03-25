@@ -87,6 +87,13 @@ services:
     environment:
       - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
       - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
+
+      # - VIRTUAL_HOST=${PGADMIN_DOMAIN}
+      # - VIRTUAL_PORT=${PGADMIN_PORT}
+      # - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
+      # - LETSENCRYPT_EMAIL=${EMAIL}
+    ports:
+      - 9124:${PGADMIN_PORT}
     volumes:
       - pgadmin:/var/lib/pgadmin
     networks:
@@ -106,8 +113,8 @@ services:
     #   - VIRTUAL_PORT=${FLOWER_PORT}
     #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
     #   - LETSENCRYPT_EMAIL=${EMAIL}
-    # ports:
-    #   - ${FLOWER_PORT}:${FLOWER_PORT}
+    ports:
+      - ${FLOWER_PORT}:${FLOWER_PORT}
     networks:
       - webtools
       - proxy
