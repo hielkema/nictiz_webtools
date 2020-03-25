@@ -355,6 +355,10 @@ class searchChipsoftConcept(viewsets.ViewSet):
                         'title' : dt_concept.component_title,
                         'extra' : dt_concept.component_extra_dict,
                     })
+
+
+        # If snomed + 1 equivalent map: return DT. Else, continue to Snomed.
+        
         elif concept.codesystem_id.codesystem_title == 'Diagnosethesaurus':
             ## Don't show equivalent items for DT items - end station
             # Append snomed concepts that this item referred to

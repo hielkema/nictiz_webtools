@@ -43,6 +43,7 @@ const state = {
     // Get results
     search: (context, term) => {
       state.loading.searchResults = true
+      state.currentConcept = false
       axios
       .get(context.rootState.baseUrl+'dhd/search/'+term+'/')
       .then((response) => {
