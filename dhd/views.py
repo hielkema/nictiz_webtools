@@ -67,17 +67,17 @@ class searchChipsoft(viewsets.ViewSet):
         search_results_title = search_results_title.exclude(codesystem_id__id = 4)
         search_results_title = search_results_title.exclude(codesystem_id__id = 3)
         search_results_title = search_results_title.exclude(codesystem_id__id = 2)
-        print(search_results_title.count(), "results op titel")
+        # print(search_results_title.count(), "results op titel")
 
         # Search in descriptions        
         search_results_descriptions = MappingCodesystemComponent.objects.annotate(
                             descriptions_text=Cast('descriptions', models.TextField()),
                         ).filter(descriptions_text__icontains=str(pk))
-        print(search_results_descriptions.count(), "results op termen")
+        # print(search_results_descriptions.count(), "results op termen")
 
         # Merge both queries
         search_results = search_results_title | search_results_descriptions
-        print(search_results.count(), "results op beide")
+        # print(search_results.count(), "results op beide")
 
         # Get SNOMED results on << 'clinical finding (finding)'
         snomed_results = search_results.filter(codesystem_id__id = 1)
@@ -87,7 +87,7 @@ class searchChipsoft(viewsets.ViewSet):
         print(len(descendants_clinFinding),"aantal items in clinical findings")
         # Apply filter descendants of 'clinical finding'
         snomed_results = snomed_results.filter(component_id__in=descendants_clinFinding)
-        print(snomed_results.count(), "results in << clinical finding (finding)")
+        # print(snomed_results.count(), "results in << clinical finding (finding)")
         
         # Get non-snomed results
         other_results = search_results.exclude(codesystem_id__id = 1)
@@ -95,59 +95,61 @@ class searchChipsoft(viewsets.ViewSet):
         search_results = snomed_results | other_results
 
         results = []
-        if search_results.count() == 0:
-            print('Geen resultaten')
-        else:
-            print("Resultaat:",search_results)
+        # if search_results.count() == 0:
+        #     print('Geen resultaten')
+        # else:
+        #     print("Resultaat:",search_results)
 
         # Handle search results
-        for concept in search_results[0:20]:
+        ignore_list = []
+        for concept in search_results[0:15]:
             equivalent = False
-            # if concept.codesystem_id.codesystem_title == 'Snomed':
-            #     # Look for diagnosethesaurus items with mapping to this snomed code
-            #     sctid = str(concept)
-            #     print(sctid)
-            #     dt_concepts = MappingCodesystemComponent.objects.filter(component_extra_dict__snomed_mapping=concept.component_id)
-            #     if dt_concepts.exists():
-            #         equivalent = []
-            #         for dt_concept in dt_concepts:
-            #             equivalent.append({
-            #                 'id' : dt_concept.id,
-            #                 'codesystem' : dt_concept.codesystem_id.codesystem_title,
-            #                 'code' : dt_concept.component_id,
-            #                 'title' : dt_concept.component_title,
-            #                 'extra' : dt_concept.component_extra_dict,
-            #             })
-            #     # Check if descendants have a DT mapping or concept is DT
-            #     dt_descendants = False
-            #     try:
-            #         descendants = json.loads(concept.descendants)
-            #     except:
-            #         descendants = []
-            #     for descendant in descendants:
-            #         mapping_query = MappingCodesystemComponent.objects.filter(component_extra_dict__snomed_mapping=descendant)
-            #         if mapping_query.exists():
-            #             dt_descendants = True
-            #             break
+            if concept.codesystem_id.codesystem_title == 'Snomed' and (concept.id not in ignore_list):
+                # Look for diagnosethesaurus items with mapping to this snomed code
+                sctid = str(concept)
+                print(sctid)
+                dt_concepts = MappingCodesystemComponent.objects.filter(component_extra_dict__snomed_mapping=concept.component_id)
+                if dt_concepts.exists():
+                    equivalent = []
+                    for dt_concept in dt_concepts:
+                        equivalent.append({
+                            'id' : dt_concept.id,
+                            'codesystem' : dt_concept.codesystem_id.codesystem_title,
+                            'code' : dt_concept.component_id,
+                            'title' : dt_concept.component_title,
+                            'extra' : dt_concept.component_extra_dict,
+                        })
+                # Check if descendants have a DT mapping or concept is DT
+                dt_descendants = False
+                try:
+                    descendants = json.loads(concept.descendants)
+                except:
+                    descendants = []
+                for descendant in descendants:
+                    mapping_query = MappingCodesystemComponent.objects.filter(component_extra_dict__snomed_mapping=descendant)
+                    if mapping_query.exists():
+                        dt_descendants = True
+                        break
                 
-            # elif concept.codesystem_id.codesystem_title == 'Diagnosethesaurus':
-            #     # Append snomed concepts that this item referred to
-            #     sctid = str(concept)
-            #     print(sctid)
-            #     snomed_concepts = MappingCodesystemComponent.objects.filter(component_id=concept.component_extra_dict.get('snomed_mapping',None))
-            #     if snomed_concepts.exists():
-            #         equivalent = []
-            #         for snomed_concept in snomed_concepts:
-            #             equivalent.append({
-            #                 'id' : snomed_concept.id,
-            #                 'codesystem' : snomed_concept.codesystem_id.codesystem_title,
-            #                 'code' : snomed_concept.component_id,
-            #                 'title' : snomed_concept.component_title,
-            #                 'extra' : snomed_concept.component_extra_dict,
-            #             })
-            #     # Check if descendants have a DT mapping or concept is DT
-            #     dt_descendants = True
-            #     descendants = None
+            elif concept.codesystem_id.codesystem_title == 'Diagnosethesaurus':
+                # Append snomed concepts that this item referred to
+                sctid = str(concept)
+                print(sctid)
+                snomed_concepts = MappingCodesystemComponent.objects.filter(component_id=concept.component_extra_dict.get('snomed_mapping',None))
+                if snomed_concepts.exists():
+                    equivalent = []
+                    for snomed_concept in snomed_concepts:
+                        equivalent.append({
+                            'id' : snomed_concept.id,
+                            'codesystem' : snomed_concept.codesystem_id.codesystem_title,
+                            'code' : snomed_concept.component_id,
+                            'title' : snomed_concept.component_title,
+                            'extra' : snomed_concept.component_extra_dict,
+                        })
+                        ignore_list.append(snomed_concept.id)
+                # Check if descendants have a DT mapping or concept is DT
+                dt_descendants = True
+                descendants = None
             
 
             results.append({
@@ -156,16 +158,16 @@ class searchChipsoft(viewsets.ViewSet):
                 'code' : concept.component_id,
                 'title' : concept.component_title,
                 'extra' : concept.component_extra_dict,
-                # 'equivalent' : equivalent,
-                # 'descendants' : descendants,
-                # 'dt_in_descendants' : dt_descendants,
+                'equivalent' : equivalent,
+                'descendants' : descendants,
+                'dt_in_descendants' : dt_descendants,
             })
 
         sep = " "
         context = {
-            'searchterm' : sep.join(terms),
-            'results_returned' : len(results),
-            'results_total' : search_results.count(),
+            # 'searchterm' : sep.join(terms),
+            # 'results_returned' : len(results),
+            # 'results_total' : search_results.count(),
             'results': results,
         }
         return Response(context)
