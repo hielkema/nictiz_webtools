@@ -65,7 +65,7 @@
                     <v-toolbar
                         color="indigo"
                         dark
-                        >
+                        dense>
                         <v-toolbar-title>Zoekresultaten:</v-toolbar-title>
                     </v-toolbar>
                     <v-card-text>
@@ -106,7 +106,8 @@
                     class="ma-1">
                     <v-toolbar
                         color="indigo"
-                        dark>
+                        dark
+                        dense>
                         <v-btn icon>
                             <v-icon v-on:click="resetCurrentConcept()">mdi-backburger</v-icon>
                         </v-btn>
@@ -116,7 +117,7 @@
                         <v-list v-if="loading.concept">
                             <p>Laden.....</p>
                         </v-list>
-                        <v-list v-else>
+                        <v-list dense v-else>
                             <v-list-item>
                                 <v-list-item-content>
                                     <v-list-item-title><b>Codesysteem</b></v-list-item-title>
@@ -207,7 +208,7 @@
                     <v-toolbar
                         color="indigo"
                         dark
-                        >
+                        dense>
                         <v-toolbar-title>Generiekere concepten</v-toolbar-title>
                     </v-toolbar>
                     <v-card-text>
@@ -244,6 +245,7 @@
                     <v-toolbar
                         color="indigo"
                         dark
+                        dense
                         >
                         <v-toolbar-title>Specifieker vastleggen?</v-toolbar-title>
                     </v-toolbar>
@@ -254,7 +256,7 @@
                         <v-list v-else-if="(childrenFiltered.length == 0) && (loading.children == false)">
                             Geen children gevonden.
                         </v-list>
-                        <v-list  v-else>
+                        <v-list dense v-else>
                             <v-list-item
                                 v-for="result in childrenFiltered"
                                 v-bind:key="result.id"

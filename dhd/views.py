@@ -91,6 +91,7 @@ class searchChipsoft(viewsets.ViewSet):
         
         # Get non-snomed results
         other_results = search_results.exclude(codesystem_id__id = 1)
+        other_results = other_results.exclude(component_extra_dict__Actief = False)
         # Merge the querysets
         search_results = snomed_results | other_results
 
@@ -104,10 +105,13 @@ class searchChipsoft(viewsets.ViewSet):
         ignore_list = []
         for concept in search_results[0:15]:
             equivalent = False
-            if concept.codesystem_id.codesystem_title == 'Snomed' and (concept.id not in ignore_list):
+            if (concept.id in ignore_list):
+                print("ignored", concept.id, str(concept))
+                continue
+            elif (concept.codesystem_id.codesystem_title == 'Snomed'):
                 # Look for diagnosethesaurus items with mapping to this snomed code
                 sctid = str(concept)
-                print(sctid)
+                print(concept.id, sctid)
                 dt_concepts = MappingCodesystemComponent.objects.filter(component_extra_dict__snomed_mapping=concept.component_id)
                 if dt_concepts.exists():
                     equivalent = []
@@ -136,6 +140,7 @@ class searchChipsoft(viewsets.ViewSet):
                 sctid = str(concept)
                 print(sctid)
                 snomed_concepts = MappingCodesystemComponent.objects.filter(component_id=concept.component_extra_dict.get('snomed_mapping',None))
+                
                 if snomed_concepts.exists():
                     equivalent = []
                     for snomed_concept in snomed_concepts:
@@ -146,7 +151,9 @@ class searchChipsoft(viewsets.ViewSet):
                             'title' : snomed_concept.component_title,
                             'extra' : snomed_concept.component_extra_dict,
                         })
+                        # ignore_list.append(concept.component_extra_dict.get('snomed_mapping',None))
                         ignore_list.append(snomed_concept.id)
+                        print("Ignore list:",ignore_list)
                 # Check if descendants have a DT mapping or concept is DT
                 dt_descendants = True
                 descendants = None
