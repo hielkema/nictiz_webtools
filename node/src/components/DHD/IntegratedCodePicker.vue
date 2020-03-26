@@ -51,6 +51,20 @@
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td>Toon parents altijd ({{always_show.parents}})</td><td>
+                                        <v-btn-toggle>
+                                            <v-btn v-on:click="alwaysShowParents(true)" color=green>Altijd tonen</v-btn><v-btn v-on:click="alwaysShowParents(false)" color=red>Slim verbergen</v-btn>
+                                        </v-btn-toggle>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Toon children altijd ({{always_show.children}})</td><td>
+                                        <v-btn-toggle>
+                                            <v-btn v-on:click="alwaysShowChildren(true)" color=green>Altijd tonen</v-btn><v-btn v-on:click="alwaysShowChildren(false)" color=red>Slim verbergen</v-btn>
+                                        </v-btn-toggle>
+                                    </td>
+                                </tr>
                             </tbody>
                         </v-simple-table>
                     </v-card-text>
@@ -128,16 +142,16 @@
                             <v-list-item>
                                 <v-list-item-content>
                                     <v-list-item-title><b>Code</b></v-list-item-title>
-                                    <v-list-item-subtitle>{{currentConcept.code}}</v-list-item-subtitle>
+                                    <v-list-item-subtitle>{{currentConcept.code}} - {{currentConcept.title}}</v-list-item-subtitle>
                                 </v-list-item-content>
                             </v-list-item>
 
-                            <v-list-item>
+                            <!-- <v-list-item>
                                 <v-list-item-content>
                                     <v-list-item-title><b>Titel</b></v-list-item-title>
                                     <v-list-item-subtitle>{{currentConcept.title}}</v-list-item-subtitle>
                                 </v-list-item-content>
-                            </v-list-item>
+                            </v-list-item> -->
 
                             <!-- <v-list-item>
                                 <v-list-item-content>
@@ -202,7 +216,7 @@
 
                 <!-- Parents -->
                 <v-card
-                    v-if="((parentsFiltered.length > 0) || (loading.parents != false)) && (currentConcept.codesystem == 'Snomed' && currentConcept.equivalent == false)" 
+                    v-if="(always_show.parents == true) || (((parentsFiltered.length > 0) || (loading.parents != false)) && (currentConcept.codesystem == 'Snomed' && currentConcept.equivalent == false))" 
                     :loading="loading.parents"
                     class="ma-1">
                     <v-toolbar
@@ -239,7 +253,7 @@
 
                 <!-- Children -->
                 <v-card 
-                    v-if="(childrenFiltered.length > 0) || (loading.children != false)" 
+                    v-if="(always_show.children == true) || ((childrenFiltered.length > 0) || (loading.children != false))" 
                     :loading="loading.children"
                     class="ma-1">
                     <v-toolbar
@@ -289,6 +303,10 @@ export default {
           'parents' : true,
           'children' : true,
       },
+      always_show: {
+          'parents' : false,
+          'children' : false,
+      }
     }
   },
   methods: {
@@ -311,7 +329,13 @@ export default {
     },
     resetCurrentConcept(){
         this.$store.state.IntegratedCodePicker.currentConcept = false;
-    }
+    },
+    alwaysShowParents(value){
+        return this.always_show.parents = value;
+    },
+    alwaysShowChildren(value){
+        return this.always_show.children = value;
+    },
   },
   computed: {
     loading(){

@@ -44,7 +44,7 @@ class searchChipsoft(viewsets.ViewSet):
         # Get results for searchterm        
         query = None ## Query to search for every search term
         terms = term.split(' ')
-        print('Searching for:',term)
+        print(request.user.username, 'Searching for:',term)
         for term in terms:
             or_query = None ## Query to search for a given term in each field
             for field_name in ['component_title']:
@@ -91,7 +91,7 @@ class searchChipsoft(viewsets.ViewSet):
         
         # Get non-snomed results
         other_results = search_results.exclude(codesystem_id__id = 1)
-        other_results = other_results.exclude(component_extra_dict__Actief = False)
+        # other_results = other_results.exclude(component_extra_dict__Actief = False)
         # Merge the querysets
         search_results = snomed_results | other_results
 
@@ -153,7 +153,7 @@ class searchChipsoft(viewsets.ViewSet):
                         })
                         # ignore_list.append(concept.component_extra_dict.get('snomed_mapping',None))
                         ignore_list.append(snomed_concept.id)
-                        print("Ignore list:",ignore_list)
+                        # print("Ignore list:",ignore_list)
                 # Check if descendants have a DT mapping or concept is DT
                 dt_descendants = True
                 descendants = None
