@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-container>
+        <v-container v-if="user.groups.includes('mapping | taskmanager')">
             <v-row>
                 <v-col cols=6>
                     <v-card class="pa-1">

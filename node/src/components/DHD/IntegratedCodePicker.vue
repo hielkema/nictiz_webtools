@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-container fluid>
+    <v-container fluid v-if="user.groups.includes('dhd | demo integratie')">
         <v-row>
             <v-col cols=6>
                 <v-card>
@@ -23,7 +23,7 @@
                 <v-card>
                     <v-subheader>Filters</v-subheader>
                     <v-card-text>
-                        <v-simple-table>
+                        <v-simple-table dense>
                             <thead>
                                 <tr>
                                     <td colspan="2">Filter: Toon alleen DT (gekoppelde) items of items met afstammelingen met DT koppeling.</td>
@@ -32,36 +32,43 @@
                             <tbody>
                                 <tr>
                                     <td>Zoekresultaten ({{hide_no_dt.searchResults}})</td><td>
-                                        <v-btn-toggle>
+                                        <v-btn-toggle dense>
                                             <v-btn v-on:click="setResultsFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setResultsFilter(false)" color=red>Toon alles</v-btn>
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Parents ({{hide_no_dt.parents}})</td><td>
-                                        <v-btn-toggle>
+                                        <v-btn-toggle dense>
                                             <v-btn v-on:click="setParentsFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setParentsFilter(false)" color=red>Toon alles</v-btn>
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Children ({{hide_no_dt.children}})</td><td>
-                                        <v-btn-toggle>
+                                        <v-btn-toggle dense>
                                             <v-btn v-on:click="setChildrenFilter(true)" color=green>Filter aan</v-btn><v-btn v-on:click="setChildrenFilter(false)" color=red>Toon alles</v-btn>
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Toon parents altijd ({{always_show.parents}})</td><td>
-                                        <v-btn-toggle>
+                                        <v-btn-toggle dense>
                                             <v-btn v-on:click="alwaysShowParents(true)" color=green>Altijd tonen</v-btn><v-btn v-on:click="alwaysShowParents(false)" color=red>Slim verbergen</v-btn>
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Toon children altijd ({{always_show.children}})</td><td>
-                                        <v-btn-toggle>
+                                        <v-btn-toggle dense>
                                             <v-btn v-on:click="alwaysShowChildren(true)" color=green>Altijd tonen</v-btn><v-btn v-on:click="alwaysShowChildren(false)" color=red>Slim verbergen</v-btn>
+                                        </v-btn-toggle>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Toon codestelsel in resultaten ({{always_show.codesystem}})</td><td>
+                                        <v-btn-toggle dense>
+                                            <v-btn v-on:click="alwaysShowCodesystem(true)" color=green>Altijd tonen</v-btn><v-btn v-on:click="alwaysShowCodesystem(false)" color=red>Verbergen</v-btn>
                                         </v-btn-toggle>
                                     </td>
                                 </tr>
@@ -100,9 +107,10 @@
                                 </v-list-item-action>
                                 <v-list-item-content>
                                     <v-list-item-title><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
-                                    <v-list-item-subtitle>{{result.codesystem}}<span v-if="result.dt_in_descendants && hide_no_dt == false"> - Heeft DT koppeling, of kinderen met koppeling</span></v-list-item-subtitle>
-                                    <!-- {{eq.codesystem}}: {{eq.title}} -->
-                                    
+                                    <v-list-item-subtitle>
+                                        <span v-if="always_show.codesystem">{{result.codesystem}}</span>
+                                        <span v-if="(result.codesystem != 'Diagnosethesaurus') && result.dt_in_descendants && hide_no_dt.searchResults == false"> - <small><i>Heeft DT koppeling, of kinderen met koppeling</i></small></span>
+                                    </v-list-item-subtitle>                                    
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
@@ -244,7 +252,7 @@
                                 </v-list-item-action>
                                 <v-list-item-content>
                                     <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
-                                    <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children: {{result.dt_in_descendants}})</v-list-item-subtitle>                            
+                                    <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}}<span v-if="result.dt_in_descendants">/ heeft DT koppeling in afstammelingen</span>)</v-list-item-subtitle>                            
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
@@ -281,7 +289,7 @@
                                 </v-list-item-action>
                                 <v-list-item-content>
                                     <v-list-item-title text-color="secondary"><v-icon small v-if="result.equivalent">mdi-link-variant</v-icon>{{result.title}}</v-list-item-title>
-                                    <v-list-item-subtitle>{{result.codesystem}} (children: {{result.children}} / DT in children {{result.dt_in_descendants}})</v-list-item-subtitle>                            
+                                    <v-list-item-subtitle>{{result.codesystem}} (afstammelingen: {{result.children}} <span v-if="result.dt_in_descendants">/ heeft DT koppeling in afstammelingen</span>)</v-list-item-subtitle>                            
                                 </v-list-item-content>
                             </v-list-item>
                         </v-list>
@@ -306,6 +314,7 @@ export default {
       always_show: {
           'parents' : false,
           'children' : false,
+          'codesystem': true,
       }
     }
   },
@@ -335,6 +344,9 @@ export default {
     },
     alwaysShowChildren(value){
         return this.always_show.children = value;
+    },
+    alwaysShowCodesystem(value){
+        return this.always_show.codesystem = value;
     },
   },
   computed: {
@@ -379,6 +391,9 @@ export default {
         }else{
             return this.parents
         }
+    },
+    user(){
+        return this.$store.state.userData
     },
   }
 }

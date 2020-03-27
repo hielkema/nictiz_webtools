@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-container>
+        <v-container v-if="user.groups.includes('mapping | rc_audit')">
             <v-row>
                 <v-col cols=5>
                     <v-card

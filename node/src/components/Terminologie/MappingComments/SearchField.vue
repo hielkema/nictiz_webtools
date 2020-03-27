@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="user.groups.includes('mapping | access')">
     <form v-on:submit.prevent>
     <v-card
       class="ma-1">

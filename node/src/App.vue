@@ -31,10 +31,33 @@
           </v-list-item-content>
         </v-list-item>
 
+        <!-- Groep Demo's -->
+        <v-list-group
+          prepend-icon="account_circle"
+          :value="false"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title>DHD/Chipsoft</v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+          <!-- Link 1 in subgroep -->
+          <v-list-item>
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/demo/Snomed-DT"><v-list-item-title>Integratie DT/SNOMED</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
+          <!-- Link 2 in subgroep -->
+        </v-list-group>
+        <!-- EIND Groep Demo's -->
+
         <!-- Groep Termspace tools -->
         <v-list-group
           prepend-icon="account_circle"
           :value="false"
+          v-if="groups.includes('termspace | commentaar zoeken')"
         >
           <template v-slot:activator>
             <v-list-item-content>
@@ -64,7 +87,6 @@
               <v-list-item-title>Mapping tools</v-list-item-title>
             </v-list-item-content>
           </template>
-
           <!-- Link 1 in subgroep -->
           <v-list-item v-if="groups.includes('mapping | access')">
             <v-list-item-action></v-list-item-action>
@@ -86,8 +108,6 @@
                 <router-link to="/mapping/TaskManager"><v-list-item-title>Taskmanager</v-list-item-title></router-link>
             </v-list-item-content>
           </v-list-item>
-
-          
         </v-list-group>
         <!-- EIND Groep Mapping tools -->
       </v-list>
