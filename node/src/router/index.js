@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
+import store from '@/store'
 
 Vue.use(VueRouter)
 
@@ -66,9 +67,10 @@ router.beforeEach((to, from, next) => {
   const loggedIn = localStorage.getItem('user');
 
   if (authRequired && !loggedIn) {
+    store.dispatch('getPermissions')
     return next('/login');
   }
-
+  store.dispatch('getPermissions')
   next();
 })
 

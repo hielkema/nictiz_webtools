@@ -154,6 +154,9 @@
       this.$vuetify.theme.dark = false;
       this.$store.dispatch('getPermissions')
     },
+    mounted (){
+      this.$store.dispatch('getPermissions')
+    },
     computed: {
         loggedIn () {
             return this.$store.state.authentication.status.loggedIn;
