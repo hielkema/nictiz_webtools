@@ -21,6 +21,7 @@ import time
 import random
 import json
 import urllib.request
+import re
 
 from rest_framework import viewsets
 from ..serializers import *
@@ -386,8 +387,8 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         # Get data
         project = MappingProject.objects.get(id=kwargs.get('project_id'))
-        data = MappingTask.objects.filter(project_id=project).order_by('id')
-    
+        data = MappingTask.objects.filter(project_id=project)
+
         tasks = []
         for task in data:
             try:
@@ -416,11 +417,14 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
                     'title' : task.status.status_title
                 },
             })
-        
+
+        tasks = sorted(tasks, key=lambda k: k['component']['id'])
+
+
         context = {
             'taskList': tasks,
         }
-        # Return JSON
+        # # Return JSON
         return JsonResponse(context,safe=False)
 
 class api_Permissions_get(UserPassesTestMixin,TemplateView):
