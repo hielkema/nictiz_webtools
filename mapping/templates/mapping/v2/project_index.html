@@ -47,13 +47,25 @@
                     </div>
                     <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#dashboardAccordion">
                         <br>
-                        <a href="{% url "mapping:index" %}taskmanager/{{current_project.id}}" class="btn btn-secondary">Taskmanager</a>
-                        <a href="{% url "mapping:index" %}updatecodesystems/" class="btn btn-secondary">Importeer stelsels</a>
-                        <a href="{% url "mapping:index" %}task_create/" class="btn btn-secondary">Taken aanmaken</a>
-                        <a href="{% url "mapping:index" %}audit/{{current_project.id}}/run_async/" class="btn btn-secondary">Audit starten</a>
-                        <a href="{% url "mapping:index" %}audit/{{current_project.id}}/show/" class="btn btn-secondary">Resultaten audit tonen</a>
+                        {% if 'mapping | taskmanager' in permissions %}
+                            <a href="{% url "mapping:index" %}taskmanager/{{current_project.id}}" class="btn btn-secondary">Taskmanager</a>
+                        {% endif %}
+                        {% if 'mapping | admin codesystems' in permissions %}
+                            <a href="{% url "mapping:index" %}updatecodesystems/" class="btn btn-secondary">Importeer stelsels</a>
+                        {% endif %}
+                        {% if 'mapping | create tasks' in permissions %}
+                            <a href="{% url "mapping:index" %}task_create/" class="btn btn-secondary">Taken aanmaken</a>
+                        {% endif %}
+                        {% if 'mapping | audit admin' in permissions %}
+                            <a href="{% url "mapping:index" %}audit/{{current_project.id}}/run_async/" class="btn btn-secondary">Audit starten</a>
+                        {% endif %}
+                        {% if 'mapping | audit' in permissions %}
+                            <a href="{% url "mapping:index" %}audit/{{current_project.id}}/show/" class="btn btn-secondary">Resultaten audit tonen</a>
+                        {% endif %}
                         {% comment %} If 1-n, show audit for multiple mappingrules {% endcomment %}
-                        {% if current_project.project_type == "1" %}<a href="{% url "mapping:index" %}audit/{{current_project.id}}/multiple_mappings/" class="btn btn-secondary">Taken met multipele mappingrules</a>{% endif %}
+                        {% if current_project.project_type == "1" %}
+                            <a href="{% url "mapping:index" %}audit/{{current_project.id}}/multiple_mappings/" class="btn btn-secondary">Taken met multipele mappingrules</a>
+                        {% endif %}
                         <br><br>
                     </div>
                 </div>
