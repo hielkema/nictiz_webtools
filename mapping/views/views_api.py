@@ -22,6 +22,8 @@ import random
 import json
 import urllib.request
 import re
+import natsort
+from operator import itemgetter
 
 from rest_framework import viewsets
 from ..serializers import *
@@ -418,8 +420,8 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
                 },
             })
 
-        tasks = sorted(tasks, key=lambda k: k['component']['id'])
-
+        # tasks = sorted(tasks, key=lambda k: k['component']['id'])
+        tasks = natsort.natsorted(tasks, key=lambda k: k['component']['id'])
 
         context = {
             'taskList': tasks,
@@ -741,6 +743,9 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                 'task': task,
                 'status_list': status_list,
             }
+            # Return JSON
+            return JsonResponse(context,safe=False)
+
         # If task does not exist, return empty
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -751,8 +756,8 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                 'task': '',
                 'status' : 'Mislukt - geen ID?',
             }
-        # Return JSON
-        return JsonResponse(context,safe=False)
+            # Return JSON
+            return JsonResponse(context,safe=False)
 
 class api_Mapping_get(UserPassesTestMixin,TemplateView):
     '''
