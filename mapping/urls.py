@@ -17,6 +17,8 @@ router_1_0.register(r'rc_rule_review', views.RCRuleReview, basename="rc_rule_rev
 router_1_0.register(r'tasks', views.MappingTasks, basename="Mapping_Tasks")
 router_1_0.register(r'change_tasks', views.ChangeMappingTasks, basename="Change_Mapping_Tasks")
 
+router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
+
 urlpatterns = [
     # DRF router
     path(r'api/1.0/', include(router_1_0.urls)),

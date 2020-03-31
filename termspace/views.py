@@ -523,6 +523,95 @@ class jsonMappingExport(viewsets.ViewSet):
         })
 
 
+class fetch_termspace_tasksupply(viewsets.ViewSet):
+    #### TODO : Alle concepten van een codesystem loopen. Output voor ieder element per project bepalen?
+    # dan kan een hele NHG tabel in 1x geëxporteerd worden, anders moet je per project eigen regels bepalen.
+
+    """
+    Fetches terms from termspace.
+    """
+    permission_classes = [AllowAny]
+    def list(self, request, pk=None):
+        output = []
+        
+        output.append(str(TermspaceProgressReport.objects.filter(title = 'Semantic review / Problem, _2019, volkert').order_by('time').last()))
+        output.append(str(TermspaceProgressReport.objects.filter(title = 'Medical review, _2019, volkert').order_by('time').last()))
+        output.append(str(TermspaceProgressReport.objects.filter(title = 'incomplete CAT, _2019').order_by('time').last()))
+        
+        return Response(output)
+
+    def create(self, request, pk=None):
+        
+        output = []
+
+        # Semantic review / problem, 2019, volkert
+        sem = TermspaceTask.objects.filter(
+            data__folder__icontains = '2019',
+            data__assignee = 'volkert',
+            data__workflowState = 'semantic review',
+        )
+        prob = TermspaceTask.objects.filter(
+            data__folder__icontains = '2019',
+            data__assignee = 'volkert',
+            data__workflowState = 'problem',
+        )
+        obj = TermspaceProgressReport.objects.create(
+            title = 'Semantic review / Problem, _2019, volkert',
+            description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status semantic review of problem.',
+            count = sem.count() + prob.count(),
+        )
+        output.append(str(obj))
+
+        # Medical review, 2019, volkert
+        query = TermspaceTask.objects.filter(
+            data__folder__icontains = '2019',
+            data__assignee = 'volkert',
+            data__workflowState = 'medical review',
+        )
+        obj = TermspaceProgressReport.objects.create(
+            title = 'Medical review, _2019, volkert',
+            description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status medical review.',
+            count = query.count(),
+        )
+        output.append(str(obj))
+
+        # Medical review, 2019, volkert
+        query = TermspaceTask.objects.filter(
+            data__folder__icontains = '2019',
+            data__assignee = 'volkert',
+            data__workflowState = 'incomplete CAT',
+        )
+        obj = TermspaceProgressReport.objects.create(
+            title = 'incomplete CAT, _2019',
+            description = 'Alle taken in een map met naam (.*)2019(.*), en status incomplete CAT.',
+            count = query.count(),
+        )
+        output.append(str(obj))
+        
+        return Response(output)
+
+
+
+        # token = None
+
+        # url = 'https://nl-prod-main.termspace.com/api/users/login'
+        # payload = {
+        #     'username' : env('termspace_user'),
+        #     'password' : env('termspace_pass'),
+        #     }
+        # data = urllib.parse.urlencode(payload)
+        # data = data.encode('ascii')
+        # req = urllib.request.Request(url, data)
+        # with urllib.request.urlopen(req) as response:
+        #     result = json.loads(response.read())
+
+        # token = result.get('token')
+
+        # print('Got token:',token[0:5],'.......(trunc)')
+
+    
+
+
 # Full modelviewset
 # class componentApi(viewsets.ReadOnlyModelViewSet):
 #     queryset = MappingCodesystemComponent.objects.all()
