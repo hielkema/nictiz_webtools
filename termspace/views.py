@@ -13,6 +13,7 @@ from urllib.request import urlopen, Request
 import urllib.parse
 from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
 from django.db.models import Q
+from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
 import json
 from .forms import *
 from .models import *
@@ -521,8 +522,6 @@ class jsonMappingExport(viewsets.ViewSet):
 
             "group" : groups,
         })
-
-
 class fetch_termspace_tasksupply(viewsets.ViewSet):
     #### TODO : Alle concepten van een codesystem loopen. Output voor ieder element per project bepalen?
     # dan kan een hele NHG tabel in 1x geëxporteerd worden, anders moet je per project eigen regels bepalen.
@@ -534,9 +533,29 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
     def list(self, request, pk=None):
         output = []
         
-        output.append(str(TermspaceProgressReport.objects.filter(title = 'Semantic review / Problem, _2019, volkert').order_by('time').last()))
-        output.append(str(TermspaceProgressReport.objects.filter(title = 'Medical review, _2019, volkert').order_by('time').last()))
-        output.append(str(TermspaceProgressReport.objects.filter(title = 'incomplete CAT, _2019').order_by('time').last()))
+        query = TermspaceProgressReport.objects.filter(title = 'Semantic review / Problem, _2019, volkert').annotate(day=TruncDay('time')).order_by('time').last()
+        output.append({
+            'id' : query.id,
+            'time' : query.day,
+            'title' : query.title,
+            'count' : query.count,
+        })
+        
+        query = TermspaceProgressReport.objects.filter(title = 'Medical review, _2019, volkert').annotate(day=TruncDay('time')).order_by('time').last()
+        output.append({
+            'id' : query.id,
+            'time' : query.day,
+            'title' : query.title,
+            'count' : query.count,
+        })
+        
+        query = TermspaceProgressReport.objects.filter(title = 'incomplete CAT, _2019').annotate(day=TruncDay('time')).order_by('time').last()
+        output.append({
+            'id' : query.id,
+            'time' : query.day,
+            'title' : query.title,
+            'count' : query.count,
+        })
         
         return Response(output)
 
