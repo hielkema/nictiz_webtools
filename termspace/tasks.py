@@ -94,6 +94,214 @@ def fetch_termspace_tasks():
     return(output)
 
 @shared_task
+def dump_termspace_progress():
+    output = []
+
+    # Semantic review / problem, 2019, volkert
+    sem = TermspaceTask.objects.filter(
+        data__folder__icontains = '2019',
+        data__assignee = 'volkert',
+        data__workflowState = 'semantic review',
+    )
+    prob = TermspaceTask.objects.filter(
+        data__folder__icontains = '2019',
+        data__assignee = 'volkert',
+        data__workflowState = 'problem',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'SemanticProblem2019volkert',
+        title = 'Semantic review / Problem, _2019, volkert',
+        description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status semantic review of problem.',
+        count = sem.count() + prob.count(),
+    )
+    output.append(str(obj))
+
+    # Medical review, 2019, volkert
+    query = TermspaceTask.objects.filter(
+        data__folder__icontains = '2019',
+        data__assignee = 'volkert',
+        data__workflowState = 'medical review',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'Medical2019volkert',
+        title = 'Medical review, _2019, volkert',
+        description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status medical review.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # incomplete CAT, 2019, volkert
+    query = TermspaceTask.objects.filter(
+        data__folder__icontains = '2019',
+        data__assignee = 'volkert',
+        data__workflowState = 'incomplete CAT',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'incompleteCAT2019',
+        title = 'incomplete CAT, _2019',
+        description = 'Alle taken in een map met naam (.*)2019(.*), en status incomplete CAT.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Medical review
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'medical review',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'Medical',
+        title = 'Alle medical review',
+        description = 'Alle taken met status medical review.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Semantic review
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'semantic review',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'Medical',
+        title = 'Alle semantic review',
+        description = 'Alle taken met status semantic review.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Problem
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'problem',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'Medical',
+        title = 'Alle problem',
+        description = 'Alle taken met status problem.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # IHTSDO
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'IHTSDO',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'IHTSDO',
+        title = 'Alle IHTSDO',
+        description = 'Alle taken met status IHTSDO.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # IHTSDO submitted
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'IHTSDO - submitted',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'IHTSDOsubmitted',
+        title = 'Alle IHTSDO submitted',
+        description = 'Alle taken met status IHTSDO submitted.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Specialist consulted
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'specialist consulted',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'specialistConsulted',
+        title = 'Alle specialist consulted',
+        description = 'Alle taken met status specialist consulted.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Waiting for specialist
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'waiting for specialist',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'waitingSpecialist',
+        title = 'Alle waiting for specialist',
+        description = 'Alle taken met status waiting for specialist.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Translation
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'translation',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'ranslation',
+        title = 'Alle translation',
+        description = 'Alle taken met status translation.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+    # Revision
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'revision',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'revision',
+        title = 'Alle revision',
+        description = 'Alle taken met status revision.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+    
+    # Quality control
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'quality control',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'qualityControl',
+        title = 'Alle quality control',
+        description = 'Alle taken met status quality control.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+    
+    # Discussion
+    query = TermspaceTask.objects.filter(
+        data__workflowState = 'discussion',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'discussion',
+        title = 'Alle discussion',
+        description = 'Alle taken met status discussion.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
+
+    # Volkert, niet sem/med/probl/catIncompl
+    query_all = TermspaceTask.objects.all()
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'allTasks',
+        title = 'Alle taken',
+        description = 'Alle taken.',
+        count = query_all.count(),
+    )
+    output.append(str(obj))
+
+    query_open = query_all.exclude(data__workflowState = 'rejected').exclude(
+        data__workflowState = 'ready for publication').exclude(
+        data__workflowState = 'waiting for July publication').exclude(
+        data__workflowState = 'Published').exclude(
+        data__workflowState = 'published')
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'OpenTasks',
+        title = 'Open taken',
+        description = 'Alle taken met status anders dan ready for publication, waiting for july publication, published.',
+        count = query_open.count(),
+    )
+    output.append(str(obj))
+    return output
+
+@shared_task
 def load_termspace_comments():
     token = None
 

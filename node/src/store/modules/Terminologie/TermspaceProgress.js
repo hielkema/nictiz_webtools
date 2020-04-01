@@ -4,13 +4,13 @@ import axios from 'axios'
 // import router from '@/router/index.js' //or whatever your router.js path is
 
 const state = {
-    results: [],
+    ProgressPerStatus: [],
   }
 
   //// ---- Mutations
   const mutations = {
-    setProgress: (state, payload) => {
-      state.results = payload
+    setProgressPerStatus: (state, payload) => {
+      state.ProgressPerStatus = payload.progress
     }
   }
 
@@ -18,12 +18,12 @@ const state = {
   const actions = {
     // Get results
     // getResults: (context, term) => {
-    getProgress: (context) => {
+    getProgressPerStatus: (context) => {
       axios
       .get(context.rootState.baseUrl+'termspace/fetch_termspace_tasksupply/')
       .then((response) => {
         // alert('Respons getResults: '+response.data)
-        context.commit('setProgress',response.data)
+        context.commit('setProgressPerStatus',response.data)
         return true;
       })
     }

@@ -34,6 +34,7 @@ class TermspaceTask(models.Model):
 class TermspaceProgressReport(models.Model):
     time   = models.DateTimeField(default=timezone.now)
     description = models.TextField(default=None, null=True, blank=True)
+    tag = models.CharField(max_length=50, default=None, null=True, blank=True)
     title = models.CharField(max_length=50, default=None, null=True, blank=True)
     count = models.IntegerField(default=None, null=True, blank=True)
     def __str__(self):

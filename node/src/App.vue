@@ -57,7 +57,7 @@
         <v-list-group
           prepend-icon="account_circle"
           :value="false"
-          v-if="groups.includes('termspace | commentaar zoeken')"
+          v-if="groups.includes('termspace | access')"
         >
           <template v-slot:activator>
             <v-list-item-content>
@@ -66,13 +66,19 @@
           </template>
 
           <!-- Link 1 in subgroep -->
-          <v-list-item>
+          <v-list-item v-if="groups.includes('termspace | commentaar zoeken')">
             <v-list-item-action></v-list-item-action>
             <v-list-item-content>
                 <router-link to="/terminologie/searchComments"><v-list-item-title>Termspace commentaar</v-list-item-title></router-link>
             </v-list-item-content>
           </v-list-item>
           <!-- Link 2 in subgroep -->
+          <v-list-item v-if="groups.includes('termspace | termspace progress')">
+            <v-list-item-action></v-list-item-action>
+            <v-list-item-content>
+                <router-link to="/terminologie/termspaceProgress"><v-list-item-title>Termspace voortgang</v-list-item-title></router-link>
+            </v-list-item-content>
+          </v-list-item>
         </v-list-group>
         <!-- EIND Groep Termspace tools -->
 

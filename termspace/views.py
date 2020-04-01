@@ -19,6 +19,7 @@ from django.db.models import Max
 import json
 from .forms import *
 from .models import *
+from .tasks import *
 import time
 import environ
 
@@ -567,134 +568,33 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
             # print(day.tx_day)
             
             day_query = query.filter(time__day=day.time.day, time__month=day.time.month, time__year=day.time.year)
-            # Semantisch medisch + problem
-            try:
-                semmed  = day_query.get(title='Semantic review / Problem, _2019, volkert').count
-            except ObjectDoesNotExist:
-                semmed = 0
-            # Medisch
-            try:
-                med  = day_query.get(title='Medical review, _2019, volkert').count
-            except ObjectDoesNotExist:
-                med = 0
-            # CAT Incomplete
-            try:
-                catincl  = day_query.get(title='incomplete CAT, _2019').count
-            except ObjectDoesNotExist:
-                catincl = 0
 
+            # Create dict to add to the list of days
+            _output = {'date' : day.tx_day.strftime('%Y-%m-%d')}
+            # For each unique title, query the database and add the relevant count
+            for title in query.distinct('title'):
+                try:
+                    _query = day_query.get(title=title.title).count
+                except ObjectDoesNotExist:
+                    _query = 0
+                _output.update({ title.tag :  _query})
 
-            output.append({
-                'date' : day.tx_day.strftime('%Y-%m-%d'),
-                'SemanticProblem' : semmed,
-                'Medisch' : med,
-                'CAT incomplete' : catincl,
+            output.append(_output)
+
+        # Get legends to show on site        
+        legend = []
+        for item in query.distinct('description'):
+            legend.append({
+                'tag' : item.tag,
+                'title' : item.title,
+                'description' : item.description,
             })
-            
-        
-        return Response(output)
+
+        return Response({
+            'progress' : output,
+            'legend' : legend,
+        })
 
     def create(self, request, pk=None):
-        
-        output = []
-
-        # Semantic review / problem, 2019, volkert
-        sem = TermspaceTask.objects.filter(
-            data__folder__icontains = '2019',
-            data__assignee = 'volkert',
-            data__workflowState = 'semantic review',
-        )
-        prob = TermspaceTask.objects.filter(
-            data__folder__icontains = '2019',
-            data__assignee = 'volkert',
-            data__workflowState = 'problem',
-        )
-        obj = TermspaceProgressReport.objects.create(
-            title = 'Semantic review / Problem, _2019, volkert',
-            description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status semantic review of problem.',
-            count = sem.count() + prob.count(),
-        )
-        output.append(str(obj))
-
-        # Medical review, 2019, volkert
-        query = TermspaceTask.objects.filter(
-            data__folder__icontains = '2019',
-            data__assignee = 'volkert',
-            data__workflowState = 'medical review',
-        )
-        obj = TermspaceProgressReport.objects.create(
-            title = 'Medical review, _2019, volkert',
-            description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status medical review.',
-            count = query.count(),
-        )
-        output.append(str(obj))
-
-        # Medical review, 2019, volkert
-        query = TermspaceTask.objects.filter(
-            data__folder__icontains = '2019',
-            data__assignee = 'volkert',
-            data__workflowState = 'incomplete CAT',
-        )
-        obj = TermspaceProgressReport.objects.create(
-            title = 'incomplete CAT, _2019',
-            description = 'Alle taken in een map met naam (.*)2019(.*), en status incomplete CAT.',
-            count = query.count(),
-        )
-        output.append(str(obj))
-        
-        return Response(output)
-
-
-
-        # token = None
-
-        # url = 'https://nl-prod-main.termspace.com/api/users/login'
-        # payload = {
-        #     'username' : env('termspace_user'),
-        #     'password' : env('termspace_pass'),
-        #     }
-        # data = urllib.parse.urlencode(payload)
-        # data = data.encode('ascii')
-        # req = urllib.request.Request(url, data)
-        # with urllib.request.urlopen(req) as response:
-        #     result = json.loads(response.read())
-
-        # token = result.get('token')
-
-        # print('Got token:',token[0:5],'.......(trunc)')
-
-    
-
-
-# Full modelviewset
-# class componentApi(viewsets.ReadOnlyModelViewSet):
-#     queryset = MappingCodesystemComponent.objects.all()
-#     serializer_class = MappingComponentSerializer
-
-# LIST endpoint
-# class testEndPoint(viewsets.ViewSet):
-#     def list(self, request):
-#         yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
-#         results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(results)
-#     def retrieve(self, request, pk=None):
-#         yourdata = pk
-#         # results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(yourdata)
-#     def create(self, request):
-#         return Response('succes')
-
-# CUSTOM endpoint
-# class TestCustomView(views.APIView):
-#     permission_classes = []
-#     def post(self, request, *args, **kwargs):
-#         email = request.data.get('email', None)
-#         url = request.data.get('url', None)
-#         if email and url:
-#             return Response({"success": True, "email":email,"url":url})
-#         else:
-#             return Response({"success": False})
-#     def get(self, request):
-#         yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
-#         results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(results)
+        dump_termspace_progress()
+        return Response('started')
