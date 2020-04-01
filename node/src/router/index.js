@@ -22,6 +22,11 @@ const routes = [
     component: () => import('../views/Terminologie/TermspaceComments.vue')
   },
   {
+    path: '/terminologie/termspaceProgress',
+    name: 'Voortgang vertaling Termspace',
+    component: () => import('../views/Terminologie/TermspaceProgress.vue')
+  },
+  {
     path: '/terminologie/mappingComments',
     name: 'Zoek commentaar in mappingtool',
     component: () => import('../views/Terminologie/MappingComments.vue')

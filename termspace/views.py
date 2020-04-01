@@ -14,6 +14,8 @@ import urllib.parse
 from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
 from django.db.models import Q
 from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
 import json
 from .forms import *
 from .models import *
@@ -24,7 +26,7 @@ from rest_framework import viewsets
 from .serializers import *
 from rest_framework import views
 from rest_framework.response import Response
-from rest_framework.permissions import *
+from rest_framework import permissions
 
 from snowstorm_client import Snowstorm
 
@@ -33,9 +35,17 @@ env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
+class Permission_TermspaceProgressReport(permissions.BasePermission):
+    """
+    Global permission check rights to use the RC Audit functionality.
+    """
+    def has_permission(self, request, view):
+        if 'termspace | termspace progress' in request.user.groups.values_list('name', flat=True):
+            return True
+
 # Search termspace comments
 class searchTermspaceComments(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     def retrieve(self, request, pk=None):
         term = str(pk)
         print(request)
@@ -80,7 +90,7 @@ class searchTermspaceComments(viewsets.ViewSet):
         return Response(context)
 
 class searchMappingComments(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     def retrieve(self, request, pk=None):
         term = str(pk)
         print(request)
@@ -131,7 +141,7 @@ class searchMappingComments(viewsets.ViewSet):
 
 # Snomed component endpoint
 class componentApi(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request):
         # clinicalFinding = MappingCodesystemComponent.objects.get(component_id='404684003')
         # clinicalFinding_list = json.loads(clinicalFinding.descendants)
@@ -155,7 +165,7 @@ class componentApi(viewsets.ViewSet):
 
 # ECL query results
 class eclQueryApi(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request):
         query = EclQueryResults.objects.filter()
         results = EclQueryResultsSerializer(query, many=True).data
@@ -203,7 +213,7 @@ class eclQueryApi(viewsets.ViewSet):
         # MethodNotAllowed(method, detail=None, code=None)
 
 class SnomedJSONTree(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         def list_children(focus):
             component = MappingCodesystemComponent.objects.get(component_id=focus)
@@ -227,7 +237,7 @@ class SnomedJSONTree(viewsets.ViewSet):
         return Response(children_list)
 
 class Mapping_Progressreport_perStatus(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         output = []
 
@@ -252,7 +262,7 @@ class Mapping_Progressreport_perStatus(viewsets.ViewSet):
             return Response(output)
 
 class Mapping_Progressreport_perProject(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         output = []
 
@@ -319,7 +329,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                 return Response(output)
 
 class Mapping_Progressreport_overTime(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request, pk=None):
         output = []
 
@@ -389,7 +399,7 @@ class jsonMappingExport(viewsets.ViewSet):
     -> /termspace/mapping_json/4/
     Will currently only export the first 10 mapping rules from each project with an export format
     """
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     def list(self, request, pk=None):
         conceptmap = []
         # Return Json response
@@ -522,40 +532,65 @@ class jsonMappingExport(viewsets.ViewSet):
 
             "group" : groups,
         })
-class fetch_termspace_tasksupply(viewsets.ViewSet):
-    #### TODO : Alle concepten van een codesystem loopen. Output voor ieder element per project bepalen?
-    # dan kan een hele NHG tabel in 1x geëxporteerd worden, anders moet je per project eigen regels bepalen.
 
+class fetch_termspace_tasksupply(viewsets.ViewSet):
     """
     Fetches terms from termspace.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [Permission_TermspaceProgressReport]
+
     def list(self, request, pk=None):
+        
+        # Get list of unique titles
+        titles = TermspaceProgressReport.objects.all().values_list('title', flat=True)
+        for title in titles:
+            # Selects last time_stamp for each day
+            last_entries = (TermspaceProgressReport.objects
+                .filter(title = title)
+                .annotate(tx_day=TruncDay('time'))
+                .values('tx_day')
+                .annotate(last_entry=Max('time'))
+                .values_list('last_entry', flat=True))
+            # Add queries
+            try:
+                query = query | TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+            except:
+                query = TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+        # Return entire queryset
         output = []
-        
-        query = TermspaceProgressReport.objects.filter(title = 'Semantic review / Problem, _2019, volkert').annotate(day=TruncDay('time')).order_by('time').last()
-        output.append({
-            'id' : query.id,
-            'time' : query.day,
-            'title' : query.title,
-            'count' : query.count,
-        })
-        
-        query = TermspaceProgressReport.objects.filter(title = 'Medical review, _2019, volkert').annotate(day=TruncDay('time')).order_by('time').last()
-        output.append({
-            'id' : query.id,
-            'time' : query.day,
-            'title' : query.title,
-            'count' : query.count,
-        })
-        
-        query = TermspaceProgressReport.objects.filter(title = 'incomplete CAT, _2019').annotate(day=TruncDay('time')).order_by('time').last()
-        output.append({
-            'id' : query.id,
-            'time' : query.day,
-            'title' : query.title,
-            'count' : query.count,
-        })
+
+        for day in query.annotate(tx_day=TruncDay('time')).distinct('tx_day'):
+            # print(day.tx_day)
+            
+            day_query = query.filter(time__day=day.time.day, time__month=day.time.month, time__year=day.time.year)
+            # Semantisch medisch + problem
+            try:
+                semmed  = day_query.get(title='Semantic review / Problem, _2019, volkert').count
+            except ObjectDoesNotExist:
+                semmed = 0
+            # Medisch
+            try:
+                med  = day_query.get(title='Medical review, _2019, volkert').count
+            except ObjectDoesNotExist:
+                med = 0
+            # CAT Incomplete
+            try:
+                catincl  = day_query.get(title='incomplete CAT, _2019').count
+            except ObjectDoesNotExist:
+                catincl = 0
+
+
+            output.append({
+                'date' : day.tx_day.strftime('%Y-%m-%d'),
+                'SemanticProblem' : semmed,
+                'Medisch' : med,
+                'CAT incomplete' : catincl,
+            })
+            
         
         return Response(output)
 

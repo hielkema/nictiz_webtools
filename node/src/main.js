@@ -3,6 +3,7 @@ import axios from 'axios'
 import App from './App.vue'
 import router from './router'
 import store from './store'
+import * as d3 from "../node_modules/d3"
 import vuetify from './plugins/vuetify';
 import VueCookies from '../node_modules/vue-cookies'
 // import { alert } from './store/alert.module'
@@ -81,6 +82,7 @@ axios.interceptors.response.use((response) => {
 new Vue({
   router,
   store,
+  d3,
   VueCookies,
   vuetify,
   axios,

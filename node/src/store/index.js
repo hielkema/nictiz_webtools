@@ -5,6 +5,7 @@ import axios from 'axios'
 // Termspace tools
 import Epd from './modules/Epd'
 import TermspaceComments from './modules/Terminologie/TermspaceComments'
+import TermspaceProgress from './modules/Terminologie/TermspaceProgress'
 
 // Mapping tools
 import MappingComments from './modules/Terminologie/MappingComments'
@@ -39,6 +40,7 @@ export default new Vuex.Store({
       TermspaceComments,
       MappingComments,
       authentication,
+      TermspaceProgress,
       RcAuditConnection,
       IntegratedCodePicker,
       TaskManager,
