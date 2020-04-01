@@ -6,12 +6,14 @@ import store from './store'
 import * as d3 from "../node_modules/d3"
 import vuetify from './plugins/vuetify';
 import VueCookies from '../node_modules/vue-cookies'
+import VueApexCharts from 'vue-apexcharts'
 // import { alert } from './store/alert.module'
 Vue.config.productionTip = false
 Vue.prototype.$axios = axios
 
 Vue.use(require('vue-cookies'));
 Vue.use('VeeValidate');
+Vue.component('apexchart', VueApexCharts)
 
 
 // Add an axios interceptor for adding token to requests

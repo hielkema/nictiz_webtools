@@ -8,7 +8,7 @@
                     :headers="headers"
                     :items="results"
                     sort-by="date"
-                    sort-desc="true"
+                    :sort-desc="true"
                     :items-per-page="5"
                     class="elevation-1"
                 ></v-data-table>
@@ -40,7 +40,7 @@ export default {
   },
   computed: {
     results() {
-      return this.$store.state.TermspaceProgress.ProgressPerStatus;
+      return this.$store.state.TermspaceProgress.ProgressPerStatus_table;
     }
   },
   created() {

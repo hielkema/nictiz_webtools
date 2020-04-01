@@ -22,6 +22,7 @@ router.register(r'mapping_progress_per_status', Mapping_Progressreport_perStatus
 router.register(r'mapping_progress_over_time', Mapping_Progressreport_overTime, basename="mapping_progress_over_time")
 
 router.register(r'fetch_termspace_tasksupply', fetch_termspace_tasksupply, basename="fetch_termspace_tasksupply")
+router.register(r'fetch_termspace_tasksupply_v2', fetch_termspace_tasksupply_v2, basename="fetch_termspace_tasksupply_v2")
 
 
 # router.register(r'test_post_endpoint', ShareView, basename="testpoint_post")

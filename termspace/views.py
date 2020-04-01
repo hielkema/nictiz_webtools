@@ -539,9 +539,7 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
     Fetches terms from termspace.
     """
     permission_classes = [Permission_TermspaceProgressReport]
-
     def list(self, request, pk=None):
-        
         # Get list of unique titles
         titles = TermspaceProgressReport.objects.all().values_list('title', flat=True)
         for title in titles:
@@ -595,6 +593,67 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
             'legend' : legend,
         })
 
+    def create(self, request, pk=None):
+        dump_termspace_progress()
+        return Response('started')
+
+
+class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
+    """
+    Fetches terms from termspace.
+    """
+    permission_classes = [Permission_TermspaceProgressReport]
+
+    def list(self, request, pk=None):
+        # Get categories - list of days
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
+        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True)
+        for title in titles:
+            # Selects last time_stamp for each day
+            last_entries = (TermspaceProgressReport.objects
+                .filter(title = title)
+                .annotate(tx_day=TruncDay('time'))
+                .values('tx_day')
+                .annotate(last_entry=Max('time'))
+                .values_list('last_entry', flat=True))
+            # Add queries
+            try:
+                query = query | TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+            except:
+                query = TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+        
+        categories = []
+        series = []
+        for day in days:
+            # List all unique days
+            categories.append(day.strftime('%d-%m-%Y'))
+        # Loop over all unique titles
+        for title in titles:
+            _data = []
+            # For each day
+            for day in days:
+                # Get the last query with this title for the day
+                day_query = query.filter(time__day=day.day, time__month=day.month, time__year=day.year)
+                day_query = day_query.filter(title = title)
+                if day_query.count() == 1:
+                    _data.append(day_query.last().count)
+                else:
+                    _data.append(0)
+            series.append({
+                'name': title,
+                'data' : _data,
+                })
+        return Response({
+            'progress' : {
+                'categories' : categories,
+                'series' : series,
+            },
+            'legend' : [],
+        })
     def create(self, request, pk=None):
         dump_termspace_progress()
         return Response('started')

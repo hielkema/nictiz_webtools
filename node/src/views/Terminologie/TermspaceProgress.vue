@@ -10,7 +10,7 @@
             <v-row>
                 <v-col class="col-12">
                     <Graph title="Voortgang per status" :values='graph_status.values' :labels="graph_status.labels" />
-                    <Graph title="Voortgang: alle taken" :values='graph_alltasks.values' :labels="graph_alltasks.labels" />
+                    <!-- <Graph title="Voortgang: alle taken" :values='graph_alltasks.values' :labels="graph_alltasks.labels" /> -->
                 </v-col>
             </v-row>
             <v-row>
@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import Graph from '@/components/Terminologie/Termspace/ProgressGraphPerStatus';
+import Graph from '@/components/Terminologie/Termspace/ProgressGraphPerStatusv2';
 import Table from '@/components/Terminologie/Termspace/ProgressTablePerStatus';
 
 export default {
@@ -64,6 +64,7 @@ export default {
     },
     created() {
         this.$store.dispatch("TermspaceProgress/getProgressPerStatus");
+        this.$store.dispatch("TermspaceProgress/getProgressPerStatusV2");
     }
 }
 </script>

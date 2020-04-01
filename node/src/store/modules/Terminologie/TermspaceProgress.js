@@ -4,13 +4,20 @@ import axios from 'axios'
 // import router from '@/router/index.js' //or whatever your router.js path is
 
 const state = {
-    ProgressPerStatus: [],
+    ProgressPerStatus_table: [],
+    ProgressPerStatus_graph: {
+        'categories': [],
+        'series' : [],
+    },
   }
 
   //// ---- Mutations
   const mutations = {
-    setProgressPerStatus: (state, payload) => {
-      state.ProgressPerStatus = payload.progress
+    setProgressPerStatus_table: (state, payload) => {
+      state.ProgressPerStatus_table = payload.progress
+    },
+    setProgressPerStatus_graph: (state, payload) => {
+        state.ProgressPerStatus_graph = payload.progress
     }
   }
 
@@ -23,10 +30,19 @@ const state = {
       .get(context.rootState.baseUrl+'termspace/fetch_termspace_tasksupply/')
       .then((response) => {
         // alert('Respons getResults: '+response.data)
-        context.commit('setProgressPerStatus',response.data)
+        context.commit('setProgressPerStatus_table',response.data)
         return true;
       })
-    }
+    },
+    getProgressPerStatusV2: (context) => {
+        axios
+        .get(context.rootState.baseUrl+'termspace/fetch_termspace_tasksupply_v2/')
+        .then((response) => {
+          // alert('Respons getResults: '+response.data)
+          context.commit('setProgressPerStatus_graph',response.data)
+          return true;
+        })
+      }
   }
 
 export default {
