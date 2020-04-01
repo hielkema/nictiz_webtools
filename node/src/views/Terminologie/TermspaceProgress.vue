@@ -9,7 +9,8 @@
         >
             <v-row>
                 <v-col class="col-12">
-                    <Graph title="Voortgang per status" :values='graph_status.values' :labels="graph_status.labels" />
+                    <Graph title="Voortgang per status"
+                        :chartSeries="chartSeries" />
                     <!-- <Graph title="Voortgang: alle taken" :values='graph_alltasks.values' :labels="graph_alltasks.labels" /> -->
                 </v-col>
             </v-row>
@@ -60,6 +61,9 @@ export default {
     computed: {
         user() {
             return this.$store.state.userData;
+        },
+        chartSeries() {
+            return this.$store.state.TermspaceProgress.ProgressPerStatus_graph.series;
         },
     },
     created() {

@@ -4,7 +4,8 @@
         <v-card>
             <v-subheader>{{title}}</v-subheader>
             <v-card-text>
-                <apexchart  type="line" :options="options" :series="seriesFiltered"></apexchart>
+                <apexchart  type="line" height="400" :options="options" :series="seriesFiltered"></apexchart>
+            {{options}}
             </v-card-text>
         </v-card>
     </v-container>
@@ -26,15 +27,28 @@
 </template>
 
 <script>
-
 export default {
   components: {
   },
-  props: ['title','values','labels'],
+  props: ['title','chartSeries'],
   data() {
     return {
-      selection : [],
-      options: {
+      selection : ['Semantic review / Problem, _2019, volkert', 'Medical review, _2019, volkert', 'incomplete CAT, _2019']
+    };
+  },
+  methods: {
+ 
+  },
+  computed: {
+    seriesFiltered() { 
+      var that = this
+      var output =  this.chartSeries.filter(function(series) {
+        return that.selection.includes(series.name);
+      })
+      return output
+    },
+    options: function() {
+      return {
         theme: {
           palette: 'palette2'
         },
@@ -56,11 +70,11 @@ export default {
           curve: 'smooth'
         },
         legend: {
-          position: 'top',
-          horizontalAlign: 'right',
-          floating: true,
-          offsetY: -25,
-          offsetX: -5
+          position: 'right',
+          horizontalAlign: 'center',
+          floating: false,
+          offsetY: 0,
+          offsetX: 0,
         },
         grid: {
           borderColor: '#e7e7e7',
@@ -69,32 +83,13 @@ export default {
             opacity: 0.5
           },
         },
-        xaxis: {
-          categories: this.$store.state.TermspaceProgress.ProgressPerStatus_graph.categories,
+        xaxis : {
+          categories: this.$store.state.TermspaceProgress.ProgressPerStatus_graph.categories
         }
-      },
-    };
-  },
-  methods: {
-        
-  },
-  computed: {
-    chartCategories() {
-      return this.$store.state.TermspaceProgress.ProgressPerStatus_graph.categories;
+      }
     },
-    chartSeries() {
-      return this.$store.state.TermspaceProgress.ProgressPerStatus_graph.series;
-    },
-    seriesFiltered() { 
-      var that = this
-      var output =  this.chartSeries.filter(function(series) {
-        return that.selection.includes(series.name);
-      })
-      return output
-    }
   },
   created() {
-    this.selection = ['Semantic review / Problem, _2019, volkert', 'Medical review, _2019, volkert', 'incomplete CAT, _2019']
   }
 };
 </script>

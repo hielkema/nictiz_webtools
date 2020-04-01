@@ -6,7 +6,6 @@ import axios from 'axios'
 const state = {
     ProgressPerStatus_table: [],
     ProgressPerStatus_graph: {
-        'categories': [],
         'series' : [],
     },
   }
