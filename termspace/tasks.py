@@ -116,6 +116,23 @@ def dump_termspace_progress():
     )
     output.append(str(obj))
 
+    # Semantic review / problem, volkert
+    sem = TermspaceTask.objects.filter(
+        data__assignee = 'volkert',
+        data__workflowState = 'semantic review',
+    )
+    prob = TermspaceTask.objects.filter(
+        data__assignee = 'volkert',
+        data__workflowState = 'problem',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'SemanticProblemVolkert',
+        title = 'Semantic review / Problem, volkert',
+        description = 'Alle taken op Volkert en status semantic review of problem.',
+        count = sem.count() + prob.count(),
+    )
+    output.append(str(obj))
+
     # Medical review, 2019, volkert
     query = TermspaceTask.objects.filter(
         data__folder__icontains = '2019',
@@ -130,6 +147,19 @@ def dump_termspace_progress():
     )
     output.append(str(obj))
 
+    # Medical review, volkert
+    query = TermspaceTask.objects.filter(
+        data__assignee = 'volkert',
+        data__workflowState = 'medical review',
+    )
+    obj = TermspaceProgressReport.objects.create(
+        tag = 'Medical2019volkert',
+        title = 'Medical review, volkert',
+        description = 'Alle taken op Volkert en status medical review.',
+        count = query.count(),
+    )
+    output.append(str(obj))
+
     # incomplete CAT, 2019, volkert
     query = TermspaceTask.objects.filter(
         data__folder__icontains = '2019',
@@ -137,8 +167,8 @@ def dump_termspace_progress():
         data__workflowState = 'incomplete CAT',
     )
     obj = TermspaceProgressReport.objects.create(
-        tag = 'incompleteCAT2019',
-        title = 'incomplete CAT, _2019',
+        tag = 'incompleteCAT2019volkert',
+        title = 'incomplete CAT, _2019, volkert',
         description = 'Alle taken in een map met naam (.*)2019(.*), en status incomplete CAT.',
         count = query.count(),
     )
