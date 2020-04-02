@@ -35,6 +35,7 @@
         <v-list-group
           prepend-icon="account_circle"
           :value="false"
+          v-if="groups.includes('dhd | demo integratie')"
         >
           <template v-slot:activator>
             <v-list-item-content>
@@ -43,7 +44,7 @@
           </template>
 
           <!-- Link 1 in subgroep -->
-          <v-list-item>
+          <v-list-item v-if="groups.includes('dhd | demo integratie')">
             <v-list-item-action></v-list-item-action>
             <v-list-item-content>
                 <router-link to="/demo/Snomed-DT"><v-list-item-title>Integratie DT/SNOMED</v-list-item-title></router-link>
