@@ -29,7 +29,7 @@ export default {
             { text: 'Datum', value: 'date' },
             { text: 'Semantisch / Probleem', value: 'SemanticProblem2019volkert' },
             { text: 'Medisch', value: 'Medical2019volkert' },
-            { text: 'CAT incompleet', value: 'incompleteCAT2019' },
+            { text: 'CAT incompleet', value: 'incompleteCAT2019volkert' },
             { text: 'Alle taken', value: 'allTasks' },
             { text: 'Open taken', value: 'OpenTasks' },
         ]
