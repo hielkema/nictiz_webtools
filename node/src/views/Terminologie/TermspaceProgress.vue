@@ -1,18 +1,10 @@
-// Commentaar zoeken - index
-
 <template>
     <div id="app" v-if="user.groups.includes('termspace | termspace progress')">
-        <h1>Termspace voortgang</h1>
+        <h1>Dashboard voortgang Termspace</h1>
         <v-divider></v-divider>
         <v-container
         fluid
         >
-            <v-row>
-                <v-col class="col-12">
-                    <GraphUser title="Voortgang per status" />
-                    <!-- <Graph title="Voortgang: alle taken" :values='graph_alltasks.values' :labels="graph_alltasks.labels" /> -->
-                </v-col>
-            </v-row>
             <v-row>
                 <v-col class="col-12">
                     <Graph title="Voortgang per status" />
@@ -22,6 +14,12 @@
             <v-row>
                 <v-col class="col-12">
                     <Table />
+                </v-col>
+            </v-row>
+            <v-row>
+                <v-col class="col-12">
+                    <GraphUser title="Taken per gebruiker per status" />
+                    <!-- <Graph title="Voortgang: alle taken" :values='graph_alltasks.values' :labels="graph_alltasks.labels" /> -->
                 </v-col>
             </v-row>
       </v-container>

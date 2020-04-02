@@ -574,7 +574,7 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
                 try:
                     _query = day_query.get(title=title.title).count
                 except ObjectDoesNotExist:
-                    _query = 0
+                    _query = None
                 _output.update({ title.tag :  _query})
 
             output.append(_output)
@@ -642,10 +642,10 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         # Add it to te output
                     print(_query.count())
                     if _query.count() == 0:
-                        user_output.append(0)
+                        user_output.append(None)
                     else:
                         user_output.append(_query.last().count)
-                    days.append(day)
+                    days.append(day.strftime('%d-%m-%Y'))
                 output.append({
                     'name' : user + ' ' + str(status),
                     'data' : user_output,
@@ -702,7 +702,7 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
                 if day_query.count() == 1:
                     _data.append(day_query.last().count)
                 else:
-                    _data.append(0)
+                    _data.append(None)
             series.append({
                 'name': title,
                 'data' : _data,
