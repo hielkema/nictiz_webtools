@@ -97,6 +97,8 @@ def fetch_termspace_tasks():
 def dump_termspace_progress():
     output = []
 
+
+    ######### Overal status distribution over all tasks #########
     # Semantic review / problem, 2019, volkert
     sem = TermspaceTask.objects.filter(
         data__folder__icontains = '2019',
@@ -306,7 +308,6 @@ def dump_termspace_progress():
     )
     output.append(str(obj))
 
-
     # Volkert, niet sem/med/probl/catIncompl
     query_all = TermspaceTask.objects.all()
     obj = TermspaceProgressReport.objects.create(
@@ -329,6 +330,55 @@ def dump_termspace_progress():
         count = query_open.count(),
     )
     output.append(str(obj))
+
+    ######## Status distribution per user ########
+    # Dump inbox counts per status for terminologists
+    terminologists = [
+        'soons',
+        'mertens',
+        'hielkema',
+        'paiman',
+        'timmer',
+        'e.degroot',
+        'krul',
+    ]
+    output = []
+    for employee in terminologists:
+        # Set container for total task count
+        total = 0
+        # Set completed statuses
+        exclude = [
+            'Published', 'published', 'ready for publication', 'waiting for July publication', 'rejected'
+        ]
+        # Get distinct statuses
+        statuses = TermspaceTask.objects.all().distinct('data__workflowState').values_list('data__workflowState', flat=True)
+        for status in statuses:
+            # Count tasks with this status
+            tasks = TermspaceTask.objects.filter(data__assignee = employee, data__workflowState = status)
+            count = tasks.count()
+            # Upload count to database
+            output.append({
+                'username' : employee,
+                'status' : status,
+                'count' : count,
+            })
+            obj = TermspaceUserReport.objects.create(
+                username = employee,
+                status = status,
+                count = count,
+            )
+            output.append(str(obj))
+            
+            if status not in exclude:
+                total += count
+        # Upload total in database
+        obj = TermspaceUserReport.objects.create(
+            username = employee,
+            status = 'total open',
+            count = total,
+        )
+        output.append(str(obj))
+
     return output
 
 @shared_task

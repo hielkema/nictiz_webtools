@@ -594,10 +594,70 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
         })
 
     def create(self, request, pk=None):
-        dump_termspace_progress()
-        return Response('started')
+        output = []
+        
+        return Response(output)
+
+class fetch_termspace_user_tasksupply(viewsets.ViewSet):
+    """
+    Fetches tasks from termspace, per user.
+    """
+    permission_classes = [Permission_TermspaceProgressReport]
+    def retrieve(self, request, pk=None):
+        output = []
+        days = []
+        reports = TermspaceUserReport.objects.all()
+
+        if pk == 'all':
+            statuses = reports.distinct('status').values_list('status', flat=True)
+        else:
+            statuses = [str(pk)]
+        
+        users = reports.distinct('username').values_list('username', flat=True)
+        
+        
+        for user in users:
+            # User loop - now go over every status and get totals per day
+            for status in statuses:
+                user_output = []
+                for day in (reports
+                        .annotate(tx_day=TruncDay('time'))
+                        .values('tx_day')
+                        .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
+                    print('Unique day:',day)
+                    
+                    # Selects last time_stamp for each day
+                    last_entries = (TermspaceUserReport.objects
+                        .filter(username = user, status=status)
+                        .annotate(tx_day=TruncDay('time'))
+                        .values('tx_day')
+                        .annotate(last_entry=Max('time'))
+                        .values_list('last_entry', flat=True))
+                    query = TermspaceUserReport.objects.filter(
+                        time__in=last_entries,
+                    )
+                    print('Looking up: ', status, user)
+                    _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
+                        # _query is the newest record for this user with this status
+                        # Add it to te output
+                    print(_query.count())
+                    if _query.count() == 0:
+                        user_output.append(0)
+                    else:
+                        user_output.append(_query.last().count)
+                    days.append(day)
+                output.append({
+                    'name' : user + ' ' + str(status),
+                    'data' : user_output,
+                })
 
 
+        return Response({
+            'progress' : {
+                    'categories' : set(days),
+                    'series':output,
+                }
+        })
 class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
     """
     Fetches terms from termspace.

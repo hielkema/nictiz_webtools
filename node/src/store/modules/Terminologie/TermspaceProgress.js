@@ -8,6 +8,9 @@ const state = {
     ProgressPerStatus_graph: {
         'series' : [],
     },
+    ProgressPerUser: {
+        'series' : [],
+    },
   }
 
   //// ---- Mutations
@@ -17,6 +20,9 @@ const state = {
     },
     setProgressPerStatus_graph: (state, payload) => {
         state.ProgressPerStatus_graph = payload.progress
+    },
+    setProgressPerUser: (state, payload) => {
+        state.ProgressPerUser = payload.progress
     }
   }
 
@@ -41,7 +47,16 @@ const state = {
           context.commit('setProgressPerStatus_graph',response.data)
           return true;
         })
-      }
+    },
+    getProgressPerUser: (context) => {
+      axios
+      .get(context.rootState.baseUrl+'termspace/fetch_termspace_user_tasksupply/all/')
+      .then((response) => {
+        // alert('Respons getResults: '+response.data)
+        context.commit('setProgressPerUser',response.data)
+        return true;
+      })
+    },
   }
 
 export default {

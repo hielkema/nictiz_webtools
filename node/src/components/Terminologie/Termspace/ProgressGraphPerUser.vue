@@ -32,7 +32,16 @@ export default {
   props: ['title'],
   data() {
     return {
-      selection : ['Semantic review / Problem, _2019, volkert', 'Medical review, _2019, volkert', 'incomplete CAT, _2019, volkert']
+      selection : [
+        'e.degroot total open',
+        'krul total open',
+        'mertens total open',
+        'soons total open',
+        'paiman total open',
+        'hielkema total open',
+        'timmer total open',
+        'krul total open',
+        ]
     };
   },
   methods: {
@@ -45,9 +54,6 @@ export default {
         return that.selection.includes(series.name);
       })
       return output
-    },
-    chartSeries() {
-        return this.$store.state.TermspaceProgress.ProgressPerStatus_graph.series;
     },
     options: function() {
       return {
@@ -86,9 +92,12 @@ export default {
           },
         },
         xaxis : {
-          categories: this.$store.state.TermspaceProgress.ProgressPerStatus_graph.categories
+          categories: this.$store.state.TermspaceProgress.ProgressPerUser.categories
         }
       }
+    },
+    chartSeries() {
+        return this.$store.state.TermspaceProgress.ProgressPerUser.series;
     },
   },
   created() {

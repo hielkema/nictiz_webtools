@@ -31,6 +31,14 @@ class TermspaceTask(models.Model):
     task_id     = models.CharField(max_length=300, default=None, null=True, blank=True)
     data        = JSONField(default=None, null=True, blank=True)
 
+class TermspaceUserReport(models.Model):
+    time   = models.DateTimeField(default=timezone.now)
+    username = models.CharField(max_length=50, default=None, null=True, blank=True)
+    status = models.CharField(max_length=50, default=None, null=True, blank=True)
+    count = models.IntegerField(default=None, null=True, blank=True)
+    def __str__(self):
+        return str(self.id) + ': ' + str(self.time) + ' ' + str(self.username) + ' ' + str(self.status) + '\t[' + str(self.count) + ']'
+
 class TermspaceProgressReport(models.Model):
     time   = models.DateTimeField(default=timezone.now)
     description = models.TextField(default=None, null=True, blank=True)
