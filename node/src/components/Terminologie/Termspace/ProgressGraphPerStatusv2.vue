@@ -33,7 +33,7 @@ export default {
   props: ['title','chartSeries'],
   data() {
     return {
-      selection : ['Semantic review / Problem, _2019, volkert', 'Medical review, _2019, volkert', 'incomplete CAT, _2019']
+      selection : ['Semantic review / Problem, _2019, volkert', 'Medical review, _2019, volkert', 'incomplete CAT, _2019, volkert']
     };
   },
   methods: {
