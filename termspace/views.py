@@ -13,9 +13,13 @@ from urllib.request import urlopen, Request
 import urllib.parse
 from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
 from django.db.models import Q
+from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Max
 import json
 from .forms import *
 from .models import *
+from .tasks import *
 import time
 import environ
 
@@ -23,7 +27,7 @@ from rest_framework import viewsets
 from .serializers import *
 from rest_framework import views
 from rest_framework.response import Response
-from rest_framework.permissions import *
+from rest_framework import permissions
 
 from snowstorm_client import Snowstorm
 
@@ -32,9 +36,17 @@ env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
+class Permission_TermspaceProgressReport(permissions.BasePermission):
+    """
+    Global permission check rights to use the RC Audit functionality.
+    """
+    def has_permission(self, request, view):
+        if 'termspace | termspace progress' in request.user.groups.values_list('name', flat=True):
+            return True
+
 # Search termspace comments
 class searchTermspaceComments(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     def retrieve(self, request, pk=None):
         term = str(pk)
         print(request)
@@ -79,7 +91,7 @@ class searchTermspaceComments(viewsets.ViewSet):
         return Response(context)
 
 class searchMappingComments(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     def retrieve(self, request, pk=None):
         term = str(pk)
         print(request)
@@ -130,7 +142,7 @@ class searchMappingComments(viewsets.ViewSet):
 
 # Snomed component endpoint
 class componentApi(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request):
         # clinicalFinding = MappingCodesystemComponent.objects.get(component_id='404684003')
         # clinicalFinding_list = json.loads(clinicalFinding.descendants)
@@ -154,7 +166,7 @@ class componentApi(viewsets.ViewSet):
 
 # ECL query results
 class eclQueryApi(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request):
         query = EclQueryResults.objects.filter()
         results = EclQueryResultsSerializer(query, many=True).data
@@ -202,7 +214,7 @@ class eclQueryApi(viewsets.ViewSet):
         # MethodNotAllowed(method, detail=None, code=None)
 
 class SnomedJSONTree(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         def list_children(focus):
             component = MappingCodesystemComponent.objects.get(component_id=focus)
@@ -226,7 +238,7 @@ class SnomedJSONTree(viewsets.ViewSet):
         return Response(children_list)
 
 class Mapping_Progressreport_perStatus(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         output = []
 
@@ -251,7 +263,7 @@ class Mapping_Progressreport_perStatus(viewsets.ViewSet):
             return Response(output)
 
 class Mapping_Progressreport_perProject(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
         output = []
 
@@ -318,7 +330,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                 return Response(output)
 
 class Mapping_Progressreport_overTime(viewsets.ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
     def list(self, request, pk=None):
         output = []
 
@@ -388,7 +400,7 @@ class jsonMappingExport(viewsets.ViewSet):
     -> /termspace/mapping_json/4/
     Will currently only export the first 10 mapping rules from each project with an export format
     """
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     def list(self, request, pk=None):
         conceptmap = []
         # Return Json response
@@ -443,29 +455,23 @@ class jsonMappingExport(viewsets.ViewSet):
                     ##### Find mapping rules using the source component of the task as source, part of this project
                     rules = MappingRule.objects.filter(source_component = task.source_component, project_id = project)
 
-                    ##### Handle products
-                    # Find rules in current task pointing to Snomed
-                    products = rules.filter(target_component__codesystem_id = 1)
-                    if products.count() > 1:
-                        error.append({
-                            "type" : "Multiple materials. Add priorities / correlation to products or accept as both?",
-                            "task" : task.id,
-                        })
-                    # Save products in product list
-                    for single_product in products:
-                        product_list.append({
-                            "property" : "http://snomed.info/id/"+single_product.target_component.component_id+"/",
-                            "system" : single_product.target_component.codesystem_id.codesystem_fhir_uri,
-                            "code" : single_product.target_component.component_id,
-                            "display" : single_product.target_component.component_title,
-                        })
-
                     ##### Loop through rules, excluding rules pointing to Snomed
                     for rule in rules.exclude(target_component__codesystem_id = 1):
                         # Replace Snomed equivalence code with readable text
                         equivalence = rule.mapcorrelation
                         for code, readable in correlation_options:
                             equivalence = equivalence.replace(code, readable)
+
+                        # Add mapspecifies targets to product list (known as rule binding in GUI)
+                        product_list = []
+                        for product in rule.mapspecifies.all():
+                            product_list.append({
+                                "property" : "http://snomed.info/id/"+product.target_component.component_id+"/",
+                                "system" : product.target_component.codesystem_id.codesystem_fhir_uri,
+                                "code" : product.target_component.component_id,
+                                "display" : product.target_component.component_title,
+                            })
+
                         # Append mapping target to target list
                         targets.append({
                             "code" : rule.target_component.component_id,
@@ -528,36 +534,186 @@ class jsonMappingExport(viewsets.ViewSet):
             "group" : groups,
         })
 
+class fetch_termspace_tasksupply(viewsets.ViewSet):
+    """
+    Fetches terms from termspace.
+    """
+    permission_classes = [Permission_TermspaceProgressReport]
+    def list(self, request, pk=None):
+        # Get list of unique titles
+        titles = TermspaceProgressReport.objects.all().values_list('title', flat=True)
+        for title in titles:
+            # Selects last time_stamp for each day
+            last_entries = (TermspaceProgressReport.objects
+                .filter(title = title)
+                .annotate(tx_day=TruncDay('time'))
+                .values('tx_day')
+                .annotate(last_entry=Max('time'))
+                .values_list('last_entry', flat=True))
+            # Add queries
+            try:
+                query = query | TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+            except:
+                query = TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+        # Return entire queryset
+        output = []
 
-# Full modelviewset
-# class componentApi(viewsets.ReadOnlyModelViewSet):
-#     queryset = MappingCodesystemComponent.objects.all()
-#     serializer_class = MappingComponentSerializer
+        for day in query.annotate(tx_day=TruncDay('time')).distinct('tx_day'):
+            # print(day.tx_day)
+            
+            day_query = query.filter(time__day=day.time.day, time__month=day.time.month, time__year=day.time.year)
 
-# LIST endpoint
-# class testEndPoint(viewsets.ViewSet):
-#     def list(self, request):
-#         yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
-#         results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(results)
-#     def retrieve(self, request, pk=None):
-#         yourdata = pk
-#         # results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(yourdata)
-#     def create(self, request):
-#         return Response('succes')
+            # Create dict to add to the list of days
+            _output = {'date' : day.tx_day.strftime('%Y-%m-%d')}
+            # For each unique title, query the database and add the relevant count
+            for title in query.distinct('title'):
+                try:
+                    _query = day_query.get(title=title.title).count
+                except ObjectDoesNotExist:
+                    _query = None
+                _output.update({ title.tag :  _query})
 
-# CUSTOM endpoint
-# class TestCustomView(views.APIView):
-#     permission_classes = []
-#     def post(self, request, *args, **kwargs):
-#         email = request.data.get('email', None)
-#         url = request.data.get('url', None)
-#         if email and url:
-#             return Response({"success": True, "email":email,"url":url})
-#         else:
-#             return Response({"success": False})
-#     def get(self, request):
-#         yourdata= [{"id": 1 ,"likes": 10, "comments": 0}, {"id": 2,"likes": 4, "comments": 23}]
-#         results = testEndPointSerializer(yourdata, many=True).data
-#         return Response(results)
+            output.append(_output)
+
+        # Get legends to show on site        
+        legend = []
+        for item in query.distinct('description'):
+            legend.append({
+                'tag' : item.tag,
+                'title' : item.title,
+                'description' : item.description,
+            })
+
+        return Response({
+            'progress' : output,
+            'legend' : legend,
+        })
+
+    def create(self, request, pk=None):
+        output = []
+        
+        return Response(output)
+
+class fetch_termspace_user_tasksupply(viewsets.ViewSet):
+    """
+    Fetches tasks from termspace, per user.
+    """
+    permission_classes = [Permission_TermspaceProgressReport]
+    def retrieve(self, request, pk=None):
+        output = []
+        days = []
+        reports = TermspaceUserReport.objects.all()
+
+        if pk == 'all':
+            statuses = reports.distinct('status').values_list('status', flat=True)
+        else:
+            statuses = [str(pk)]
+        
+        users = reports.distinct('username').values_list('username', flat=True)
+        
+        
+        for user in users:
+            # User loop - now go over every status and get totals per day
+            for status in statuses:
+                user_output = []
+                for day in (reports
+                        .annotate(tx_day=TruncDay('time'))
+                        .values('tx_day')
+                        .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
+                    print('Unique day:',day)
+                    
+                    # Selects last time_stamp for each day
+                    last_entries = (TermspaceUserReport.objects
+                        .filter(username = user, status=status)
+                        .annotate(tx_day=TruncDay('time'))
+                        .values('tx_day')
+                        .annotate(last_entry=Max('time'))
+                        .values_list('last_entry', flat=True))
+                    query = TermspaceUserReport.objects.filter(
+                        time__in=last_entries,
+                    )
+                    print('Looking up: ', status, user)
+                    _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
+                        # _query is the newest record for this user with this status
+                        # Add it to te output
+                    print(_query.count())
+                    if _query.count() == 0:
+                        user_output.append(None)
+                    else:
+                        user_output.append(_query.last().count)
+                    days.append(day.strftime('%d-%m-%Y'))
+                output.append({
+                    'name' : user + ' ' + str(status),
+                    'data' : user_output,
+                })
+
+
+        return Response({
+            'progress' : {
+                    'categories' : set(days),
+                    'series':output,
+                }
+        })
+class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
+    """
+    Fetches terms from termspace.
+    """
+    permission_classes = [Permission_TermspaceProgressReport]
+
+    def list(self, request, pk=None):
+        # Get categories - list of days
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
+        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True)
+        for title in titles:
+            # Selects last time_stamp for each day
+            last_entries = (TermspaceProgressReport.objects
+                .filter(title = title)
+                .annotate(tx_day=TruncDay('time'))
+                .values('tx_day')
+                .annotate(last_entry=Max('time'))
+                .values_list('last_entry', flat=True))
+            # Add queries
+            try:
+                query = query | TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+            except:
+                query = TermspaceProgressReport.objects.filter(
+                    time__in=last_entries,
+                )
+        
+        categories = []
+        series = []
+        for day in days:
+            # List all unique days
+            categories.append(day.strftime('%d-%m-%Y'))
+        # Loop over all unique titles
+        for title in titles:
+            _data = []
+            # For each day
+            for day in days:
+                # Get the last query with this title for the day
+                day_query = query.filter(time__day=day.day, time__month=day.month, time__year=day.year)
+                day_query = day_query.filter(title = title)
+                if day_query.count() == 1:
+                    _data.append(day_query.last().count)
+                else:
+                    _data.append(None)
+            series.append({
+                'name': title,
+                'data' : _data,
+                })
+        return Response({
+            'progress' : {
+                'categories' : categories,
+                'series' : series,
+            },
+            'legend' : [],
+        })
+    def create(self, request, pk=None):
+        dump_termspace_progress()
+        return Response('started')

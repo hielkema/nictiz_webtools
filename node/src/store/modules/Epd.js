@@ -2,8 +2,6 @@ import axios from '../../../node_modules/axios'
 import Vue from 'vue'
 
 const state = {
-    // baseUrl: 'http://localhost/',
-    baseUrl: 'https://termservice.test-nictiz.nl/',
     currentPatient: {},
     patientList: [],
     currentPatientDecursus: [],
@@ -35,7 +33,7 @@ const state = {
     // Get new CSRF token
     getCsrfToken: (context) => {
       axios
-      .get(context.state.baseUrl+'epd/test/')
+      .get(context.rootState.baseUrl+'epd/test/')
       .then((response) => {
         context.commit('setCsrftoken',response.data)
         return true;
@@ -44,7 +42,7 @@ const state = {
     // Get patient-list
     getPatientList: (context) => {
       axios
-      .get(context.state.baseUrl+'epd/patient/')
+      .get(context.rootState.baseUrl+'epd/patient/')
       .then((response) => {
         context.commit('getPatientList',response.data)
         return true;
@@ -53,7 +51,7 @@ const state = {
     // Get patient-detail
     getPatientData: (context, patientid) => {
       axios
-      .get(context.state.baseUrl+'epd/patient/'+patientid)
+      .get(context.rootState.baseUrl+'epd/patient/'+patientid)
       .then((response) => {
         context.commit('getPatientData',response.data)
         return true;
@@ -62,7 +60,7 @@ const state = {
     // Get decursus
     getDecursus: (context, patientid) => {
       axios
-      .get(context.state.baseUrl+'epd/decursus/'+patientid)
+      .get(context.rootState.baseUrl+'epd/decursus/'+patientid)
       .then((response) => {
         context.commit('getDecursusData',response.data) 
         return true;
@@ -71,7 +69,7 @@ const state = {
     // Get single decursus
     getDecursusDetail: (context, decursusId) => {
       axios
-      .get(context.state.baseUrl+'epd/decursus/'+context.state.currentPatient.id+'/'+decursusId)
+      .get(context.rootState.baseUrl+'epd/decursus/'+context.state.currentPatient.id+'/'+decursusId)
       .then((response) => {
         context.commit('getDecursusDetail',response.data)
         return true;
@@ -84,7 +82,7 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'epd/decursus/', {
+      .post(context.rootState.baseUrl+'epd/decursus/', {
         'action'    : 'new',
         'patientId' : patientid
       },auth)
@@ -99,7 +97,7 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'epd/problem/', {
+      .post(context.rootState.baseUrl+'epd/problem/', {
         'action'   : payload.action,
         'decursusId'   : payload.decursusId,
         'patientId'   : payload.patientId,
@@ -120,7 +118,7 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'epd/decursus/', {
+      .post(context.rootState.baseUrl+'epd/decursus/', {
         'action'   : payload.action,
         'patientId'   : payload.decursus.patientid,
         'decursus' : payload.decursus
@@ -139,7 +137,7 @@ const state = {
         withCredentials: true
       }
       axios
-      .post(context.state.baseUrl+'epd/decursus/', {
+      .post(context.rootState.baseUrl+'epd/decursus/', {
         'action'   : 'delete',
         'decursusId'   : payload,
         'patientId'   : context.state.currentPatient.id

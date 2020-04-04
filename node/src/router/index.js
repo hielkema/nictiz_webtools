@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
+import store from '@/store'
 
 Vue.use(VueRouter)
 
@@ -12,18 +13,38 @@ const routes = [
   },
   {
     path: '/epd',
-    name: 'epd',
+    name: 'EPD',
     component: () => import('../views/Epd/index.vue')
   },
   {
     path: '/terminologie/searchComments',
-    name: 'searchComments',
+    name: 'Zoek commentaar in Termspace',
     component: () => import('../views/Terminologie/TermspaceComments.vue')
   },
   {
+    path: '/terminologie/termspaceProgress',
+    name: 'Voortgang vertaling Termspace',
+    component: () => import('../views/Terminologie/TermspaceProgress.vue')
+  },
+  {
     path: '/terminologie/mappingComments',
-    name: 'mappingComments',
+    name: 'Zoek commentaar in mappingtool',
     component: () => import('../views/Terminologie/MappingComments.vue')
+  },
+  {
+    path: '/mapping/RcAudit',
+    name: 'Mapping release candidate audit',
+    component: () => import('../views/Mapping/RcAudit.vue')
+  },
+  {
+    path: '/mapping/TaskManager',
+    name: 'Mapping taskmanager',
+    component: () => import('../views/Mapping/TaskManager.vue')
+  },
+  {
+    path: '/demo/Snomed-DT',
+    name: 'DT Snomed integratie',
+    component: () => import('../views/DHD/DemoIntegratie.vue')
   },
   {
     path: '/about',
@@ -51,9 +72,10 @@ router.beforeEach((to, from, next) => {
   const loggedIn = localStorage.getItem('user');
 
   if (authRequired && !loggedIn) {
+    store.dispatch('getPermissions')
     return next('/login');
   }
-
+  store.dispatch('getPermissions')
   next();
 })
 

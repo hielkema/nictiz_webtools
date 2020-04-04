@@ -64,6 +64,7 @@ INSTALLED_APPS = (
     'mapping',
     'epd',
     'termspace',
+    'dhd',
 )
 
 MIDDLEWARE = (

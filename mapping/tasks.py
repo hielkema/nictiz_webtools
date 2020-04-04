@@ -69,17 +69,19 @@ def update_snomedConcept_async(payload=None):
     obj.component_title = str(concept['fsn']['term'])
     extra = {
         'Preferred term' : str(concept['pt']['term']),
-        'Actief'         : str(concept['active']),
+        'Actief'         : concept['active'],
         'Effective time' : str(concept['effectiveTime']),
         'Definition status'  : str(concept['definitionStatus']),
     }
+
+    obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
 
     obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
     obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
     obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
     obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
 
-    obj.component_extra_dict = json.dumps(extra)
+    obj.component_extra_dict = extra
     # Save
     obj.save()
     return str(obj)
@@ -160,7 +162,7 @@ def import_labcodeset_async():
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
             obj.component_title     = term_en
-            obj.component_extra_dict   = json.dumps({
+            obj.component_extra_dict   = {
                 'Nederlands'            : term_nl,
                 'Component'             : loinc_component,
                 'Kenmerk'               : loinc_property,
@@ -170,7 +172,7 @@ def import_labcodeset_async():
                 'Klasse'                : loinc_class,
                 'Aanvraag/Resultaat'    : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
-            })
+            }
             obj.save()
 
             material_list = []
@@ -242,10 +244,68 @@ def import_nhgverrichtingen_task():
             'VO' : row[6],
             'VM' : row[7],
             'VV' : row[8],
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
         }
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         # Save
         obj.save()
+
+@shared_task
+def import_diagnosethesaurus_task():
+    thesaurusConcept    = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusConcept.csv')
+    thesaurusTerm       = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusTerm.csv')
+    thesaurusConcept    = thesaurusConcept.fillna(value=False)
+    thesaurusTerm       = thesaurusTerm.fillna(value=False)
+
+
+    # Build dictionary of concepts
+    concepts = {}
+    for index, row in thesaurusConcept.iterrows():
+        conceptid = row.get('ConceptID')
+        terms = []
+        # Add descriptions in a custom format
+        for no, term in thesaurusTerm[thesaurusTerm['ConceptID'] == row.get('ConceptID')].iterrows():
+            actief = False
+            if term['Einddatum'] == 20991231: actief = True
+            terms.append({
+                'type' : term['TypeTerm'],
+                'term' : term['Omschrijving'],
+                'actief' : actief,
+            })
+        # Check if concept is active
+        actief = False
+        if row.get('Einddatum') == 20991231: actief = True
+        # Add concept to dict of concepts
+        concepts.update({
+            conceptid : {
+                'conceptid' : str(conceptid),
+                'descriptions': terms,
+                'actief' : actief,
+                'snomedid' : str(row.get('SnomedID','')).split('.')[0],
+            }
+        })
+
+    # Loop through the dictionary of concepts and add to database
+    for key, concept in concepts.items():
+        codesystem = MappingCodesystem.objects.get(id='6')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=concept.get('conceptid'),
+        )
+        descriptions = concept.get('descriptions',{})
+        try:
+            title = list(filter(lambda x : x['type'] == 'voorkeursterm', descriptions))[0].get('term','[Geen titel]')
+        except:
+            title = "[Geen titel]"
+        obj.component_title = title
+        obj.descriptions = descriptions
+        extra = {
+            'Actief' : concept.get('actief'),
+            'snomed_mapping' : concept.get('snomedid', False),
+        }
+        obj.component_extra_dict = extra
+        obj.save()
+
 
 @shared_task
 def import_nhgbepalingen_task():
@@ -388,7 +448,7 @@ def import_nhgbepalingen_task():
             'Actief' : actief_component,
         }
         # print(extra)
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         obj.save()
 
 @shared_task
@@ -421,7 +481,7 @@ def import_icpc_task():
             'Actief'    : actief_concept,
         }
         # print(extra)
-        obj.component_extra_dict = json.dumps(extra)
+        obj.component_extra_dict = extra
         obj.save()
 
 @shared_task
@@ -460,7 +520,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Checks for the entire task
             # If source component contains active/deprecated designation ->
-            extra_dict = json.loads(task.source_component.component_extra_dict)
+            extra_dict = task.source_component.component_extra_dict
             if extra_dict.get('Actief',False):
                 # If source code is deprecated ->
                 if extra_dict.get('Actief') == "False":
@@ -524,7 +584,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             )
 
                 # If Target component contains active/deprecated designation ->
-                extra_dict = json.loads(rule.target_component.component_extra_dict)
+                extra_dict = rule.target_component.component_extra_dict
                 if extra_dict.get('Actief',False):
                     # If source code is deprecated ->
                     if extra_dict.get('Actief') == "False":
@@ -643,3 +703,329 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     #         )
             else:
                 logger.info('No rules for current task')
+
+
+# Create RC shadow copy of codesystem
+@shared_task
+def exportCodesystemToRCRules(rc_id, user_id):
+    def component_dump(codesystem=None, component_id=None):
+        component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
+        output = {
+            'identifier'    : component.component_id,
+            'title'         : component.component_title,
+            'extra'         : component.component_extra_dict,
+            'created'       : str(component.component_created),
+            'codesystem'    : {
+                'id'        : component.codesystem_id.id,
+                'name'      : component.codesystem_id.codesystem_title,
+                'version'   : component.codesystem_id.codesystem_version,
+                'fhir_uri'  : component.codesystem_id.codesystem_fhir_uri,
+            }
+        }
+        return output
+
+    # Selecte RC
+    rc = MappingReleaseCandidate.objects.get(id = rc_id)
+    rc.finished = False
+    rc.save()
+    # Get all tasks in requested codesystem - based on the codesystem of the source component
+    tasks = MappingTask.objects.filter(source_component__codesystem_id__id = rc.codesystem.id).order_by('source_component__component_id')
+    print('Found',tasks.count(),'tasks.')
+    
+    debug_list = []
+    # Loop through tasks
+    for task in tasks:
+        if task.status != task.project_id.status_complete:
+            logger.debug('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
+            # Remove all rules in the RC database originating from this task, since it is rejected.
+            rc_rules = MappingReleaseCandidateRules.objects.filter(
+                    static_source_component_ident = task.source_component.component_id,
+                    export_rc = rc,
+            )
+            rc_rules.delete()
+
+        else:
+            rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+            
+            ## First: check if any of the rules for this task have changes
+            ## if so: delete all existing rules in RC and replace them all
+            for rule in rules:
+                # Handle bindings / specifications / products
+                mapspecifies = []
+                for binding in rule.mapspecifies.all():
+                    mapspecifies.append({
+                        'id' : binding.target_component.component_id,
+                        'title' : binding.target_component.component_title,
+                    })
+
+                # Get all RC rules, filtered on this rule and RC
+                rc_rule = MappingReleaseCandidateRules.objects.filter(
+                    export_rule = rule,
+                    export_rc = rc,
+                    # rc_rule.export_user = User.objects.get(id=user_id)
+                    export_task = task,
+                    task_status = task.status.status_title,
+                    # task_user = task.user.username
+                    source_component = rule.source_component,
+                    static_source_component_ident = rule.source_component.component_id,
+                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                    target_component = rule.target_component,
+                    static_target_component_ident = rule.target_component.component_id,
+                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                    mapgroup = rule.mapgroup,
+                    mappriority = rule.mappriority,
+                    mapcorrelation = rule.mapcorrelation,
+                    mapadvice = rule.mapadvice,
+                    maprule = rule.maprule,
+                    mapspecifies = mapspecifies,
+                )
+                # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
+                if rc_rule.count() == 1:
+                    rc_rule = rc_rule.first()
+                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+                else:
+                    rc_rule_todelete = MappingReleaseCandidateRules.objects.filter(
+                        source_component = task.source_component,
+                        export_rc = rc,
+                    )
+                    if rc_rule_todelete.count() > 0:
+                        debug_list.append('Found rule(s) with changes for component {} - deleting all RC rules for this task.'.format(task.source_component.component_id))
+                        rc_rule_todelete.delete()
+            ### End check for changes
+            
+            ## Now copy the new rules where needed
+            for rule in rules:
+                # Handle bindings / specifications / products
+                mapspecifies = []
+                for binding in rule.mapspecifies.all():
+                    mapspecifies.append({
+                        'id' : binding.target_component.component_id,
+                        'title' : binding.target_component.component_title,
+                    })
+
+                # Get all RC rules, filtered on this rule and RC
+                rc_rule = MappingReleaseCandidateRules.objects.filter(
+                    export_rule = rule,
+                    export_rc = rc,
+                    # rc_rule.export_user = User.objects.get(id=user_id)
+                    export_task = task,
+                    task_status = task.status.status_title,
+                    # task_user = task.user.username
+                    source_component = rule.source_component,
+                    static_source_component_ident = rule.source_component.component_id,
+                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                    target_component = rule.target_component,
+                    static_target_component_ident = rule.target_component.component_id,
+                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                    mapgroup = rule.mapgroup,
+                    mappriority = rule.mappriority,
+                    mapcorrelation = rule.mapcorrelation,
+                    mapadvice = rule.mapadvice,
+                    maprule = rule.maprule,
+                    mapspecifies = mapspecifies,
+                )
+                # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
+                if rc_rule.count() == 1:
+                    rc_rule = rc_rule.first()
+                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+
+                elif rc_rule.count() > 1:
+                    logger.info(rc_rule.all())
+                    logger.info("Multiple RC rules exists for a single dev rule. PASS.")
+                    pass
+                # If not, make a new one
+                else:
+                    rc_rule = MappingReleaseCandidateRules.objects.create(
+                        export_rule = rule,
+                        export_rc = rc,
+                        # Add essential data to shadow copy in RC
+                        export_user = User.objects.get(id=user_id),
+                        export_task = task,
+                        task_status = task.status.status_title,
+                        task_user = task.user.username,
+                        source_component = rule.source_component,
+                        static_source_component_ident = rule.source_component.component_id,
+                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                        target_component = rule.target_component,
+                        static_target_component_ident = rule.target_component.component_id,
+                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                        mapgroup = rule.mapgroup,
+                        mappriority = rule.mappriority,
+                        mapcorrelation = rule.mapcorrelation,
+                        mapadvice = rule.mapadvice,
+                        maprule = rule.maprule,
+                        mapspecifies = mapspecifies,
+                    )
+                    # rc_rule.save()
+    rc.finished = True
+    logger.info('Finished')
+    for item in debug_list:
+        print(item,'\n')
+    rc.save()
+
+# Generate FHIR ConceptMap
+@shared_task
+def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
+# Option to return as JSON object, or save to database
+# Database queries
+    pk = rc_id
+    if action == 'output':
+        output = MappingReleaseCandidateFHIRConceptMap.objects.get(id=rc_id)
+        return output.data
+    elif action == 'save':
+        rc = MappingReleaseCandidate.objects.get(id=int(pk))
+        rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc)
+        project_ids = rules.values_list('export_task__project_id',flat=True).distinct()
+
+        # Setup
+        elements = []
+        projects = []
+        error = []
+        groups = []
+        correlation_options = [
+            # [code, readable]
+            # ['447559001', 'Broad to narrow'],
+            # ['447557004', 'Exact match'],
+            # ['447558009', 'Narrow to broad'],
+            # ['447560006', 'Partial overlap'],
+            # ['447556008', 'Not mappable'],
+            # ['447561005', 'Not specified'],
+            # Suitable for FHIR spec
+            ['447559001', 'narrower'],
+            ['447557004', 'equal'],
+            ['447558009', 'wider'],
+            ['447560006', 'inexact'],
+            ['447556008', 'unmatched'],
+            ['447561005', 'unmatched'],
+        ]
+
+        # Loop through elements in this RC, per project
+        for project_id in project_ids:
+            elements = []
+            project = MappingProject.objects.get(id=project_id)
+            projects.append(str(project))
+            # Export rules, can be unique per project
+            # if project_id == 3:
+            if project_id:
+                # Get all unique source components
+                tasks = rules.filter(export_task__project_id = project).values_list('static_source_component_ident',flat=True).order_by('static_source_component_ident').distinct()
+                # Loop through unique source components
+                for task in tasks:
+                    targets = []
+                    product_list = []
+                    # Get all rules using the source component of the loop as source
+                    rules_for_task = MappingReleaseCandidateRules.objects.filter(static_source_component_ident = task, export_task__project_id = project)
+                    
+                    # Put all the identifiers of products in a list for later use
+                    for single_rule in rules_for_task:
+                        for target in single_rule.mapspecifies:
+                            product_list.append(target.get('id'))
+                    # Now loop through while ignoring id's used as product
+                    for single_rule in rules_for_task:
+                        target_component = single_rule.static_target_component
+
+
+                        # Skip if identifier in the list of used products
+                        if target_component.get('identifier') not in product_list:
+                            # Put all the products in a list
+                            products = []
+                            for target in single_rule.mapspecifies:
+                                # Lookup data for the target
+                                target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
+                                products.append({
+                                    # Property can be added to designate the product as a sample, but this is already implicit in the used concept
+                                    # 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                    'system' : target_data.codesystem_id.codesystem_fhir_uri,
+                                    'code' : target.get('id'),
+                                    # 'display' : target.get('title'),
+                                })
+
+                            # Translate the map correlation
+                            equivalence = single_rule.mapcorrelation
+                            for code, readable in correlation_options:
+                                equivalence = equivalence.replace(code, readable)
+                            
+                            # Create output dict
+                            output = {
+                                'code' : target_component.get('identifier'),
+                                # 'display' : target_component.get('title'),
+                                'equivalence' : equivalence,
+                                'comment' : single_rule.mapadvice,
+                            }
+                            # Add products to output if they exist
+                            if len(products) > 0:
+                                output['product'] = products
+                            
+                            # Append result for this rule
+                            targets.append(output)
+
+                    # Add this source component with all targets and products to the element list
+                    source_component = single_rule.static_source_component
+                    output = {
+                        # 'DEBUG_numrules' : rules_for_task.count(),
+                        # 'DEBUG_productlist' : product_list,
+                        'code' : source_component.get('identifier'),
+                        # 'display' : source_component.get('title'),
+                        'target' : targets,
+                    }
+                    elements.append(output)
+
+                # Add the group to the group list
+                groups.append({
+                    # 'DEBUG_projecttitle' : project.title,
+                    'source' : project.source_codesystem.codesystem_title,
+                    'sourceVersion' : project.source_codesystem.codesystem_version,
+                    'target' : project.target_codesystem.codesystem_title,
+                    'targetVersion': project.target_codesystem.codesystem_version,
+                    'element' : elements,
+                })
+
+        status_options = [
+                # (code, readable)
+                ('0', 'Testing'),
+                ('1', 'Experimental'),
+                ('2', 'Acceptance'),
+                ('3', 'Production'),
+            ]
+        status = rc.status
+        for code, readable in status_options:
+            status = status.replace(code, readable)
+
+        contact = {
+            "telecom": [
+                {
+                    "system": "url",
+                    "name": rc.metadata_contact,
+                }
+            ]
+        }
+
+        output = {
+            'resourceType' : 'ConceptMap',
+            'id' : rc.metadata_id,
+            'name' : rc.title,
+            'description' : rc.metadata_description,
+            'version' : rc.metadata_version,
+            'status' : status,
+            'experimental' : rc.metadata_experimental,
+            'date' : rc.metadata_date,
+            'publisher' : rc.metadata_publisher,
+            'contact' : contact,
+            'copyright' : rc.metadata_copyright,
+            'sourceCanonical' : rc.metadata_sourceCanonical,
+
+            # 'DEBUG_projects' : list(projects),
+            'groups' : groups,
+        }
+
+
+        
+        obj = MappingReleaseCandidateFHIRConceptMap.objects.create(
+            title = payload.get('title'),
+            rc = rc,
+            release_notes = payload.get('rc_notes'),
+            codesystem = rc.codesystem,
+            deprecated=True,
+            data = output,
+        )
+        return obj.id

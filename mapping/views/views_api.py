@@ -21,6 +21,16 @@ import time
 import random
 import json
 import urllib.request
+import re
+import natsort
+from operator import itemgetter
+
+from rest_framework import viewsets
+from ..serializers import *
+from rest_framework import views
+from rest_framework.response import Response
+from rest_framework.permissions import *
+
 # Get latest snowstorm client once on startup. Set master or develop
 branch = "develop"
 url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
@@ -30,6 +40,24 @@ from snowstorm_client import Snowstorm
 from ..tasks import *
 from ..forms import *
 from ..models import *
+
+app_name = 'mapping'
+
+class componentApi(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def list(self, request):
+        return Response({
+            'test' : 'YES',
+        })
+    def retrieve(self, request, pk=None):
+        return Response({
+            'test' : 'YES',
+        })
+    def create(self, request):
+        return Response({
+            'error' : 'Not allowed'
+        })
+        # MethodNotAllowed(method, detail=None, code=None)
 
 class api_EventList_get(UserPassesTestMixin,TemplateView):
     '''
@@ -208,6 +236,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
 
     def post(self, request, **kwargs):
         try:
+            print('Diagnosethesaurus', json.loads(request.POST.get('codesystem[diagnosethesaurus]')))
+            if json.loads(request.POST.get('codesystem[diagnosethesaurus]')):
+                import_diagnosethesaurus_task.delay()
+            
             print('Labcode', json.loads(request.POST.get('codesystem[labcode]')))
             if json.loads(request.POST.get('codesystem[labcode]')):
                 import_labcodeset_async.delay()
@@ -357,8 +389,8 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
     def get(self, request, **kwargs):
         # Get data
         project = MappingProject.objects.get(id=kwargs.get('project_id'))
-        data = MappingTask.objects.filter(project_id=project).order_by('id')
-    
+        data = MappingTask.objects.filter(project_id=project)
+
         tasks = []
         for task in data:
             try:
@@ -387,11 +419,14 @@ class api_TaskList_get(UserPassesTestMixin,TemplateView):
                     'title' : task.status.status_title
                 },
             })
-        
+
+        # tasks = sorted(tasks, key=lambda k: k['component']['id'])
+        tasks = natsort.natsorted(tasks, key=lambda k: k['component']['id'])
+
         context = {
             'taskList': tasks,
         }
-        # Return JSON
+        # # Return JSON
         return JsonResponse(context,safe=False)
 
 class api_Permissions_get(UserPassesTestMixin,TemplateView):
@@ -494,7 +529,7 @@ class api_Mapping_post(UserPassesTestMixin,TemplateView):
                 mapping_rule = MappingRule.objects.get(id=value.get('id'))
                 mapping_rule.delete()
             elif value.get('id') != 'extra':
-                print("Aanpassen mapping")
+                print("Aanpassen mapping", value.get('id'))
                 mapping_rule = MappingRule.objects.get(id=value.get('id'))
                 mapping_rule.source_component   = source_component
                 mapping_rule.target_component   = target_component
@@ -503,6 +538,48 @@ class api_Mapping_post(UserPassesTestMixin,TemplateView):
                 mapping_rule.mapcorrelation     = value.get('correlation')
                 mapping_rule.mapadvice          = value.get('advice')
                 mapping_rule.maprule            = value.get('rule')
+
+                # Handle specifies/dependency/rule binding
+                if value.get('dependency'):
+                    for dependency in value.get('dependency'):
+                        print("Handling",dependency) # TODO debug
+                        # If binding should be true:
+                        # First check if the relationship exists in DB, otherwise create it.
+                        if dependency.get('binding'):
+                            # Check if binding does not exists in DB
+                            print('Binding should be present')
+                            if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                print("Binding (many to many) not present in DB - creating")
+                                addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                print('Adding relationship to rule', addrule)
+                                mapping_rule.mapspecifies.add(addrule)
+                                # Sanity check: success?
+                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                    print("Created")
+                                else:
+                                    print("Failed")
+                            else:
+                                print('Binding already present')
+                        # If binding should not exist:
+                        # Check if present, if so: remove
+                        else:
+                            print('Binding should not be present')
+                            # Check if binding exists in DB
+                            if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                print("Binding (many to many) present in DB but should not be - removing")
+                                remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                mapping_rule.mapspecifies.remove(remrule)
+                                # Sanity check: success?
+                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                    print("Still present")
+                                else:
+                                    print("Succesfully removed")
+                            else:
+                                print('Binding was already absent')
+                    print("Done handling dependency for",dependency)
+
+                                
+
                 mapping_rule.save()
             elif value.get('id') == 'extra' and  value.get('target').get('new'):
                 print("Nieuwe mapping toevoegen")
@@ -516,6 +593,27 @@ class api_Mapping_post(UserPassesTestMixin,TemplateView):
                     mapadvice          = value.get('advice'),
                     maprule            = value.get('rule'),
                 )
+                if value.get('dependency'):
+                    for dependency in value.get('dependency'):
+                        print("Handling",dependency)
+                        # If binding should be true:
+                        # First check if the relationship exists in DB, otherwise create it.
+                        if dependency.get('binding'):
+                            # Check if binding does not exists in DB
+                            print('Binding should be created')
+                            if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                print("Binding (many to many) not present in DB - creating")
+                                addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                print('Adding relationship to rule', addrule)
+                                mapping_rule.mapspecifies.add(addrule)
+                                # Sanity check: success?
+                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                    print("Created")
+                                else:
+                                    print("Failed")
+                            else:
+                                print('Binding already present')
+                        # No need for removing bindings here, as these will have binding==False and no binding should be present anyway.
                 mapping_rule.save()
 
         context = {
@@ -610,7 +708,7 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
             statuses = MappingTaskStatus.objects.filter(project_id=project).order_by('status_id')
             # print(statuses)
             try:
-                extra_dict = json.loads(task.source_component.component_extra_dict)
+                extra_dict = task.source_component.component_extra_dict
             except:
                 extra_dict = ''
             task = ({
@@ -645,6 +743,9 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                 'task': task,
                 'status_list': status_list,
             }
+            # Return JSON
+            return JsonResponse(context,safe=False)
+
         # If task does not exist, return empty
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -655,12 +756,12 @@ class api_TaskId_get(UserPassesTestMixin,TemplateView):
                 'task': '',
                 'status' : 'Mislukt - geen ID?',
             }
-        # Return JSON
-        return JsonResponse(context,safe=False)
+            # Return JSON
+            return JsonResponse(context,safe=False)
 
 class api_Mapping_get(UserPassesTestMixin,TemplateView):
     '''
-    Delivers the current mapping for a task
+    Delivers the current mapping rules for a task
     Only allowed with view tasks rights.
     '''
     def handle_no_permission(self):
@@ -683,6 +784,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             mappings = MappingRule.objects.filter(project_id=task.project_id, target_component=task.source_component)
         mappings = mappings.order_by('mapgroup', 'mappriority')
         mapping_list = []
+        dependency_list = []
         for mapping in mappings:
             mapcorrelation = mapping.mapcorrelation
             # if mapcorrelation == "447559001": mapcorrelation = "Broad to narrow"
@@ -692,9 +794,24 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             # if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
             # if mapcorrelation == "447561005": mapcorrelation = "Not specified"
             try:
-                extra = json.loads(mapping.target_component.component_extra_dict)
+                extra = mapping.target_component.component_extra_dict
             except:
                 extra = ""
+            
+            # Add dependencies to list
+            # For each mapping rule in this task, add an item with true/false
+            for maprule in mappings:
+                if mapping.mapspecifies.filter(id = maprule.id).exists():
+                    binding = True
+                else:
+                    binding = False
+                if maprule is not mapping:
+                    dependency_list.append({
+                        'rule_id'   : maprule.id,
+                        'source'    : maprule.target_component.component_title,
+                        'binding'   : binding,
+                    })
+
             mapping_list.append({
                 'id' : mapping.id,
                 'source' : {
@@ -718,10 +835,19 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
                 'correlation' : mapping.mapcorrelation,
                 'advice' : mapping.mapadvice,
                 'rule' : mapping.maprule,
+                'dependency' : dependency_list,
                 'delete' : False,
             })
+            dependency_list = []
         if task.project_id.project_type == "1" or task.project_id.project_type == "2" :
             # Append extra empty mapping
+            dependency_list = []
+            for maprule in mappings:
+                dependency_list.append({
+                    'rule_id'   : maprule.id,
+                    'source'    : maprule.target_component.component_title,
+                    'binding'   : False,
+                })
             mapping_list.append({
                     'id' : 'extra',
                     'source' : {
@@ -744,8 +870,10 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
                     'correlation' : '447557004',
                     'advice' : None,
                     'rule' : None,
+                    'dependency' : dependency_list,
                     'delete' : False,
                 })
+            dependency_list = []
         
         project_data = {
             'type' : task.project_id.project_type,
@@ -754,6 +882,7 @@ class api_Mapping_get(UserPassesTestMixin,TemplateView):
             'correlation' : task.project_id.use_mapcorrelation,
             'rule' : task.project_id.use_maprule,
             'advice' : task.project_id.use_mapadvice,
+            'rulebinding' : task.project_id.use_rulebinding,
             'correlation_options' : {
                 '447559001' : 'Broad to narrow',
                 '447557004' : 'Exact match',

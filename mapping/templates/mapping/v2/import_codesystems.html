@@ -30,6 +30,12 @@
                 </td>
             </tr>
             <tr>
+                <th width="130">Diagnosethesaurus</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.diagnosethesaurus">
+                </td>
+            </tr>
+            <tr>
                 <th width="130">Snomed</th>
                 <td>
                     <input type="checkbox" v-model="codesystem.snomed">
@@ -54,6 +60,7 @@ var vuePosts = new Vue({
     data: {
         codesystem: {
             'labcode' : false,
+            'diagnosethesaurus' : false,
             'snomed' : false,
             'nhgverr' : false,
             'nhgbep' : false,

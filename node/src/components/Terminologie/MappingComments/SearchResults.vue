@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="user.groups.includes('mapping | access')">
     <v-card 
       class="ma-1"
       max-width="500"

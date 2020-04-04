@@ -31,12 +31,13 @@ urlpatterns = [
     path(r'mapping/', include('mapping.urls')), 
     path(r'epd/', include('epd.urls')), 
     path(r'termspace/', include('termspace.urls')), 
+    path(r'dhd/', include('dhd.urls')), 
     # url(r'^select2/', include('django_select2.urls')),
     path(r'', include('homepage.urls')),
 ]
 
-if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns = [
-        path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+# if settings.DEBUG:
+#     import debug_toolbar
+#     urlpatterns = [
+#         path('__debug__/', include(debug_toolbar.urls)),
+#     ] + urlpatterns

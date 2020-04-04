@@ -1,27 +1,25 @@
 <template>
-  <v-container>
-    <v-layout
-      text-center
-      wrap
-    >
-      <v-flex mb-4>
-        <h1 class="display-2 font-weight-bold mb-3">
-          Welkom
-        </h1>
-        <p class="subheading font-weight-regular">
-          
-        </p>
-      </v-flex>
-    </v-layout>
-  </v-container>
+  <div>
+    <p class="subheading font-weight-regular">
+      Welkom <b v-if="user.details.first_name">{{user.details.first_name}}</b><b v-else>{{user.username}}</b>!<br>
+      Kies in het menu een module om te beginnen.
+    </p>
+  </div>
 </template>
 
 <script>
 export default {
   name: 'HelloWorld',
 
-  data: () => ({
-
-  })
+  data() {
+    return {
+      
+    }
+  },
+  computed: {
+    user() {
+      return this.$store.state.userData
+    }
+  }
 };
 </script>

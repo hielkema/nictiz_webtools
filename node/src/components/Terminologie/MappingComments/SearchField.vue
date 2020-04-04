@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="user.groups.includes('mapping | access')">
     <form v-on:submit.prevent>
     <v-card
       class="ma-1">
@@ -46,6 +46,9 @@ export default {
     }
   },
   computed: {
+    user(){
+      return this.$store.state.userData
+    }
   }
 }
 </script>

@@ -3,14 +3,17 @@ import axios from 'axios'
 import App from './App.vue'
 import router from './router'
 import store from './store'
+import * as d3 from "../node_modules/d3"
 import vuetify from './plugins/vuetify';
 import VueCookies from '../node_modules/vue-cookies'
+import VueApexCharts from 'vue-apexcharts'
 // import { alert } from './store/alert.module'
 Vue.config.productionTip = false
 Vue.prototype.$axios = axios
 
 Vue.use(require('vue-cookies'));
 Vue.use('VeeValidate');
+Vue.component('apexchart', VueApexCharts)
 
 
 // Add an axios interceptor for adding token to requests
@@ -35,7 +38,7 @@ axios.interceptors.response.use((response) => {
 
   // alert(error.response.status)
   
-  if (error.response.status === 403 && originalRequest.url === 'https://termservice.test-nictiz.nl/jwtauth/token/') {
+  if (error.response.status === 403 && originalRequest.url === store.state.baseUrl+'jwtauth/token/') {
       router.push('/login');
       return Promise.reject(error);
   }
@@ -45,7 +48,7 @@ axios.interceptors.response.use((response) => {
       originalRequest._retry = true;
       const tokenStorage = JSON.parse(localStorage.getItem('user'));
       // alert('Refreshtoken: '+ tokenStorage)
-      return axios.post('https://termservice.test-nictiz.nl/jwtauth/refresh/',
+      return axios.post(store.state.baseUrl+'jwtauth/refresh/',
           {
               "refresh": tokenStorage.refresh
           })
@@ -81,6 +84,7 @@ axios.interceptors.response.use((response) => {
 new Vue({
   router,
   store,
+  d3,
   VueCookies,
   vuetify,
   axios,
