@@ -654,7 +654,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
 
         return Response({
             'progress' : {
-                    'categories' : set(days),
+                    'categories' : sorted(set(days)),
                     'series':output,
                 }
         })
@@ -666,8 +666,8 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
 
     def list(self, request, pk=None):
         # Get categories - list of days
-        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
-        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True)
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').order_by('tx_day').values_list('tx_day', flat=True)
+        titles = TermspaceProgressReport.objects.all().order_by('time').values_list('title', flat=True)
         for title in titles:
             # Selects last time_stamp for each day
             last_entries = (TermspaceProgressReport.objects
