@@ -709,7 +709,7 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
                 })
         return Response({
             'progress' : {
-                'categories' : categories,
+                'categories' : sorted(categories),
                 'series' : series,
             },
             'legend' : [],
