@@ -624,7 +624,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         .annotate(tx_day=TruncDay('time'))
                         .values('tx_day')
                         .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
-                    print('Unique day:',day)
+                    # print('Unique day:',day)
                     
                     # Selects last time_stamp for each day
                     last_entries = (TermspaceUserReport.objects
@@ -636,11 +636,11 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                     query = TermspaceUserReport.objects.filter(
                         time__in=last_entries,
                     )
-                    print('Looking up: ', status, user)
+                    # print('Looking up: ', status, user)
                     _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
                         # _query is the newest record for this user with this status
-                        # Add it to te output
-                    print(_query.count())
+                        # Add it to the output
+                    # print(_query.count())
                     if _query.count() == 0:
                         user_output.append(None)
                     else:
