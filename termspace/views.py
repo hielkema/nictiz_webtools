@@ -605,7 +605,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
     permission_classes = [Permission_TermspaceProgressReport]
     def retrieve(self, request, pk=None):
         output = []
-        days = []
+        categories = []
         reports = TermspaceUserReport.objects.all()
 
         if pk == 'all':
@@ -615,7 +615,11 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
         
         users = reports.distinct('username').values_list('username', flat=True)
         
-        
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
+        for day in days:
+            # List all unique days
+            categories.append(day.strftime('%d-%m-%Y'))
+
         for user in users:
             # User loop - now go over every status and get totals per day
             for status in statuses:
@@ -645,16 +649,15 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         user_output.append(None)
                     else:
                         user_output.append(_query.last().count)
-                    days.append(day.strftime('%d-%m-%Y'))
+                    # days.append(day.strftime('%d-%m-%Y'))
                 output.append({
                     'name' : user + ' ' + str(status),
                     'data' : user_output,
                 })
 
-
         return Response({
             'progress' : {
-                    'categories' : set(days),
+                    'categories' : categories,
                     'series':output,
                 }
         })
