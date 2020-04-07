@@ -283,7 +283,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
             else:
                 for component in components:
                     tasks = MappingTask.objects.filter(source_component = component)
-                    extra = json.loads(component.component_extra_dict)
+                    extra = component.component_extra_dict
                     aub = extra.get('Aanvraag/Uitslag/Beide')
                     if aub == 'A': aub="Aanvraag"
                     if aub == 'B': aub="Aanvraag en uitslag"
