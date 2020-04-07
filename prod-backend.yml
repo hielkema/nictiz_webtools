@@ -1,8 +1,6 @@
 version: '3'
 volumes:
-  pgdata:
   static_files:
-  pgadmin:
 services:
   python: &python
     # image: python:3.4
@@ -47,6 +45,7 @@ services:
     image: rabbitmq:3.7-alpine
     networks:
       - webtools
+
   celery_worker:
     # Copy template from service Python
     <<: *python
@@ -57,6 +56,7 @@ services:
       - rabbitmq
     networks:
       - webtools
+      - postgres_network
   celery_beat:
     # Copy template from service Python
     <<: *python
@@ -67,6 +67,7 @@ services:
       - rabbitmq
     networks:
       - webtools
+      - postgres_network
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
