@@ -11,6 +11,8 @@ services:
       POSTGRES_PASS: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    expose:
+      - 5432
     networks:
       - postgres_network
 
