@@ -4,6 +4,20 @@ volumes:
   static_files:
   pgadmin:
 services:
+  postgres:
+    image: postgres:10.3
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_PASS}
+      POSTGRES_PASS: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # ports:
+    #   - 5432:5432
+    links:
+      - python
+    networks:
+      - webtools
   python: &python
     # image: python:3.4
     image: mertenssander/nictiz_webtools:latest
@@ -18,7 +32,6 @@ services:
     command: gunicorn -w 4 app.wsgi -b 0.0.0.0:8000
     networks:
       - webtools
-      - postgres_network
   
   nginx:
     # image: nginx
@@ -69,6 +82,25 @@ services:
       - postgres
     networks:
       - webtools
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
+      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
+
+      # - VIRTUAL_HOST=${PGADMIN_DOMAIN}
+      # - VIRTUAL_PORT=${PGADMIN_PORT}
+      # - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
+      # - LETSENCRYPT_EMAIL=${EMAIL}
+    ports:
+      - 9124:${PGADMIN_PORT}
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    networks:
+      - webtools
+      - proxy
+    expose:
+      - "${PGADMIN_PORT}"
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
@@ -82,13 +114,11 @@ services:
     #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
     #   - LETSENCRYPT_EMAIL=${EMAIL}
     ports:
-      - ${FLOWER_PORT}:8888
+      - ${FLOWER_PORT}:${FLOWER_PORT}
     networks:
       - webtools
       - proxy
 networks:
   webtools:
-  postgres_network:
-    external: true
   proxy:
     external: true
