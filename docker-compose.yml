@@ -2,6 +2,7 @@ version: '3'
 volumes:
   pgdata:
   pgadmin:
+  postgres_backup:
 networks: 
   postgres_network:
     external: true
@@ -45,31 +46,3 @@ services:
     restart: always
     ports:
       - ${FLOWER_PORT}:8888
-  postgres:
-    image: postgres:10.3
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_PASS}
-      POSTGRES_PASS: ${POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    networks:
-      - postgres_network
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
-      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
-
-      # - VIRTUAL_HOST=${PGADMIN_DOMAIN}
-      # - VIRTUAL_PORT=${PGADMIN_PORT}
-      # - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
-      # - LETSENCRYPT_EMAIL=${EMAIL}
-    ports:
-      - 9124:80
-    volumes:
-      - pgadmin:/var/lib/pgadmin
-    networks:
-      - postgres_network
-    expose:
-      - 80
