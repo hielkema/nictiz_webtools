@@ -646,7 +646,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         # Add it to the output
                     # print(_query.count())
                     if _query.count() == 0:
-                        user_output.append(None)
+                        user_output.append(0)
                     else:
                         user_output.append(_query.last().count)
                     # days.append(day.strftime('%d-%m-%Y'))
