@@ -614,11 +614,6 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
             statuses = [str(pk)]
         
         users = reports.distinct('username').values_list('username', flat=True)
-        
-        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
-        for day in days:
-            # List all unique days
-            categories.append(day.strftime('%d-%m-%Y'))
 
         for user in users:
             # User loop - now go over every status and get totals per day
@@ -635,6 +630,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                     last_entries = (TermspaceUserReport.objects
                         .filter(username = user, status=status)
                         .annotate(tx_day=TruncDay('time'))
+                        .order_by('tx_day')
                         .values('tx_day')
                         .annotate(last_entry=Max('time'))
                         .values_list('last_entry', flat=True))
@@ -643,9 +639,8 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                     )
                     # print('Looking up: ', status, user)
                     _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
-                        # _query is the newest record for this user with this status
-                        # Add it to the output
-                    # print(_query.count())
+                    if _query.last().time.strftime('%d-%m-%Y') not in categories:
+                        categories.append(_query.last().time.strftime('%d-%m-%Y'))
                     if _query.count() == 0:
                         user_output.append(0)
                     else:
@@ -655,7 +650,6 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                     'name' : user + ' ' + str(status),
                     'data' : user_output,
                 })
-
         return Response({
             'progress' : {
                     'categories' : categories,
@@ -692,9 +686,9 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
         
         categories = []
         series = []
-        for day in days:
-            # List all unique days
-            categories.append(day.strftime('%d-%m-%Y'))
+        # for day in days:
+        #     # List all unique days
+        #     categories.append(day.strftime('%d-%m-%Y'))
         # Loop over all unique titles
         for title in titles:
             _data = []
@@ -705,8 +699,11 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
                 day_query = day_query.filter(title = title)
                 if day_query.count() == 1:
                     _data.append(day_query.last().count)
+                    if day_query.last().time.strftime('%d-%m-%Y') not in categories:
+                        categories.append(day.strftime('%d-%m-%Y'))
                 else:
                     _data.append(None)
+                
             series.append({
                 'name': title,
                 'data' : _data,
