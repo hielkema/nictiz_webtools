@@ -627,6 +627,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                 for day in (reports
                         .annotate(tx_day=TruncDay('time'))
                         .values('tx_day')
+                        .order_by('tx_day')
                         .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
                     # print('Unique day:',day)
                     
