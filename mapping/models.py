@@ -20,6 +20,8 @@ class MappingProject(models.Model):
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
+    tags = JSONField(default=None, null=True, blank=True)
+
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
     target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_target', default=None, blank=True, null=True)
 
@@ -105,7 +107,7 @@ class MappingTaskStatus(models.Model):
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     status_title = models.CharField(max_length=50) # Uniek ID in codesystem = MappingCodesystemComponent:id
     status_id = models.IntegerField() # Uniek ID van codesystem waar vandaan in deze taak gemapt moet worden
-    status_description = models.CharField(max_length=50) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
+    status_description = models.TextField(default=None, blank=True, null=True) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
     status_next = models.CharField(max_length=50) # ID van gebruiker
 
     def __str__(self):
