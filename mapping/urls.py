@@ -32,6 +32,8 @@ router_1_0.register(r'statuses', views.MappingStatuses, basename="Mapping status
 router_1_0.register(r'users', views.MappingUsers, basename="Mapping users for selected project")
 router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping comments for selected task")
 
+
+
 urlpatterns = [
     # DRF router
     path(r'api/1.0/', include(router_1_0.urls)),

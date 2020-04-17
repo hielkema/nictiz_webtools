@@ -49,7 +49,8 @@ class Tasklist(viewsets.ViewSet):
         # List all projects
         # TODO filter on which projects the user has access to
          # Get data
-        project = MappingProject.objects.get(id=pk)
+        current_user = User.objects.get(id=request.user.id)
+        project = MappingProject.objects.get(id=pk, access__username=current_user)
         data = MappingTask.objects.filter(project_id=project).order_by('id')
     
         task_list = []
@@ -91,40 +92,42 @@ class TaskDetails(viewsets.ViewSet):
         # TODO filter on which projects the user has access to
          # Get data
         task = MappingTask.objects.get(id=pk)
+        current_user = User.objects.get(id=request.user.id)
+        if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
 
-        try:
-            user_id = task.user.id
-            user_name = task.user.username
-        except:
-            user_id = 'Niet toegewezen'
-            user_name = 'Niet toegewezen'
-        output = {
-            'id'    :   task.id,
-            'user' : {
-                'id' : user_id,
-                'name' : user_name,
-            },
-            'project' : {
-                'id' : task.project_id.id,
-            },
-            'component' : {
-                'id'  :   task.source_component.component_id,
-                'title' :   task.source_component.component_title,
-                'codesystem' : {
-                    'id' : task.source_component.codesystem_id.id,
-                    'version' : task.source_component.codesystem_id.codesystem_version,
-                    'title' : task.source_component.codesystem_id.codesystem_title,
+            try:
+                user_id = task.user.id
+                user_name = task.user.username
+            except:
+                user_id = 'Niet toegewezen'
+                user_name = 'Niet toegewezen'
+            output = {
+                'id'    :   task.id,
+                'user' : {
+                    'id' : user_id,
+                    'name' : user_name,
                 },
-                'extra' : task.source_component.component_extra_dict,
-            },
-            'status'  :   {
-                'id' : task.status.id,
-                'title' : task.status.status_title,
-                'description' : task.status.status_description,
-            },
-        }
+                'project' : {
+                    'id' : task.project_id.id,
+                },
+                'component' : {
+                    'id'  :   task.source_component.component_id,
+                    'title' :   task.source_component.component_title,
+                    'codesystem' : {
+                        'id' : task.source_component.codesystem_id.id,
+                        'version' : task.source_component.codesystem_id.codesystem_version,
+                        'title' : task.source_component.codesystem_id.codesystem_title,
+                    },
+                    'extra' : task.source_component.component_extra_dict,
+                },
+                'status'  :   {
+                    'id' : task.status.id,
+                    'title' : task.status.status_title,
+                    'description' : task.status.status_description,
+                },
+            }
 
-        return Response(output)
+            return Response(output)
 
 class EventsAndComments(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
@@ -135,54 +138,57 @@ class EventsAndComments(viewsets.ViewSet):
          # Get data
     
         events_list = []
-        comments = MappingComment.objects.filter(comment_task=pk).order_by('-comment_created') 
-        for item in comments:
-            created = item.comment_created.strftime('%B %d %Y')
-            events_list.append({
-                'id' : item.id,
-                'text' : item.comment_body,
-                'type' : 'comment',
-                'user' : {
-                    'id' : item.comment_user.id,
-                    'name' : item.comment_user.username,
-                },
-                'action_user' : {
-                    'id' : item.comment_user.id,
-                    'name' : item.comment_user.username,
-                },
-                'created' : created,
-                'timestamp' : item.comment_created,
-            })
-        events = MappingEventLog.objects.filter(task_id=pk).order_by('-event_time') 
-        for item in events:
-            data =  json.dumps(item.new_data, sort_keys=True, indent=4)
-            created = item.event_time.strftime('%B %d %Y')
+        current_user = User.objects.get(id=request.user.id)
+        task = MappingTask.objects.get(id=pk)
+        if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
+            comments = MappingComment.objects.filter(comment_task=pk).order_by('-comment_created') 
+            for item in comments:
+                created = item.comment_created.strftime('%B %d %Y')
+                events_list.append({
+                    'id' : item.id,
+                    'text' : item.comment_body,
+                    'type' : 'comment',
+                    'user' : {
+                        'id' : item.comment_user.id,
+                        'name' : item.comment_user.username,
+                    },
+                    'action_user' : {
+                        'id' : item.comment_user.id,
+                        'name' : item.comment_user.username,
+                    },
+                    'created' : created,
+                    'timestamp' : item.comment_created,
+                })
+            events = MappingEventLog.objects.filter(task_id=pk).order_by('-event_time') 
+            for item in events:
+                data =  json.dumps(item.new_data, sort_keys=True, indent=4)
+                created = item.event_time.strftime('%B %d %Y')
+                
+                try:
+                    # Make it break if user not set
+                    item.action_user.username
+                    action_user = item.action_user
+                except:
+                    action_user = item.user_source
+                events_list.append({
+                    'id' : item.id,
+                    'text' : action_user.username + ': ' + item.old + ' -> ' + item.new,
+                    'data' : data,
+                    'action_user' : {
+                        'id' : action_user.id,
+                        'name' : action_user.username,
+                    },
+                    'type' : item.action,
+                    'user' : {
+                        'id' : item.user_source.id,
+                        'name' : item.user_source.username,
+                    },
+                    'created' : created,
+                    'timestamp' : item.event_time,
+                })
+                    
+            # Sort event_list on date
+            events_list.sort(key=lambda item:item['timestamp'], reverse=True)
             
-            try:
-                # Make it break if user not set
-                item.action_user.username
-                action_user = item.action_user
-            except:
-                action_user = item.user_source
-            events_list.append({
-                'id' : item.id,
-                'text' : action_user.username + ': ' + item.old + ' -> ' + item.new,
-                'data' : data,
-                'action_user' : {
-                    'id' : action_user.id,
-                    'name' : action_user.username,
-                },
-                'type' : item.action,
-                'user' : {
-                    'id' : item.user_source.id,
-                    'name' : item.user_source.username,
-                },
-                'created' : created,
-                'timestamp' : item.event_time,
-            })
-                 
-        # Sort event_list on date
-        events_list.sort(key=lambda item:item['timestamp'], reverse=True)
-        
 
-        return Response(events_list)
+            return Response(events_list)

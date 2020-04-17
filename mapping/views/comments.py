@@ -48,35 +48,40 @@ class MappingPostComment(viewsets.ViewSet):
     def create(self, request):
         if 'mapping | place comments' in request.user.groups.values_list('name', flat=True):
             print("Commentaar:",request.user, request.data.get('task'), request.data.get('comment'))
+            current_user = User.objects.get(id=request.user.id)
             task = MappingTask.objects.get(id=request.data.get('task'))
-            user = User.objects.get(id=request.user.id)
+            if MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
 
-            comment = MappingComment.objects.create(
-                comment_title   = '',
-                comment_task    = task,
-                comment_body    = request.data.get('comment'),
-                comment_user    = user,
-            )
-            comment.save()
-            return Response(str(comment))
+                comment = MappingComment.objects.create(
+                    comment_title   = '',
+                    comment_task    = task,
+                    comment_body    = request.data.get('comment'),
+                    comment_user    = current_user,
+                )
+                comment.save()
+                return Response(str(comment))
         else:
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
 
     def delete(self, request, pk=None):
         print("Commentaar:",request.user)
         current_user = User.objects.get(id=request.user.id)
-        if current_user == request.user:
-            comment = MappingComment.objects.get(id=pk, comment_user=current_user)
-            comment.delete()
-            return Response('succes')
-        else:
-            return Response('fail: not your comment?')
+        comment = MappingComment.objects.get(id=pk, comment_user=current_user)
+        current_user = User.objects.get(id=request.user.id)
+        if MappingProject.objects.filter(id=comment.comment_task.project_id.id, access__username=current_user).exists():
+            if current_user == request.user:
+                comment.delete()
+                return Response('succes')
+            else:
+                return Response('fail: not your comment?')
     def retrieve(self, request, pk=None):
         comment = MappingComment.objects.get(id=pk)
-        output = {
-            'comment_title'   : '',
-            'comment_task'    : str(comment.comment_task),
-            'comment_body'    : comment.comment_body,
-            'comment_user'    : comment.comment_user.username,
-        }
-        return Response(output)
+        current_user = User.objects.get(id=request.user.id)
+        if MappingProject.objects.filter(id=comment.comment_task.project_id.id, access__username=current_user).exists():
+            output = {
+                'comment_title'   : '',
+                'comment_task'    : str(comment.comment_task),
+                'comment_body'    : comment.comment_body,
+                'comment_user'    : comment.comment_user.username,
+            }
+            return Response(output)

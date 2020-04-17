@@ -46,7 +46,8 @@ class MappingUsers(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        project = MappingProject.objects.get(id=pk)
+        current_user = User.objects.get(id=request.user.id)
+        project = MappingProject.objects.get(id=pk, access__username=current_user)
         users = User.objects.all().order_by('username')
         tasks = MappingTask.objects.all()
         output = []
@@ -62,43 +63,46 @@ class MappingUsers(viewsets.ViewSet):
         return Response(output)
     def create(self, request):
         task = MappingTask.objects.get(id=request.data.get('task'))
-        newuser = User.objects.get(id=request.data.get('user'))
-        source_user = User.objects.get(id=task.user.id)
-        target_user = User.objects.get(id=request.data.get('user'))
         current_user = User.objects.get(id=request.user.id)
-        task.user = newuser
-        task.save()
+        if MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
 
-        # Save snapshot to database
-        source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-        mappingquery = MappingRule.objects.filter(source_component_id=source_component.id)
-        mappingrules = {}
-        for rule in mappingquery:
-            mappingrules.update({rule.id : {
-                'Project ID' : rule.project_id.id,
-                'Project' : rule.project_id.title,
-                'Target component ID' : rule.target_component.component_id,
-                'Target component Term' : rule.target_component.component_title,
-                'Mapgroup' : rule.mapgroup,
-                'Mappriority' : rule.mappriority,
-                'Mapcorrelation' : rule.mapcorrelation,
-                'Mapadvice' : rule.mapadvice,
-                'Maprule' : rule.maprule,
-                'Active' : rule.active,
-            }})            
-        # print(str(mappingrules))
-        event = MappingEventLog.objects.create(
-                task=task,
-                action='user_change',
-                action_user=current_user,
-                action_description='Gebruiker:',
-                old_data='',
-                new_data=str(mappingrules),
-                old=str(source_user),
-                new=str(target_user),
-                user_source=source_user,
-                user_target=target_user,
-            )
-        event.save()
-        print(str(task))
-        return Response([])
+            newuser = User.objects.get(id=request.data.get('user'))
+            source_user = User.objects.get(id=task.user.id)
+            target_user = User.objects.get(id=request.data.get('user'))
+            current_user = User.objects.get(id=request.user.id)
+            task.user = newuser
+            task.save()
+
+            # Save snapshot to database
+            source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+            mappingquery = MappingRule.objects.filter(source_component_id=source_component.id)
+            mappingrules = {}
+            for rule in mappingquery:
+                mappingrules.update({rule.id : {
+                    'Project ID' : rule.project_id.id,
+                    'Project' : rule.project_id.title,
+                    'Target component ID' : rule.target_component.component_id,
+                    'Target component Term' : rule.target_component.component_title,
+                    'Mapgroup' : rule.mapgroup,
+                    'Mappriority' : rule.mappriority,
+                    'Mapcorrelation' : rule.mapcorrelation,
+                    'Mapadvice' : rule.mapadvice,
+                    'Maprule' : rule.maprule,
+                    'Active' : rule.active,
+                }})            
+            # print(str(mappingrules))
+            event = MappingEventLog.objects.create(
+                    task=task,
+                    action='user_change',
+                    action_user=current_user,
+                    action_description='Gebruiker:',
+                    old_data='',
+                    new_data=str(mappingrules),
+                    old=str(source_user),
+                    new=str(target_user),
+                    user_source=source_user,
+                    user_target=target_user,
+                )
+            event.save()
+            print(str(task))
+            return Response([])

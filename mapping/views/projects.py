@@ -49,13 +49,13 @@ class Projects(viewsets.ViewSet):
         # List all projects
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
-        projects = MappingProject.objects.filter(active=True)        
-
+        projects = MappingProject.objects.filter(active=True).filter(access__username=current_user)
+    
         project_list = []
         for project in projects:
+            # if project.access.filter(username=current_user).exists():
             # Get task count for current user
             tasks = MappingTask.objects.filter(user=current_user, project_id=project).exclude(status=project.status_complete).exclude(status=project.status_rejected)
-
             project_list.append({
                 'id' : project.id,
                 'active' : project.active,
@@ -69,7 +69,7 @@ class Projects(viewsets.ViewSet):
         # Details on the selected project
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
-        project = MappingProject.objects.get(active=True, id=pk)        
+        project = MappingProject.objects.get(active=True, id=pk, access__username=current_user)
 
         tasks = MappingTask.objects.filter(user=current_user, project_id=project).exclude(status=project.status_complete).exclude(status=project.status_rejected)
 

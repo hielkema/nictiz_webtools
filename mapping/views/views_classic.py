@@ -532,13 +532,14 @@ class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
     # TODO - daily chronjob to this endpoint / OR get celery beat working
     def get(self, request, **kwargs):
         # Taken per status
-        project_list = MappingProject.objects.filter(active=True)
+        current_user = User.objects.get(id=request.user.id)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
         tasks_per_user_dict = []
         tasks_per_status_dict = []
 
         for project in project_list:        
             try:
-                project_list = MappingProject.objects.filter(active=True)
+                project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
                 current_project = MappingProject.objects.get(id=project.id, active=True)
                 
                 status_list = MappingTaskStatus.objects.filter(project_id=project.id).order_by('status_id')#.exclude(id=current_project.status_complete.id)
@@ -750,7 +751,8 @@ class MappingIndexPageView(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        current_user = User.objects.get(id=request.user.id)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
         return render(request, 'mapping/index.html', {
             'page_title': 'Mapping project',
             'project_list': project_list,
@@ -774,7 +776,7 @@ class ProjectIndexPageView(UserPassesTestMixin,TemplateView):
         # Taken per status
         try:
             current_user = User.objects.get(id=request.user.id)
-            project_list = MappingProject.objects.filter(active=True).order_by('id')
+            project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
             tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
             
@@ -908,7 +910,7 @@ class ProjectIndexPageView(UserPassesTestMixin,TemplateView):
         print("TASKS", tasks)
 
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
         tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
         total_num_tasks = len(tasks)

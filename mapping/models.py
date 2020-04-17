@@ -11,6 +11,8 @@ class MappingProject(models.Model):
     status_complete = models.ForeignKey('MappingTaskStatus', related_name="status_complete", on_delete=models.PROTECT, blank=True, null=True, default=None)
     status_rejected = models.ForeignKey('MappingTaskStatus', related_name="status_rejected", on_delete=models.PROTECT, blank=True, null=True, default=None)
 
+    access = models.ManyToManyField(User, related_name="access_users", default=None, blank=True)
+
     project_types_options = [
         # (code, readable)
         ('1', 'One to Many'),

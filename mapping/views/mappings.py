@@ -164,54 +164,58 @@ class MappingDialog(viewsets.ViewSet):
 
     def create(self, request):
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+            print(request.data)
+  
             task = MappingTask.objects.get(id=request.data.get('task'))
-            try:
-                if task.project_id.project_type == "1": # One to many
-                    source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                    target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
-                    print('Project type 1')
-                elif task.project_id.project_type == "2": # Many to one
-                    source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                    print('Project type 2')
-                elif task.project_id.project_type == "4": # ECL to one
-                    source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                    print('Project type 4')
+            current_user = User.objects.get(id=request.user.id)
+            if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
+                try:
+                    if task.project_id.project_type == "1": # One to many
+                        source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                        target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
+                        print('Project type 1')
+                    elif task.project_id.project_type == "2": # Many to one
+                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                        print('Project type 2')
+                    elif task.project_id.project_type == "4": # ECL to one
+                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                        print('Project type 4')
+                    else:
+                        print("No support for this project type in MappingDialog POST method [type 3?]")
+                except Exception as e:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    error = 'Exc MappingDialog/create type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                    print(error)
+
+                print('\n\n','Raw request data',request.data,'\n\n')
+
+                print('Mapping:', request.data.get('mapping'),'\n\n')
+                if request.data.get('mapping').get('id') == 'extra':
+                    print('Zou een nieuwe mapping moeten worden.')
+                    print('Task',request.data.get('task'))
+                    print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
+                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                    mapping = MappingRule.objects.create(
+                        project_id = task.project_id,
+                        source_component = task.source_component,
+                        target_component = new_target,
+                        active = True,
+                    )
+                    mapping.save()
                 else:
-                    print("No support for this project type in MappingDialog POST method [type 3?]")
-            except Exception as e:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                error = 'Exc MappingDialog/create type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
-                print(error)
+                    print('Betreft bestaande mapping.')
+                    print('New target:', request.data.get('new'),'\n\n')
+                    print('User',request.user.username,': Replacing mapping',request.data.get('mapping').get('id'),'with',request.data.get('new').get('component').get('id'))
+                    mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
+                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                    mapping.target_component = new_target
+                    mapping.save()
 
-            print('\n\n','Raw request data',request.data,'\n\n')
+                audit_async.delay('multiple_mapping', task.project_id.id, task.id)
 
-            print('Mapping:', request.data.get('mapping'),'\n\n')
-            if request.data.get('mapping').get('id') == 'extra':
-                print('Zou een nieuwe mapping moeten worden.')
-                print('Task',request.data.get('task'))
-                print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
-                new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                mapping = MappingRule.objects.create(
-                    project_id = task.project_id,
-                    source_component = task.source_component,
-                    target_component = new_target,
-                    active = True,
-                )
-                mapping.save()
-            else:
-                print('Betreft bestaande mapping.')
-                print('New target:', request.data.get('new'),'\n\n')
-                print('User',request.user.username,': Replacing mapping',request.data.get('mapping').get('id'),'with',request.data.get('new').get('component').get('id'))
-                mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
-                new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                mapping.target_component = new_target
-                mapping.save()
-
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
-
-            return Response(str(mapping))
+                return Response(str(mapping))
         else:
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
 
@@ -219,186 +223,187 @@ class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
     def create(self, request):
+        print(request.data)
         task = MappingTask.objects.get(id=request.data.get('task'))
-        print('\n\n----------------------------------\n')
-        for target in request.data.get('targets'):
-            print("ID",             target.get('target').get('id'))     
-            print("NIEUW",          target.get('target').get('new'))     
-            print("component_id",   target.get('target').get('component_id'))     
-            print("component_title",target.get('target').get('component_title'))
-            print("rule",           target.get('rule'))
-            print("correlation",    target.get('correlation'))
-            print("advice",         target.get('advice'))
-            print("group",          target.get('group'))
-            print("priority",       target.get('priority'))
-            print("dependency",     target.get('dependency'))
-            print("DELETE",         target.get('delete'))
-            print("")
+        current_user = User.objects.get(id=request.user.id)
+        if MappingProject.objects.get(id=task.project_id.id, access__username=current_user) and task.user == current_user:
+            print('\n\n----------------------------------\n')
+            for target in request.data.get('targets'):
+                print("ID",             target.get('target').get('id'))     
+                print("NIEUW",          target.get('target').get('new'))     
+                print("component_id",   target.get('target').get('component_id'))     
+                print("component_title",target.get('target').get('component_title'))
+                print("rule",           target.get('rule'))
+                print("correlation",    target.get('correlation'))
+                print("advice",         target.get('advice'))
+                print("group",          target.get('group'))
+                print("priority",       target.get('priority'))
+                print("dependency",     target.get('dependency'))
+                print("DELETE",         target.get('delete'))
+                print("")
 
-            if target.get('delete') == True:
-                print('Get ready to delete')
-                mapping_rule = MappingRule.objects.get(id=target.get('id'))
-                print(mapping_rule)
-                mapping_rule.delete()
-                print(mapping_rule)
-            elif target.get('id') != 'extra':
-                print("Aanpassen mapping", target.get('id'))
-                mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                if target.get('delete') == True:
+                    print('Get ready to delete')
+                    mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                    print(mapping_rule)
+                    mapping_rule.delete()
+                    print(mapping_rule)
+                elif target.get('id') != 'extra':
+                    print("Aanpassen mapping", target.get('id'))
+                    mapping_rule = MappingRule.objects.get(id=target.get('id'))
 
-                mapping_rule.mapgroup           = target.get('group')
-                mapping_rule.mappriority        = target.get('priority')
-                mapping_rule.mapcorrelation     = target.get('correlation')
-                mapping_rule.mapadvice          = target.get('advice')
-                mapping_rule.maprule            = target.get('rule')
+                    mapping_rule.mapgroup           = target.get('group')
+                    mapping_rule.mappriority        = target.get('priority')
+                    mapping_rule.mapcorrelation     = target.get('correlation')
+                    mapping_rule.mapadvice          = target.get('advice')
+                    mapping_rule.maprule            = target.get('rule')
 
-                # Handle specifies/dependency/rule binding
-                if target.get('dependency'):
-                    for dependency in target.get('dependency'):
-                        print("Handling",dependency) # TODO debug
-                        # If binding should be true:
-                        # First check if the relationship exists in DB, otherwise create it.
-                        if dependency.get('binding'):
-                            # Check if binding does not exists in DB
-                            print('Binding should be present')
-                            if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                print("Binding (many to many) not present in DB - creating")
-                                addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                print('Adding relationship to rule', addrule)
-                                mapping_rule.mapspecifies.add(addrule)
-                                # Sanity check: success?
-                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                    print("Created")
+                    # Handle specifies/dependency/rule binding
+                    if target.get('dependency'):
+                        for dependency in target.get('dependency'):
+                            print("Handling",dependency) # TODO debug
+                            # If binding should be true:
+                            # First check if the relationship exists in DB, otherwise create it.
+                            if dependency.get('binding'):
+                                # Check if binding does not exists in DB
+                                print('Binding should be present')
+                                if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                    print("Binding (many to many) not present in DB - creating")
+                                    addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                    print('Adding relationship to rule', addrule)
+                                    mapping_rule.mapspecifies.add(addrule)
+                                    # Sanity check: success?
+                                    if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                        print("Created")
+                                    else:
+                                        print("Failed")
                                 else:
-                                    print("Failed")
+                                    print('Binding already present')
+                            # If binding should not exist:
+                            # Check if present, if so: remove
                             else:
-                                print('Binding already present')
-                        # If binding should not exist:
-                        # Check if present, if so: remove
-                        else:
-                            print('Binding should not be present')
-                            # Check if binding exists in DB
-                            if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                print("Binding (many to many) present in DB but should not be - removing")
-                                remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                mapping_rule.mapspecifies.remove(remrule)
-                                # Sanity check: success?
+                                print('Binding should not be present')
+                                # Check if binding exists in DB
                                 if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                    print("Still present")
+                                    print("Binding (many to many) present in DB but should not be - removing")
+                                    remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                    mapping_rule.mapspecifies.remove(remrule)
+                                    # Sanity check: success?
+                                    if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                        print("Still present")
+                                    else:
+                                        print("Succesfully removed")
                                 else:
-                                    print("Succesfully removed")
-                            else:
-                                print('Binding was already absent')
-                    print("Done handling dependency for",dependency)
-                mapping_rule.save()
+                                    print('Binding was already absent')
+                        print("Done handling dependency for",dependency)
+                    mapping_rule.save()
 
-        audit_async.delay('multiple_mapping', task.project_id.id, task.id)
-        return Response([])
+            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            return Response([])
 
     def retrieve(self, request, pk=None):
-        # List all events
-        # TODO filter on which projects the user has access to
-
         task = MappingTask.objects.get(id=pk)
-
-        if task.project_id.project_type == "1":
-            mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
-        if task.project_id.project_type == "2":
-            mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
-        elif task.project_id.project_type == "4":
-            mappings = MappingRule.objects.filter(project_id=task.project_id, target_component=task.source_component)
-        mappings = mappings.order_by('mapgroup', 'mappriority')
-        mapping_list = []
-        dependency_list = []
-        for mapping in mappings:
-            mapcorrelation = mapping.mapcorrelation
-            # if mapcorrelation == "447559001": mapcorrelation = "Broad to narrow"
-            # if mapcorrelation == "447557004": mapcorrelation = "Exact match"
-            # if mapcorrelation == "447558009": mapcorrelation = "Narrow to broad"
-            # if mapcorrelation == "447560006": mapcorrelation = "Partial overlap"
-            # if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
-            # if mapcorrelation == "447561005": mapcorrelation = "Not specified"
-            try:
-                extra = mapping.target_component.component_extra_dict
-            except:
-                extra = ""
-            
-            # Add dependencies to list
-            # For each mapping rule in this task, add an item with true/false
-            for maprule in mappings:
-                if mapping.mapspecifies.filter(id = maprule.id).exists():
-                    binding = True
-                else:
-                    binding = False
-                if maprule is not mapping:
-                    dependency_list.append({
-                        'rule_id'   : maprule.id,
-                        'source'    : maprule.target_component.component_title,
-                        'binding'   : binding,
-                    })
-
-            mapping_list.append({
-                'id' : mapping.id,
-                'source' : {
-                    'id': mapping.source_component.id,
-                    'component_id': mapping.source_component.component_id,
-                    'component_title': mapping.source_component.component_title,
-                },
-                'target' : {
-                    'id': mapping.target_component.id,
-                    'component_id': mapping.target_component.component_id,
-                    'component_title': mapping.target_component.component_title,
-                    'extra' : extra,
-                    'codesystem': {
-                        'title' : mapping.target_component.codesystem_id.codesystem_title,
-                        'version' : mapping.target_component.codesystem_id.codesystem_version,
-                        'id' : mapping.target_component.codesystem_id.id,
-                    },
-                    'new' : {},
-                },
-                'group' : mapping.mapgroup,
-                'priority' : mapping.mappriority,
-                'correlation' : mapping.mapcorrelation,
-                'advice' : mapping.mapadvice,
-                'rule' : mapping.maprule,
-                'dependency' : dependency_list,
-                'delete' : False,
-            })
+        current_user = User.objects.get(id=request.user.id)
+        if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
+            if task.project_id.project_type == "1":
+                mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
+            if task.project_id.project_type == "2":
+                mappings = MappingRule.objects.filter(project_id=task.project_id, source_component=task.source_component)
+            elif task.project_id.project_type == "4":
+                mappings = MappingRule.objects.filter(project_id=task.project_id, target_component=task.source_component)
+            mappings = mappings.order_by('mapgroup', 'mappriority')
+            mapping_list = []
             dependency_list = []
-        if task.project_id.project_type == "1" or task.project_id.project_type == "2" :
-            # Append extra empty mapping
-            dependency_list = []
-            for maprule in mappings:
-                dependency_list.append({
-                    'rule_id'   : maprule.id,
-                    'source'    : maprule.target_component.component_title,
-                    'binding'   : False,
-                })
-            mapping_list.append({
-                    'id' : 'extra',
+            for mapping in mappings:
+                mapcorrelation = mapping.mapcorrelation
+                # if mapcorrelation == "447559001": mapcorrelation = "Broad to narrow"
+                # if mapcorrelation == "447557004": mapcorrelation = "Exact match"
+                # if mapcorrelation == "447558009": mapcorrelation = "Narrow to broad"
+                # if mapcorrelation == "447560006": mapcorrelation = "Partial overlap"
+                # if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
+                # if mapcorrelation == "447561005": mapcorrelation = "Not specified"
+                try:
+                    extra = mapping.target_component.component_extra_dict
+                except:
+                    extra = ""
+                
+                # Add dependencies to list
+                # For each mapping rule in this task, add an item with true/false
+                for maprule in mappings:
+                    if mapping.mapspecifies.filter(id = maprule.id).exists():
+                        binding = True
+                    else:
+                        binding = False
+                    if maprule is not mapping:
+                        dependency_list.append({
+                            'rule_id'   : maprule.id,
+                            'source'    : maprule.target_component.component_title,
+                            'binding'   : binding,
+                        })
+
+                mapping_list.append({
+                    'id' : mapping.id,
                     'source' : {
-                        'id': task.source_component.id,
-                        'component_id': task.source_component.component_id,
-                        'component_title': task.source_component.component_title,
+                        'id': mapping.source_component.id,
+                        'component_id': mapping.source_component.component_id,
+                        'component_title': mapping.source_component.component_title,
                     },
                     'target' : {
-                        'id': None,
-                        'component_id': None,
-                        'component_title': None,
+                        'id': mapping.target_component.id,
+                        'component_id': mapping.target_component.component_id,
+                        'component_title': mapping.target_component.component_title,
+                        'extra' : extra,
                         'codesystem': {
-                            'title' : None,
-                            'version' : None,
-                            'id' : None,
-                        }
+                            'title' : mapping.target_component.codesystem_id.codesystem_title,
+                            'version' : mapping.target_component.codesystem_id.codesystem_version,
+                            'id' : mapping.target_component.codesystem_id.id,
+                        },
+                        'new' : {},
                     },
-                    'group' : None,
-                    'priority' : None,
-                    'correlation' : '447557004',
-                    'advice' : None,
-                    'rule' : None,
+                    'group' : mapping.mapgroup,
+                    'priority' : mapping.mappriority,
+                    'correlation' : mapping.mapcorrelation,
+                    'advice' : mapping.mapadvice,
+                    'rule' : mapping.maprule,
                     'dependency' : dependency_list,
                     'delete' : False,
                 })
-            dependency_list = []
-        
+                dependency_list = []
+            if task.project_id.project_type == "1" or task.project_id.project_type == "2" :
+                # Append extra empty mapping
+                dependency_list = []
+                for maprule in mappings:
+                    dependency_list.append({
+                        'rule_id'   : maprule.id,
+                        'source'    : maprule.target_component.component_title,
+                        'binding'   : False,
+                    })
+                mapping_list.append({
+                        'id' : 'extra',
+                        'source' : {
+                            'id': task.source_component.id,
+                            'component_id': task.source_component.component_id,
+                            'component_title': task.source_component.component_title,
+                        },
+                        'target' : {
+                            'id': None,
+                            'component_id': None,
+                            'component_title': None,
+                            'codesystem': {
+                                'title' : None,
+                                'version' : None,
+                                'id' : None,
+                            }
+                        },
+                        'group' : None,
+                        'priority' : None,
+                        'correlation' : '447557004',
+                        'advice' : None,
+                        'rule' : None,
+                        'dependency' : dependency_list,
+                        'delete' : False,
+                    })
+                dependency_list = []
+            
 
-        return Response(mapping_list)
+            return Response(mapping_list)

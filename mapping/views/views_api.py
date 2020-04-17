@@ -947,7 +947,7 @@ class vue_MappingIndex(UserPassesTestMixin,TemplateView):
         # TODO - Check if active projects exist, otherwise -> error.
         # TODO - Check if active projects exist, otherwise -> error.
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
         project_dict = []
         for project in project_list:
             tasks = MappingTask.objects.filter(project_id=project)
@@ -981,7 +981,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         # Taken per status
         try:
             current_user = User.objects.get(id=request.user.id)
-            project_list = MappingProject.objects.filter(active=True)
+            project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
             tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             
@@ -1115,7 +1115,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         print("TASKS", tasks)
 
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
         tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
         total_num_tasks = len(tasks)

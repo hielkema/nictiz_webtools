@@ -44,14 +44,17 @@ class MappingStatuses(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        project = MappingProject.objects.get(id=pk)
+        current_user = User.objects.get(id=request.user.id)
+        project = MappingProject.objects.get(id=pk, access__username=current_user)
         status_list = MappingTaskStatus.objects.filter(project_id = project).order_by('status_id')
         output=[]
         for status in status_list:
             output.append({
                 'project' : status.project_id.id,
                 'title' : status.status_title,
+                'text' : status.status_title,
                 'status_id' : status.status_id,
+                'value' : status.id,
                 'id' : status.id,
                 'description' : status.status_description,
                 'next' : status.status_next,
@@ -60,8 +63,9 @@ class MappingStatuses(viewsets.ViewSet):
         return Response(output)
 
     def create(self, request):
-        if 'mapping | change task status' in request.user.groups.values_list('name', flat=True):
-            task = MappingTask.objects.get(id=request.data.get('task'))
+        task = MappingTask.objects.get(id=request.data.get('task'))
+        current_user = User.objects.get(id=request.user.id)
+        if ('mapping | change task status' in request.user.groups.values_list('name', flat=True)) and MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
             current_user = User.objects.get(id=request.user.id)
             new_status = MappingTaskStatus.objects.get(id=request.data.get('status'))
             old_status = task.status.status_title
