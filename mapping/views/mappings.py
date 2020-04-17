@@ -86,6 +86,48 @@ class MappingTargetSearch(viewsets.ViewSet):
         output = sorted(output, key=lambda item: len(item.get("text")), reverse=False)
         return Response(output[:20])
 
+class RuleSearchByComponent(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def create(self, request):
+        query = request.data.get('query')
+        print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
+
+        component = MappingCodesystemComponent.objects.get(id=query)
+        
+        output=[]
+
+        target = MappingRule.objects.filter(target_component = component)
+        for rule in target:
+            tasks = MappingTask.objects.filter(source_component = rule.source_component)
+            for task in tasks:
+                output.append({
+                    'task_id' : task.id,
+                    'project' : task.project_id.title,
+                    'project_id' : task.project_id.id,
+                    'rule_id' : rule.id,
+                    'source_id' : rule.source_component.component_id,
+                    'source_title' : rule.source_component.component_title,
+                    'target_id' : rule.target_component.component_id,
+                    'target_title' : rule.target_component.component_title,
+                })
+
+        source = MappingRule.objects.filter(source_component = component)
+        for rule in source:
+            tasks = MappingTask.objects.filter(source_component = rule.source_component)
+            for task in tasks:
+                output.append({
+                    'task_id' : task.id,
+                    'project' : task.project_id.title,
+                    'project_id' : task.project_id.id,
+                    'rule_id' : rule.id,
+                    'source_id' : rule.source_component.component_id,
+                    'source_title' : rule.source_component.component_title,
+                    'target_id' : rule.target_component.component_id,
+                    'target_title' : rule.target_component.component_title,
+                })
+
+        return Response(output)
 class MappingDialog(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
