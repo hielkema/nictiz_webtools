@@ -723,7 +723,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Look for rules with the same target component
             for target in mapping_targets:
-                other_rules = MappingRule.objects.filter(target_component=target)
+                other_rules = MappingRule.objects.filter(source_component__codesystem_id = target.codesystem_id, target_component=target)
                 if other_rules.count() > 0:
                     other_tasks_same_target = []
                     for other_rule in other_rules:
