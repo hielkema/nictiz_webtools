@@ -103,6 +103,8 @@ class MappingStatuses(viewsets.ViewSet):
                 user_source=current_user,
             )
             event.save()
+            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+
             return Response([])
         else:
             return Response('Geen toegang',status=status.HTTP_401_UNAUTHORIZED)
