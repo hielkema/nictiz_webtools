@@ -32,9 +32,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import *
 
 # Get latest snowstorm client once on startup. Set master or develop
-branch = "develop"
-url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
-    branch+'/snowstorm_client.py'
+try:
+    branch = "develop"
+    url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
+        branch+'/snowstorm_client.py'
+except:
+    print('Could not get latest Snowstorm client')
 # urllib.request.urlretrieve(url, 'snowstorm_client.py')
 from snowstorm_client import Snowstorm
 from ..tasks import *
