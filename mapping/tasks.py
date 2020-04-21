@@ -286,12 +286,15 @@ def import_palgathesaurus_task():
         # Save
         obj.save()
 
-        # Bestaande mapping rules doorvoeren
-        task = MappingTask.objects.get(source_component = obj)
-        
-        # Bestaande mappings verwijderen
-        existing_mappings = MappingRule.objects.filter(source_component = obj)
-        existing_mappings.delete()
+        try:
+            # Bestaande mapping rules doorvoeren
+            task = MappingTask.objects.get(source_component = obj)
+            
+            # Bestaande mappings verwijderen
+            existing_mappings = MappingRule.objects.filter(source_component = obj)
+            existing_mappings.delete()
+        except:
+            print('Nog geen taak voor '+str(row[0]))
 
         try:
             target = MappingCodesystemComponent.objects.get(codesystem_id = snomed, component_id = row[4])
