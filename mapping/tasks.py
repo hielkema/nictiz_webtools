@@ -251,6 +251,91 @@ def import_nhgverrichtingen_task():
         obj.save()
 
 @shared_task
+def import_palgathesaurus_task():
+    df = read_excel('/webserver/mapping/resources/palga/Thesaurus_20200401.xls')
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+    # Selecteer alleen rijen met voorkeursterm
+    df = df[df['DESTACE'] == 'V']
+    df = df[df['DESNOMEDCT'] != 'nvt']
+
+    # Set alle bestaande concepten in het codestelsel Palga als inactief
+    palga = MappingCodesystem.objects.get(id='7')
+    snomed = MappingCodesystem.objects.get(id='1')
+    concepts = MappingCodesystemComponent.objects.filter(codesystem_id=palga)
+    concepts.update(component_extra_dict = {
+        'Actief':False,
+    })
+
+    for index, row in df.iterrows():
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=palga,
+            component_id=row[1],
+        )
+        # Add data not used for matching
+        obj.component_title     = row[0]
+
+        extra = {
+            'DEADVOM' : row[3],
+            'DEPROT' : row[5],
+            'DERETR' : row[6],
+            'DENKR' : row[7],
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
+        }
+        obj.component_extra_dict = extra
+        # Save
+        obj.save()
+
+        # Bestaande mapping rules doorvoeren
+        task = MappingTask.objects.get(source_component = obj)
+        
+        # Bestaande mappings verwijderen
+        existing_mappings = MappingRule.objects.filter(source_component = obj)
+        existing_mappings.delete()
+
+        try:
+            target = MappingCodesystemComponent.objects.get(codesystem_id = snomed, component_id = row[4])
+            rule, createdRule = MappingRule.objects.get_or_create(
+                project_id = task.project_id,
+                source_component = obj,
+                target_component = target,
+                active = True,
+            )
+        except:
+            print('Geen hit op',row[4])
+
+    # Commentaren uit todo bestand inladen
+    df = read_excel('/webserver/mapping/resources/palga/PALGA_TODO.xlsx')
+    # Vervang lege cellen door False
+    df = df.fillna(value=False)
+    for index, row in df.iterrows():
+        # Find concept
+        component = MappingCodesystemComponent.objects.get(
+            codesystem_id=palga,
+            component_id=row[1],
+        )
+        # Find task for the concept
+        task = MappingTask.objects.get(source_component = component)
+
+        # Maak commentaar indien nog niet aanwezig
+        comments = []
+        comments.append("Commentaar import [Nictiz 1]: "+str(row[9])) # Nictiz
+        comments.append("Commentaar import [Palga 1]: "+str(row[10])) # Palga
+        comments.append("Commentaar import [Nictiz 2]: "+str(row[11])) # Nictiz
+        comments.append("Commentaar import [Palga 2]: "+str(row[12])) # Palga
+
+        for comment in comments:
+            obj,created = MappingComment.objects.get_or_create(
+                comment_task = task,
+                comment_title = 'Import uit TODO bestand',
+                comment_body = comment,
+                comment_user = User.objects.get(username='mertens')
+            )
+
+
+
+
+@shared_task
 def import_diagnosethesaurus_task():
     thesaurusConcept    = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusConcept.csv')
     thesaurusTerm       = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusTerm.csv')
