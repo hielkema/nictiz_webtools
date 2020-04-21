@@ -288,7 +288,6 @@ def import_palgathesaurus_task():
 
         try:
             # Bestaande mapping rules doorvoeren
-            task = MappingTask.objects.get(source_component = obj)
             
             # Bestaande mappings verwijderen
             existing_mappings = MappingRule.objects.filter(source_component = obj)
@@ -298,6 +297,7 @@ def import_palgathesaurus_task():
             print('Nog geen taak voor '+str(row[0]))
 
         try:
+            task = MappingTask.objects.get(source_component = obj)
             target = MappingCodesystemComponent.objects.get(codesystem_id = snomed, component_id = row[4])
             rule, createdRule = MappingRule.objects.get_or_create(
                 project_id = task.project_id,
