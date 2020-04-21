@@ -658,17 +658,19 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
                 # Audits valid for all rules
                 if rule.mappriority == '' or rule.mappriority == None:
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type=audit_type,
-                                hit_reason='Regel heeft geen prioriteit',
-                            )
+                    if rule.project_id.use_mappriority:
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Regel heeft geen prioriteit',
+                                )
                 if rule.mapadvice == '':
-                    obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type=audit_type,
-                                hit_reason='Regel heeft geen mapadvice',
-                            )
+                    if rule.project_id.use_mapadvice:
+                        obj, created = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type=audit_type,
+                                    hit_reason='Regel heeft geen mapadvice',
+                                )
                 if rule.source_component == rule.target_component:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
