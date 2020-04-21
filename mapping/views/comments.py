@@ -74,6 +74,9 @@ class MappingPostComment(viewsets.ViewSet):
                 return Response('succes')
             else:
                 return Response('fail: not your comment?')
+        else:
+            return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
+
     def retrieve(self, request, pk=None):
         comment = MappingComment.objects.get(id=pk)
         current_user = User.objects.get(id=request.user.id)
@@ -85,3 +88,5 @@ class MappingPostComment(viewsets.ViewSet):
                 'comment_user'    : comment.comment_user.username,
             }
             return Response(output)
+        else:
+            return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
