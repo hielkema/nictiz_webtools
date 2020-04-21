@@ -305,6 +305,9 @@ def import_palgathesaurus_task():
                 target_component = target,
                 active = True,
             )
+            # Als dit gelukt is, taak op klaar voor publicatie zetten.
+            task.status = task.project_id.status_complete
+            task.save()
         except Exception as e:
             print(e)
             print('Geen hit op',row[4])
@@ -324,10 +327,10 @@ def import_palgathesaurus_task():
 
         # Maak commentaar indien nog niet aanwezig
         comments = []
-        comments.append("Commentaar import [Nictiz 1]: "+str(row[9])) # Nictiz
-        comments.append("Commentaar import [Palga 1]: "+str(row[10])) # Palga
-        comments.append("Commentaar import [Nictiz 2]: "+str(row[11])) # Nictiz
-        comments.append("Commentaar import [Palga 2]: "+str(row[12])) # Palga
+        if row[9] != False: comments.append("Commentaar import [Nictiz 1]: "+str(row[9])) # Nictiz
+        if row[10] != False: comments.append("Commentaar import [Palga 1]: "+str(row[10])) # Palga
+        if row[11] != False: comments.append("Commentaar import [Nictiz 2]: "+str(row[11])) # Nictiz
+        if row[12] != False: comments.append("Commentaar import [Palga 2]: "+str(row[12])) # Palga
 
         for comment in comments:
             obj,created = MappingComment.objects.get_or_create(
