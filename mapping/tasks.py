@@ -293,7 +293,8 @@ def import_palgathesaurus_task():
             # Bestaande mappings verwijderen
             existing_mappings = MappingRule.objects.filter(source_component = obj)
             existing_mappings.delete()
-        except:
+        except Exception as e:
+            print(e)
             print('Nog geen taak voor '+str(row[0]))
 
         try:
@@ -304,7 +305,8 @@ def import_palgathesaurus_task():
                 target_component = target,
                 active = True,
             )
-        except:
+        except Exception as e:
+            print(e)
             print('Geen hit op',row[4])
 
     # Commentaren uit todo bestand inladen
