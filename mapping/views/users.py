@@ -105,4 +105,6 @@ class MappingUsers(viewsets.ViewSet):
                 )
             event.save()
             print(str(task))
+            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+
             return Response([])
