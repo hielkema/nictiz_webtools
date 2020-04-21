@@ -81,6 +81,7 @@ class Tasklist(viewsets.ViewSet):
                     'title' : task.status.status_title
                 },
             })
+        task_list = natsort.natsorted(task_list, key=lambda k: k['component']['id'])
 
         return Response(task_list)
 
@@ -126,7 +127,6 @@ class TaskDetails(viewsets.ViewSet):
                     'description' : task.status.status_description,
                 },
             }
-
             return Response(output)
 
 class EventsAndComments(viewsets.ViewSet):
