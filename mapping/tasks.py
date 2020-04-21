@@ -746,13 +746,13 @@ def audit_async(audit_type=None, project=None, task_id=None):
             # Specific rules for single or multiple mappings
             if rules.count() == 1:
                 logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
-                if rules[0].mappriority != 1:
+                if rules[0].mappriority != 1 and rules[0].project_id.use_mappriority:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
                             hit_reason='Taak heeft 1 mapping rule: prioriteit is niet 1'
                         )
-                if rules[0].mapadvice != 'Altijd':
+                if rules[0].mapadvice != 'Altijd' and rules[0].project_id.use_mapadvice:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type=audit_type,
