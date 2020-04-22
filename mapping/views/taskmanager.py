@@ -33,7 +33,7 @@ class Permission_MappingTasks(permissions.BasePermission):
     Global permission check rights to use the taskmanager.
     """
     def has_permission(self, request, view):
-        if 'mapping | create tasks' in request.user.groups.values_list('name', flat=True):
+        if 'mapping | taskmanager' in request.user.groups.values_list('name', flat=True):
             return True
 
 # Change tasks
