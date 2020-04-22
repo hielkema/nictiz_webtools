@@ -38,12 +38,21 @@ def import_snomed_async(focus=None):
     result = snowstorm.findConcepts(ecl="<<"+focus)
     print('Found {} concepts'.format(len(result)))
 
-    # Set all snomed concepts in the database as inactive, in case they are not retrieves through ECL
-    snomed = MappingCodesystem.objects.get(id='1')
-    concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
-    concepts.update(component_extra_dict = {
-        'Actief':False,
-    })
+    # Set all snomed concepts in the database as inactive, in case they are not retrieved through ECL?
+    # Should probably be changed to all applying only to concepts not in the above ECL query results!
+    # Voorbeeld:
+    # snomed = MappingCodesystem.objects.get(id='1')
+    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+    # concepts.update(component_extra_dict = {
+    #     'Actief':False,
+    # })
+    # Nieuw TODO:
+    # snomed = MappingCodesystem.objects.get(id='1')
+    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+    # concepts = concepts.exclude(component_id__in = result.keys()) ??????
+    # concepts.update(component_extra_dict = {
+    #     'Actief':False,
+    # })
 
     # Spawn task for each concept
     for conceptid, concept in result.items():
