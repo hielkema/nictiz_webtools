@@ -837,123 +837,47 @@ def exportCodesystemToRCRules(rc_id, user_id):
 
     # Selecte RC
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
-    rc.finished = False
-    rc.save()
-    # Get all tasks in requested codesystem - based on the codesystem of the source component
-    tasks = MappingTask.objects.filter(source_component__codesystem_id__id = rc.codesystem.id).order_by('source_component__component_id')
-    print('Found',tasks.count(),'tasks.')
-    
-    debug_list = []
-    # Loop through tasks
-    for task in tasks:
-        if task.status != task.project_id.status_complete:
-            logger.debug('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
-            # Remove all rules in the RC database originating from this task, since it is rejected.
-            rc_rules = MappingReleaseCandidateRules.objects.filter(
-                    static_source_component_ident = task.source_component.component_id,
-                    export_rc = rc,
-            )
-            rc_rules.delete()
-
-        else:
-            rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
-            
-            ## First: check if any of the rules for this task have changes
-            ## if so: delete all existing rules in RC and replace them all
-            for rule in rules:
-                # Handle bindings / specifications / products
-                mapspecifies = []
-                for binding in rule.mapspecifies.all():
-                    mapspecifies.append({
-                        'id' : binding.target_component.component_id,
-                        'title' : binding.target_component.component_title,
-                    })
-
-                # Get all RC rules, filtered on this rule and RC
-                rc_rule = MappingReleaseCandidateRules.objects.filter(
-                    export_rule = rule,
-                    export_rc = rc,
-                    # rc_rule.export_user = User.objects.get(id=user_id)
-                    export_task = task,
-                    task_status = task.status.status_title,
-                    # task_user = task.user.username
-                    source_component = rule.source_component,
-                    static_source_component_ident = rule.source_component.component_id,
-                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
-                    target_component = rule.target_component,
-                    static_target_component_ident = rule.target_component.component_id,
-                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
-                    mapgroup = rule.mapgroup,
-                    mappriority = rule.mappriority,
-                    mapcorrelation = rule.mapcorrelation,
-                    mapadvice = rule.mapadvice,
-                    maprule = rule.maprule,
-                    mapspecifies = mapspecifies,
-                )
-                # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
-                if rc_rule.count() == 1:
-                    rc_rule = rc_rule.first()
-                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
-                else:
-                    rc_rule_todelete = MappingReleaseCandidateRules.objects.filter(
-                        source_component = task.source_component,
+    if rc.status != 3: # 3=production
+        rc.finished = False
+        rc.save()
+        # Get all tasks in requested codesystem - based on the codesystem of the source component
+        tasks = MappingTask.objects.filter(source_component__codesystem_id__id = rc.codesystem.id).order_by('source_component__component_id')
+        print('Found',tasks.count(),'tasks.')
+        
+        debug_list = []
+        # Loop through tasks
+        for task in tasks:
+            if task.status != task.project_id.status_complete:
+                logger.debug('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
+                # Remove all rules in the RC database originating from this task, since it is rejected.
+                rc_rules = MappingReleaseCandidateRules.objects.filter(
+                        static_source_component_ident = task.source_component.component_id,
                         export_rc = rc,
-                    )
-                    if rc_rule_todelete.count() > 0:
-                        debug_list.append('Found rule(s) with changes for component {} - deleting all RC rules for this task.'.format(task.source_component.component_id))
-                        rc_rule_todelete.delete()
-            ### End check for changes
-            
-            ## Now copy the new rules where needed
-            for rule in rules:
-                # Handle bindings / specifications / products
-                mapspecifies = []
-                for binding in rule.mapspecifies.all():
-                    mapspecifies.append({
-                        'id' : binding.target_component.component_id,
-                        'title' : binding.target_component.component_title,
-                    })
-
-                # Get all RC rules, filtered on this rule and RC
-                rc_rule = MappingReleaseCandidateRules.objects.filter(
-                    export_rule = rule,
-                    export_rc = rc,
-                    # rc_rule.export_user = User.objects.get(id=user_id)
-                    export_task = task,
-                    task_status = task.status.status_title,
-                    # task_user = task.user.username
-                    source_component = rule.source_component,
-                    static_source_component_ident = rule.source_component.component_id,
-                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
-                    target_component = rule.target_component,
-                    static_target_component_ident = rule.target_component.component_id,
-                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
-                    mapgroup = rule.mapgroup,
-                    mappriority = rule.mappriority,
-                    mapcorrelation = rule.mapcorrelation,
-                    mapadvice = rule.mapadvice,
-                    maprule = rule.maprule,
-                    mapspecifies = mapspecifies,
                 )
-                # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
-                if rc_rule.count() == 1:
-                    rc_rule = rc_rule.first()
-                    debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+                rc_rules.delete()
 
-                elif rc_rule.count() > 1:
-                    logger.info(rc_rule.all())
-                    logger.info("Multiple RC rules exists for a single dev rule. PASS.")
-                    pass
-                # If not, make a new one
-                else:
-                    rc_rule = MappingReleaseCandidateRules.objects.create(
+            else:
+                rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+                
+                ## First: check if any of the rules for this task have changes
+                ## if so: delete all existing rules in RC and replace them all
+                for rule in rules:
+                    # Handle bindings / specifications / products
+                    mapspecifies = []
+                    for binding in rule.mapspecifies.all():
+                        mapspecifies.append({
+                            'id' : binding.target_component.component_id,
+                            'title' : binding.target_component.component_title,
+                        })
+
+                    # Get all RC rules, filtered on this rule and RC
+                    rc_rule = MappingReleaseCandidateRules.objects.filter(
                         export_rule = rule,
                         export_rc = rc,
-                        # Add essential data to shadow copy in RC
-                        export_user = User.objects.get(id=user_id),
+                        # rc_rule.export_user = User.objects.get(id=user_id)
                         export_task = task,
                         task_status = task.status.status_title,
-                        task_user = task.user.username,
+                        # task_user = task.user.username
                         source_component = rule.source_component,
                         static_source_component_ident = rule.source_component.component_id,
                         static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
@@ -967,12 +891,92 @@ def exportCodesystemToRCRules(rc_id, user_id):
                         maprule = rule.maprule,
                         mapspecifies = mapspecifies,
                     )
-                    # rc_rule.save()
-    rc.finished = True
-    logger.info('Finished')
-    for item in debug_list:
-        print(item,'\n')
-    rc.save()
+                    # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
+                    if rc_rule.count() == 1:
+                        rc_rule = rc_rule.first()
+                        debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+                    else:
+                        rc_rule_todelete = MappingReleaseCandidateRules.objects.filter(
+                            source_component = task.source_component,
+                            export_rc = rc,
+                        )
+                        if rc_rule_todelete.count() > 0:
+                            debug_list.append('Found rule(s) with changes for component {} - deleting all RC rules for this task.'.format(task.source_component.component_id))
+                            rc_rule_todelete.delete()
+                ### End check for changes
+                
+                ## Now copy the new rules where needed
+                for rule in rules:
+                    # Handle bindings / specifications / products
+                    mapspecifies = []
+                    for binding in rule.mapspecifies.all():
+                        mapspecifies.append({
+                            'id' : binding.target_component.component_id,
+                            'title' : binding.target_component.component_title,
+                        })
+
+                    # Get all RC rules, filtered on this rule and RC
+                    rc_rule = MappingReleaseCandidateRules.objects.filter(
+                        export_rule = rule,
+                        export_rc = rc,
+                        # rc_rule.export_user = User.objects.get(id=user_id)
+                        export_task = task,
+                        task_status = task.status.status_title,
+                        # task_user = task.user.username
+                        source_component = rule.source_component,
+                        static_source_component_ident = rule.source_component.component_id,
+                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                        target_component = rule.target_component,
+                        static_target_component_ident = rule.target_component.component_id,
+                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                        mapgroup = rule.mapgroup,
+                        mappriority = rule.mappriority,
+                        mapcorrelation = rule.mapcorrelation,
+                        mapadvice = rule.mapadvice,
+                        maprule = rule.maprule,
+                        mapspecifies = mapspecifies,
+                    )
+                    # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
+                    if rc_rule.count() == 1:
+                        rc_rule = rc_rule.first()
+                        debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
+
+                    elif rc_rule.count() > 1:
+                        logger.info(rc_rule.all())
+                        logger.info("Multiple RC rules exists for a single dev rule. PASS.")
+                        pass
+                    # If not, make a new one
+                    else:
+                        rc_rule = MappingReleaseCandidateRules.objects.create(
+                            export_rule = rule,
+                            export_rc = rc,
+                            # Add essential data to shadow copy in RC
+                            export_user = User.objects.get(id=user_id),
+                            export_task = task,
+                            task_status = task.status.status_title,
+                            task_user = task.user.username,
+                            source_component = rule.source_component,
+                            static_source_component_ident = rule.source_component.component_id,
+                            static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                            target_component = rule.target_component,
+                            static_target_component_ident = rule.target_component.component_id,
+                            static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                            mapgroup = rule.mapgroup,
+                            mappriority = rule.mappriority,
+                            mapcorrelation = rule.mapcorrelation,
+                            mapadvice = rule.mapadvice,
+                            maprule = rule.maprule,
+                            mapspecifies = mapspecifies,
+                        )
+                        # rc_rule.save()
+        rc.finished = True
+        logger.info('Finished')
+        for item in debug_list:
+            print(item,'\n')
+        rc.save()
+        return str('Import klaar')
+    else:
+        return str('Import niet toegestaan - productie RC')
 
 # Generate FHIR ConceptMap
 @shared_task
@@ -1035,9 +1039,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                     for single_rule in rules_for_task:
                         target_component = single_rule.static_target_component
 
+                        
 
                         # Skip if identifier in the list of used products
-                        if target_component.get('identifier') not in product_list:
+                        if (target_component.get('identifier') not in product_list):
                             # Put all the products in a list
                             products = []
                             for target in single_rule.mapspecifies:
@@ -1071,15 +1076,19 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             targets.append(output)
 
                     # Add this source component with all targets and products to the element list
-                    source_component = single_rule.static_source_component
-                    output = {
-                        # 'DEBUG_numrules' : rules_for_task.count(),
-                        # 'DEBUG_productlist' : product_list,
-                        'code' : source_component.get('identifier'),
-                        # 'display' : source_component.get('title'),
-                        'target' : targets,
-                    }
-                    elements.append(output)
+                    # Only if it has approves and no rejects
+                    accepted_count = single_rule.accepted.count()
+                    rejected_count = single_rule.rejected.count()
+                    if (accepted_count > 0) and (rejected_count == 0):
+                        source_component = single_rule.static_source_component
+                        output = {
+                            # 'DEBUG_numrules' : rules_for_task.count(),
+                            # 'DEBUG_productlist' : product_list,
+                            'code' : source_component.get('identifier'),
+                            # 'display' : source_component.get('title'),
+                            'target' : targets,
+                        }
+                        elements.append(output)
 
                 # Add the group to the group list
                 groups.append({
