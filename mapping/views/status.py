@@ -50,7 +50,7 @@ class MappingStatuses(viewsets.ViewSet):
         output=[]
         for status in status_list:
             output.append({
-                'project' : status.project_id.id,
+                # 'project' : status.project_id.id,
                 'title' : status.status_title,
                 'text' : status.status_title,
                 'status_id' : status.status_id,

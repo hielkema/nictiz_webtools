@@ -71,7 +71,16 @@ class Projects(viewsets.ViewSet):
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(active=True, id=pk, access__username=current_user)
 
-        tasks = MappingTask.objects.filter(user=current_user, project_id=project).exclude(status=project.status_complete).exclude(status=project.status_rejected)
+        tasks = MappingTask.objects.filter(project_id=project)
+
+        tasks_per_status =[]
+        status_list = tasks.distinct('status').values_list('status__status_title', flat=True)
+        for status in status_list:
+            tasks_per_status.append({
+                'status_title' : status,
+                'count_total' : tasks.filter(status__status_title = status).count(),
+                'count_user' : tasks.filter(status__status_title = status, user = current_user).count(),
+            })
 
         project_data = {
             'id' : project.id,
@@ -79,8 +88,11 @@ class Projects(viewsets.ViewSet):
             'title' : project.title,
             'source' : project.source_codesystem.codesystem_title,
             'target' : project.target_codesystem.codesystem_title,
-            'open_tasks' : tasks.count(),
             'tags' : project.tags,
+
+            'open_tasks' : tasks.exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+            'open_tasks_user' : tasks.filter(user=current_user).exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
+            'tasks_per_status' : tasks_per_status,
 
             'type' : project.project_type,
             'group' : project.use_mapgroup,
