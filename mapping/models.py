@@ -231,6 +231,8 @@ class MappingReleaseCandidate(models.Model):
     ]
     status = models.CharField(default=None, max_length=50, blank=True, null=True, choices=status_options)
     created = models.DateTimeField(default=timezone.now)
+    def __str__(self):
+        return str(self.title)
 
 class MappingReleaseCandidateFHIRConceptMap(models.Model):
     title = models.TextField(default=None, blank=True, null=True)

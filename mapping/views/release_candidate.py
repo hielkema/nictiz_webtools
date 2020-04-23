@@ -430,14 +430,17 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             # Handle foreign key info that might be deleted in dev path
             try:
                 project_title = rule.export_rule.project_id.title
+                project_id = rule.export_rule.project_id.id
             except:
                 project_title = '[unknown]'
+                project_id = '[unknown]'
             static_source_component = rule.static_source_component
             task_list.append({
                 'status' : rule.task_status,
                 'source' : static_source_component,
                 'task_id': export_task_id,
                 'project' : project_title,
+                'project_id' : project_id,
                 'group' : static_source_component.get('extra',{}).get('Groep',''),
                 'rules' : filtered_rule_list,
                 'accepted_list' : set(accepted_list),
