@@ -74,7 +74,7 @@ class Projects(viewsets.ViewSet):
         tasks = MappingTask.objects.filter(project_id=project)
 
         tasks_per_status =[]
-        status_list = tasks.distinct('status').values_list('status__status_title', flat=True)
+        status_list = tasks.order_by('status_id').distinct('status').values_list('status__status_title', flat=True)
         for status in status_list:
             tasks_per_status.append({
                 'status_title' : status,
