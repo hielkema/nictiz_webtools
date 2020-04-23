@@ -217,6 +217,8 @@ class MappingReleaseCandidate(models.Model):
     metadata_copyright = models.TextField(default=None, blank=True, null=True)
     metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
 
+    access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
+    
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
     finished = models.BooleanField(default=False)
     # Perhaps status should be coming from the status DB table - text for now
