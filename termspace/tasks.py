@@ -460,12 +460,14 @@ def load_termspace_comments():
                     concept = task.get('terminologyComponent').get('id'),
                     task_id = task.get('_id'),
                     fsn = task.get('terminologyComponent').get('name'),
-                    assignee = comment.get('author'),
                     comment = comment.get('text'),
                     time = comment.get('time'),
                     folder = task.get('folder'),
-                    status = task.get('workflowState'),
                 )
+                obj.status = task.get('workflowState')
+                obj.assignee = comment.get('author')
+                obj.save()
+
     print('Got',retrieved_tasks,'tasks from termspace.')
 
     pass
