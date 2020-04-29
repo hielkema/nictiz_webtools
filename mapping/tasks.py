@@ -1149,3 +1149,74 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             data = output,
         )
         return obj.id
+        
+# Dump progress per day to database
+@shared_task
+def mappingProgressDump():
+    # Taken per status
+    project_list = MappingProject.objects.filter(active=True)
+    tasks_per_user_dict = []
+    tasks_per_status_dict = []
+
+    for project in project_list:        
+        try:
+            project_list = MappingProject.objects.filter(active=True)
+            current_project = MappingProject.objects.get(id=project.id, active=True)
+            
+            status_list = MappingTaskStatus.objects.filter(project_id=project.id).order_by('status_id')#.exclude(id=current_project.status_complete.id)
+            tasks_per_status_labels = []
+            tasks_per_status_values = []
+            tasks_per_status_dict = []
+            user_list = User.objects.filter()
+            tasks_per_user_labels = []
+            tasks_per_user_values = []
+            tasks_per_user_dict = []
+            for user in user_list:
+                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
+                if num_tasks > 0:
+                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
+                    tasks_per_user_labels.append(user.username)
+                    tasks_per_user_values.append(num_tasks)
+                    tasks_per_user_dict.append({
+                    'user' : user.username,
+                    'num_tasks' : num_tasks,
+                    })
+            for status in status_list:            
+                num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).exclude(status=current_project.status_rejected).count()
+                tasks_per_status_labels.append(status.status_title)
+                tasks_per_status_values.append(num_tasks)
+                tasks_per_status_dict.append({
+                    'status' : status.status_title,
+                    'num_tasks' : num_tasks,
+                    })
+        except:
+            tasks_per_status_labels = []
+            tasks_per_status_values = []
+            tasks_per_user_labels = []
+            tasks_per_user_values = []
+        
+        # print(tasks_per_user_dict)
+        # print(tasks_per_status_dict)
+        try:
+            MappingProgressRecord.objects.create(
+                name = 'TasksPerStatus',
+                project = project,
+                labels = '',
+                values = json.dumps(tasks_per_status_dict)
+            )
+        except Exception as e:
+            print(e)
+        try:
+            MappingProgressRecord.objects.create(
+                name = 'TasksPerUser',
+                project = project,
+                labels = '',
+                values = json.dumps(tasks_per_user_dict)
+            )
+        except Exception as e:
+            print(e)
+
+    return {
+        'project' : project.id,
+        'results' : tasks_per_status_dict,
+    }
