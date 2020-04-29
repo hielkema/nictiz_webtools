@@ -85,7 +85,6 @@ urlpatterns = [
     url(r'taskmanager/(?P<project>\w+)', views.TaskManagerPageView.as_view(), name='taskmanager_project'),
     url(r'taskmanager', views.TaskManagerPageView.as_view(), name='taskmanager'),
 
-    url(r'ajaxprogressreport/(?P<secret>\w+)', views.AjaxProgressRecordPageView.as_view(), name='ajaxprogressreport'),
     url(r'audit/(?P<project>\w+)/(?P<audit_type>\w+)', views.AuditPageView.as_view(), name='audit'),
 
     url(r'task_create', views.TaskCreatePageView.as_view(), name='task_create'),
