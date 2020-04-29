@@ -13,7 +13,7 @@ import urllib.request
 from pandas import read_excel, read_csv
 import environ
 
-from .build_tree_excel import *
+from .build_tree import *
 
 import csv, multiprocessing, pandas, sys, os
 from pprint import pprint
