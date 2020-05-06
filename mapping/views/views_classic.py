@@ -573,7 +573,7 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
                     else:
                         present = False
                         obj = MappingTask.objects.create(
-                            project_id=project,
+                            project_id=project, # Wel matchen op project - anders kan het zijn dat je geen taak voor een mapping naar een ander stels kan maken - denk palga & NHG parallel.
                             source_component=component_obj,
                         )
                         # Add data not used for matching
