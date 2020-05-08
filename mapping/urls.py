@@ -16,9 +16,12 @@ router_1_0.register(r'rc_rule_review', views.RCRuleReview, basename="rc_rule_rev
 
 router_1_0.register(r'tasks_manager', views.MappingTasks, basename="Mapping_Tasks")
 router_1_0.register(r'change_tasks', views.ChangeMappingTasks, basename="Change_Mapping_Tasks")
+router_1_0.register(r'create_tasks', views.CreateTasks, basename="Create_Mapping_Tasks")
 
 router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
 
+
+router_1_0.register(r'codesystems', views.Codesystems, basename="Mapping Codesystems")
 router_1_0.register(r'projects', views.Projects, basename="Mapping Projects")
 router_1_0.register(r'tasklist', views.Tasklist, basename="Mapping tasks")
 router_1_0.register(r'taskdetails', views.TaskDetails, basename="Mapping tasks")

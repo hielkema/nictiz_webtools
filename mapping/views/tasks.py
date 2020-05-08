@@ -42,6 +42,131 @@ class Permission_MappingProject_Access(permissions.BasePermission):
         if 'mapping | access' in request.user.groups.values_list('name', flat=True):
             return True
 
+class Permission_CreateMappingTasks(permissions.BasePermission):
+    """
+    Global permission check rights to use the taskmanager.
+    """
+    def has_permission(self, request, view):
+        if 'mapping | create tasks' in request.user.groups.values_list('name', flat=True):
+            return True
+
+class CreateTasks(viewsets.ViewSet):
+    permission_classes = [Permission_CreateMappingTasks]
+
+    def create(self, request):
+        # Create new tasks
+        current_user = User.objects.get(id=request.user.id)
+        payload = request.data
+        
+        # Check for permissions in chosen project
+        project = MappingProject.objects.filter(id=payload.get('projectid'), access__username=current_user)
+        # Continue if project exists and user has access
+        if project.exists():
+            project = project.first()
+            
+
+
+            codesystem = MappingCodesystem.objects.get(id=int(payload.get('codesystem')))
+
+            print("Taken worden aangemaakt in project {} / codesystem {}".format(project, codesystem))
+
+
+            print("Gaat om project {} / codesystem {}".format(project.title, codesystem.codesystem_title))
+            # user = User.objects.get(id=request.user.id) # Taken maken we nu altijd zonder gebruiker
+
+            status = MappingTaskStatus.objects.get(project_id = project, id = payload.get('status'))
+   
+            projects = MappingProject.objects.all()
+            project_list = []
+            for projectIter in projects:
+                project_list.append((projectIter.id, projectIter.title))
+
+            tasks_list = payload.get('tasks').splitlines()
+            handled = []
+            for component in tasks_list:
+                print("\nAttempting to find component ",component)
+                error   = False
+                created = False
+                present = False
+                component_id = None
+                component_title = None
+                try:
+                    component_obj = MappingCodesystemComponent.objects.get(component_id=component, codesystem_id=codesystem)
+                    print("Component found: ", component_obj)
+
+                    obj = MappingTask.objects.filter(
+                        project_id=project,
+                        source_component=component_obj,
+                    )
+                    if obj.count() > 0:
+                        present = True
+                        obj = obj.first()
+                    else:
+                        present = False
+                        obj = MappingTask.objects.create(
+                            project_id=project, # Wel matchen op project - anders kan het zijn dat je geen taak voor een mapping naar een ander stels kan maken - denk palga & NHG parallel.
+                            source_component=component_obj,
+                        )
+                        # Add data not used for matching
+                        # obj.source_component = component_obj.id
+                        print(component_obj)
+                        obj.source_codesystem = component_obj.codesystem_id
+                        obj.target_codesystem = component_obj.codesystem_id # Voor nu gelijk aan bron.
+                        # TODO target nog aanpassen naar optie in formulier, om een doel-codesystem af te dwingen.
+                        obj.status = status
+                        if payload.get('user'):
+                            obj.user = User.objects.get(id=payload.get('user'))
+                        else:
+                            obj.user = User.objects.get(id=request.user.id)
+
+                        # Save
+                        obj.save()
+                        created = True
+
+                        # Add comment
+                        print("Comment: ",payload.get('comments'))
+                        if payload.get('comments'):
+                            print("Adding comment")
+                            user = User.objects.get(id=request.user.id)
+                            comment = MappingComment.objects.get_or_create(
+                                        comment_title = 'task created',
+                                        comment_task = obj,
+                                        comment_body = '[Commentaar bij aanmaken taak]\n'+payload.get('comments'),
+                                        comment_user = user,
+                                    )
+
+                    
+                    component_id = component_obj.id
+                    component_title = component_obj.component_title
+                    handled.append({
+                        'taskid'    : obj.id,
+                        'user'      : obj.user.username,
+                        'status'    : obj.status.status_title,
+                        'reqid'     : component,
+                        'present'   : present,
+                        'created'   : created,
+                        'error'     : error,
+                        'project'   : project.title,
+                        'component_id'      : component_id,
+                        'component_title'   : component_title,
+                    })
+                except Exception as e:
+                    print("Component not found, or error: ", e)
+                    error = str(e)
+
+                    handled.append({
+                        'reqid'     : component,
+                        'created'   : False,
+                        'error'     : error,
+                    })
+
+            return Response({
+                'response' : 'OK: Toegang => '+str(project),
+                'request' : payload,
+                'result' : handled,
+            })
+        else:
+            return Response('Error: Geen toegang')
 class Tasklist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 

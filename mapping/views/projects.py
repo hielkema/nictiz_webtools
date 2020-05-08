@@ -42,6 +42,23 @@ class Permission_MappingProject_Access(permissions.BasePermission):
         if 'mapping | access' in request.user.groups.values_list('name', flat=True):
             return True
 
+class Codesystems(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def list(self, request):
+        # List all projects
+        # TODO filter on which projects the user has access to
+        current_user = User.objects.get(id=request.user.id)
+        codesystems = MappingCodesystem.objects.all()
+    
+        codesystem_list = []
+        for codesystem in codesystems:
+            codesystem_list.append({
+                'id' : codesystem.id,
+                'title' : codesystem.codesystem_title,
+            })
+        return Response(codesystem_list)
+
 class Projects(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
