@@ -72,6 +72,8 @@ class MappingAuditsPerProject(viewsets.ViewSet):
             audits.append({
                 'id':audit.id,
                 'task':audit.task.id,
+                'status':audit.task.status.status_title,
+                'user':audit.task.user.username,
                 'project':audit.task.project_id.id,
                 'type':audit.audit_type,
                 'reason':audit.hit_reason,
