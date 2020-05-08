@@ -59,3 +59,23 @@ class MappingAudits(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+
+class MappingAuditsPerProject(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        project = MappingProject.objects.get(id=pk)
+        audit_hits = MappingTaskAudit.objects.filter(task__project_id=project)
+
+        audits = []
+        for audit in audit_hits:
+            audits.append({
+                'id':audit.id,
+                'task':audit.task.id,
+                'project':audit.task.project_id.id,
+                'type':audit.audit_type,
+                'reason':audit.hit_reason,
+                'ignore':audit.ignore,
+                'timestamp':audit.first_hit_time,
+            })
+        return Response(audits)

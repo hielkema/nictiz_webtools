@@ -21,13 +21,15 @@ router_1_0.register(r'create_tasks', views.CreateTasks, basename="Create_Mapping
 router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
 
 
+router_1_0.register(r'audits', views.MappingAudits, basename="Audits")
+router_1_0.register(r'audits_per_project', views.MappingAuditsPerProject, basename="Audits per project")
+
 router_1_0.register(r'codesystems', views.Codesystems, basename="Mapping Codesystems")
 router_1_0.register(r'projects', views.Projects, basename="Mapping Projects")
 router_1_0.register(r'tasklist', views.Tasklist, basename="Mapping tasks")
 router_1_0.register(r'taskdetails', views.TaskDetails, basename="Mapping tasks")
 router_1_0.register(r'events_and_comments', views.EventsAndComments, basename="Mapping events and comments")
 router_1_0.register(r'mappings', views.MappingTargets, basename="Mappings")
-router_1_0.register(r'audits', views.MappingAudits, basename="Audits")
 router_1_0.register(r'mapping_dialog', views.MappingDialog, basename="Mappings")
 router_1_0.register(r'componentsearch', views.MappingTargetSearch, basename="Component search endpoint")
 router_1_0.register(r'search_by_component', views.RuleSearchByComponent, basename="Search by mapping rule components")
