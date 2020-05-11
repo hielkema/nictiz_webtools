@@ -220,86 +220,90 @@ class MappingDialog(viewsets.ViewSet):
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
 
 class MappingTargets(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(request.data)
-        task = MappingTask.objects.get(id=request.data.get('task'))
-        current_user = User.objects.get(id=request.user.id)
-        if MappingProject.objects.get(id=task.project_id.id, access__username=current_user) and task.user == current_user:
-            print('\n\n----------------------------------\n')
-            for target in request.data.get('targets'):
-                print("ID",             target.get('target').get('id'))     
-                print("NIEUW",          target.get('target').get('new'))     
-                print("component_id",   target.get('target').get('component_id'))     
-                print("component_title",target.get('target').get('component_title'))
-                print("rule",           target.get('rule'))
-                print("correlation",    target.get('correlation'))
-                print("advice",         target.get('advice'))
-                print("group",          target.get('group'))
-                print("priority",       target.get('priority'))
-                print("dependency",     target.get('dependency'))
-                print("DELETE",         target.get('delete'))
-                print("")
+        if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+            print(request.data)
+            task = MappingTask.objects.get(id=request.data.get('task'))
+            current_user = User.objects.get(id=request.user.id)
+            if MappingProject.objects.get(id=task.project_id.id, access__username=current_user) and task.user == current_user:
+                print('\n\n----------------------------------\n')
+                for target in request.data.get('targets'):
+                    print("ID",             target.get('target').get('id'))     
+                    print("NIEUW",          target.get('target').get('new'))     
+                    print("component_id",   target.get('target').get('component_id'))     
+                    print("component_title",target.get('target').get('component_title'))
+                    print("rule",           target.get('rule'))
+                    print("correlation",    target.get('correlation'))
+                    print("advice",         target.get('advice'))
+                    print("group",          target.get('group'))
+                    print("priority",       target.get('priority'))
+                    print("dependency",     target.get('dependency'))
+                    print("DELETE",         target.get('delete'))
+                    print("")
 
-                if target.get('delete') == True:
-                    print('Get ready to delete')
-                    mapping_rule = MappingRule.objects.get(id=target.get('id'))
-                    print(mapping_rule)
-                    mapping_rule.delete()
-                    print(mapping_rule)
-                elif target.get('id') != 'extra':
-                    print("Aanpassen mapping", target.get('id'))
-                    mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                    if target.get('delete') == True:
+                        print('Get ready to delete')
+                        mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                        print(mapping_rule)
+                        mapping_rule.delete()
+                        print(mapping_rule)
+                    elif target.get('id') != 'extra':
+                        print("Aanpassen mapping", target.get('id'))
+                        mapping_rule = MappingRule.objects.get(id=target.get('id'))
 
-                    mapping_rule.mapgroup           = target.get('group')
-                    mapping_rule.mappriority        = target.get('priority')
-                    mapping_rule.mapcorrelation     = target.get('correlation')
-                    mapping_rule.mapadvice          = target.get('advice')
-                    mapping_rule.maprule            = target.get('rule')
+                        mapping_rule.mapgroup           = target.get('group')
+                        mapping_rule.mappriority        = target.get('priority')
+                        mapping_rule.mapcorrelation     = target.get('correlation')
+                        mapping_rule.mapadvice          = target.get('advice')
+                        mapping_rule.maprule            = target.get('rule')
 
-                    # Handle specifies/dependency/rule binding
-                    if target.get('dependency'):
-                        for dependency in target.get('dependency'):
-                            print("Handling",dependency) # TODO debug
-                            # If binding should be true:
-                            # First check if the relationship exists in DB, otherwise create it.
-                            if dependency.get('binding'):
-                                # Check if binding does not exists in DB
-                                print('Binding should be present')
-                                if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                    print("Binding (many to many) not present in DB - creating")
-                                    addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                    print('Adding relationship to rule', addrule)
-                                    mapping_rule.mapspecifies.add(addrule)
-                                    # Sanity check: success?
-                                    if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                        print("Created")
+                        # Handle specifies/dependency/rule binding
+                        if target.get('dependency'):
+                            for dependency in target.get('dependency'):
+                                print("Handling",dependency) # TODO debug
+                                # If binding should be true:
+                                # First check if the relationship exists in DB, otherwise create it.
+                                if dependency.get('binding'):
+                                    # Check if binding does not exists in DB
+                                    print('Binding should be present')
+                                    if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                        print("Binding (many to many) not present in DB - creating")
+                                        addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                        print('Adding relationship to rule', addrule)
+                                        mapping_rule.mapspecifies.add(addrule)
+                                        # Sanity check: success?
+                                        if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                            print("Created")
+                                        else:
+                                            print("Failed")
                                     else:
-                                        print("Failed")
+                                        print('Binding already present')
+                                # If binding should not exist:
+                                # Check if present, if so: remove
                                 else:
-                                    print('Binding already present')
-                            # If binding should not exist:
-                            # Check if present, if so: remove
-                            else:
-                                print('Binding should not be present')
-                                # Check if binding exists in DB
-                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                    print("Binding (many to many) present in DB but should not be - removing")
-                                    remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                    mapping_rule.mapspecifies.remove(remrule)
-                                    # Sanity check: success?
+                                    print('Binding should not be present')
+                                    # Check if binding exists in DB
                                     if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                        print("Still present")
+                                        print("Binding (many to many) present in DB but should not be - removing")
+                                        remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                        mapping_rule.mapspecifies.remove(remrule)
+                                        # Sanity check: success?
+                                        if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                            print("Still present")
+                                        else:
+                                            print("Succesfully removed")
                                     else:
-                                        print("Succesfully removed")
-                                else:
-                                    print('Binding was already absent')
-                        print("Done handling dependency for",dependency)
-                    mapping_rule.save()
+                                        print('Binding was already absent')
+                            print("Done handling dependency for",dependency)
+                        mapping_rule.save()
 
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
-            return Response([])
+                audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                return Response([])
+        else:
+            return Response('Geen toegang tot -edit mapping-')
+
 
     def retrieve(self, request, pk=None):
         task = MappingTask.objects.get(id=pk)
