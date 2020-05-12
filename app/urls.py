@@ -32,6 +32,7 @@ urlpatterns = [
     path(r'epd/', include('epd.urls')), 
     path(r'termspace/', include('termspace.urls')), 
     path(r'dhd/', include('dhd.urls')), 
+    path(r'postco/', include('postcoordination.urls')), 
     # url(r'^select2/', include('django_select2.urls')),
     path(r'', include('homepage.urls')),
 ]

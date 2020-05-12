@@ -65,6 +65,7 @@ INSTALLED_APPS = (
     'epd',
     'termspace',
     'dhd',
+    'postcoordination',
 )
 
 MIDDLEWARE = (
