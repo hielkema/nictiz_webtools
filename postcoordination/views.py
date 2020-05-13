@@ -37,39 +37,18 @@ environ.Env.read_env(env.str('ENV_PATH', '.env'))
 class PostcoTemplates(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def retrieve(self, request, pk=None):
-        data = template.objects.get(id=pk)
-        output = {
-            'id' : data.id,
-            'title' : data.title,
-            'description' : data.description,
-        }
+        output = TemplateSerializer(template.objects.get(id=pk)).data
+
+        return Response(output)
+    def list(self, request):
+        output = TemplateSerializer(template.objects.all(), many=True).data
 
         return Response(output)
 
 class PostcoAttributes(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def retrieve(self, request, pk=None):
-        data = template.objects.get(id=pk)
-        output = []
-        for attribute in data.attributes.all():
-            output.append({
-                'id': attribute.id,
-                'sctid': attribute.sctid,
-                'fsn' : attribute.fsn,
-            })
-        
-        return Response(output)
 
-class PostcoAttributeValues(viewsets.ViewSet):
-    permission_classes = [AllowAny]
-    def retrieve(self, request, pk=None):
-        output = []
-        data = attribute.objects.get(id=pk)
-        for value in data.attribute_values.all():
-            output.append({
-                'id': value.id,
-                'sctid': value.sctid,
-                'fsn' : value.fsn,
-            })
+        output = AttributeSerializer(attribute.objects.get(id=pk)).data
 
         return Response(output)
