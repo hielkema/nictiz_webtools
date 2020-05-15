@@ -66,7 +66,7 @@ class PostcoExpression(viewsets.ViewSet):
         string +=   "{\n"
         
         for attribute in data.get('postcoComponents'):
-            string +=   f"{attribute['attribute']} = {attribute['value']},\n"
+            string +=   f"{attribute['attribute']['sctid']} |{attribute['attribute']['fsn']}| = {attribute['value'].get('sctid')} |{attribute['value'].get('fsn')}|,\n"
 
         string +=   "}"
 
