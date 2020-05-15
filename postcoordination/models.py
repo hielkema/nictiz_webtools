@@ -17,7 +17,7 @@ class rootConcept(models.Model):
     def __str__(self):
         return self.fsn
 class attributeSet(models.Model):
-    template = models.OneToOneField("template", default=None, blank=True, null=True, related_name="Template", on_delete=models.PROTECT)
+    template = models.ManyToManyField("template", default=None, blank=True, null=True, related_name="Template")
     description = models.TextField(default=None)
     fsn = models.CharField(max_length=300)
     sctid = models.CharField(max_length=300)
