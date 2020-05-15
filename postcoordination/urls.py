@@ -11,6 +11,7 @@ router = SimpleRouter()
 # router.register(r'termspace_comments', termspaceComments, basename="termspace_comments")
 router.register(r'templates', PostcoTemplates, basename="postco templates")
 router.register(r'attributes', PostcoAttributes, basename="postco templates attr-values")
+router.register(r'expression', PostcoExpression, basename="postco templates expression")
 # router.register(r'attributevalues', PostcoAttributeValues, basename="postco templates attr-values")
 
 urlpatterns = [ 

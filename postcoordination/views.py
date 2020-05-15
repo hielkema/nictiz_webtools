@@ -19,6 +19,8 @@ from .models import *
 import time
 import environ
 
+from pprint import pprint
+
 from rest_framework import viewsets
 from .serializers import *
 from rest_framework import views
@@ -51,4 +53,24 @@ class PostcoAttributes(viewsets.ViewSet):
 
         output = AttributeSerializer(attribute.objects.get(id=pk)).data
 
+        return Response(output)
+
+class PostcoExpression(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    def create(self, request):
+        data = request.data
+        pprint(data)
+        print("\n ------------")
+
+        string =    f"=== {data.get('rootConcept').get('sctid')} |{data.get('rootConcept').get('fsn')} : \n"
+        string +=   "{\n"
+        
+        for attribute in data.get('postcoComponents'):
+            string +=   f"{attribute['attribute']} = {attribute['value']},\n"
+
+        string +=   "}"
+
+        print("STRING:\n",string)
+
+        output=string
         return Response(output)
