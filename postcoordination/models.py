@@ -17,14 +17,14 @@ class rootConcept(models.Model):
     def __str__(self):
         return self.fsn
 class attributeSet(models.Model):
-    template = models.ManyToManyField("template", default=None, blank=True, null=True, related_name="Template")
+    title = models.CharField(max_length=300, default=None, blank=True, null=True)
     description = models.TextField(default=None)
     fsn = models.CharField(max_length=300)
     sctid = models.CharField(max_length=300)
     attribute_values = models.ManyToManyField("attributeValue", default=None, blank=True)
 
     def __str__(self):
-        return self.fsn
+        return self.title
 
 
 class attributeValue(models.Model):
