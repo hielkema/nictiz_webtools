@@ -411,3 +411,57 @@ class MappingTargets(viewsets.ViewSet):
             
 
             return Response(mapping_list)
+
+class MappingListLookup(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def create(self, request):
+        query = request.data.get('list')
+        print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
+
+        list_source = []
+        handled = []
+        for ident in query.splitlines():
+            print("get component",ident)
+
+            # try:
+            components = MappingCodesystemComponent.objects.filter(component_id = str(ident))
+            
+            for component in components:
+                # Identify rules using this component as either target or source
+                _rules = MappingRule.objects.filter(source_component = component)
+                _rules = _rules | MappingRule.objects.filter(target_component = component)
+
+                # Loop over all source components in the above rules
+                for _rule in _rules:
+
+                    # Find tasks using this component as source
+                    tasks = MappingTask.objects.filter(source_component = _rule.source_component, project_id__project_type = '1')
+                    for task in tasks:
+                        if task.id not in handled:
+                            rules = MappingRule.objects.filter(source_component = task.source_component).order_by('mapgroup', 'mappriority')
+                            rule_list = []
+                            for rule in rules:
+                                rule_list.append({
+                                    'codesystem' : rule.target_component.codesystem_id.codesystem_title,
+                                    'id' : rule.target_component.component_id,
+                                    'title' : rule.target_component.component_title,
+                                    'group' : rule.mapgroup,
+                                    'priority' : rule.mappriority,
+                                    'correlation' : rule.mapcorrelation,
+                                    'advice' : rule.mapadvice,
+                                })
+                            list_source.append({
+                                'project' : task.project_id.title,
+                                'status' : task.status.status_title,
+                                'task' : task.id,
+                                'source' : {
+                                    'codesystem' : task.source_component.codesystem_id.codesystem_title,
+                                    'id' : task.source_component.component_id,
+                                    'title' : task.source_component.component_title,
+                                },
+                                'targets' : rule_list,
+                            })
+                        handled.append(task.id)
+
+        return Response(list_source)

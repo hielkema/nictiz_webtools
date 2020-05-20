@@ -37,7 +37,7 @@ router_1_0.register(r'statuses', views.MappingStatuses, basename="Mapping status
 router_1_0.register(r'users', views.MappingUsers, basename="Mapping users for selected project")
 router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping comments for selected task")
 
-
+router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
 
 urlpatterns = [
     # DRF router
