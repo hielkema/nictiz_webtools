@@ -87,7 +87,7 @@ class MappingTargetSearch(viewsets.ViewSet):
         return Response(output[:20])
 
 class RuleSearchByComponent(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
         query = request.data.get('query')
