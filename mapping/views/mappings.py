@@ -413,7 +413,7 @@ class MappingTargets(viewsets.ViewSet):
             return Response(mapping_list)
 
 class MappingListLookup(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
         query = request.data.get('list')
