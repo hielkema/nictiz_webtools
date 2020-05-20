@@ -51,7 +51,7 @@ class Permission_MappingProject_ChangeMappings(permissions.BasePermission):
             return True
 
 class MappingTargetSearch(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
         query = request.data.get('query').strip()
