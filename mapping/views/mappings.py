@@ -442,13 +442,20 @@ class MappingListLookup(viewsets.ViewSet):
                             rules = MappingRule.objects.filter(source_component = task.source_component).order_by('mapgroup', 'mappriority')
                             rule_list = []
                             for rule in rules:
+                                mapcorrelation = rule.mapcorrelation
+                                if mapcorrelation == "447559001": mapcorrelation = "Broad to narrow"
+                                if mapcorrelation == "447557004": mapcorrelation = "Exact match"
+                                if mapcorrelation == "447558009": mapcorrelation = "Narrow to broad"
+                                if mapcorrelation == "447560006": mapcorrelation = "Partial overlap"
+                                if mapcorrelation == "447556008": mapcorrelation = "Not mappable"
+                                if mapcorrelation == "447561005": mapcorrelation = "Not specified"
                                 rule_list.append({
                                     'codesystem' : rule.target_component.codesystem_id.codesystem_title,
                                     'id' : rule.target_component.component_id,
                                     'title' : rule.target_component.component_title,
                                     'group' : rule.mapgroup,
                                     'priority' : rule.mappriority,
-                                    'correlation' : rule.mapcorrelation,
+                                    'correlation' : mapcorrelation,
                                     'advice' : rule.mapadvice,
                                 })
                             list_source.append({
