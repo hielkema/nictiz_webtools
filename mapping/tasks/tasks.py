@@ -603,14 +603,6 @@ def audit_async(audit_type=None, project=None, task_id=None):
         tasks = MappingTask.objects.filter(project_id=project)
     else:
         tasks = MappingTask.objects.filter(project_id=project, id=task_id)
-            
-    # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
-    snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
-    results = snowstorm.findConcepts(ecl='<<123038009')
-    specimen_exclusion_list = []
-    for concept in results:
-        specimen_exclusion_list.append(str(concept))
-
 
     ###### Slowly moving to separate audit QA scripts.
     logger.info('Spawning QA processes')
@@ -628,7 +620,13 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
     ###### Older code, still functional. Needs to be distributed over other QA scripts in the future.
     if audit_type == "multiple_mapping" and legacy:
-        
+        # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
+        snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+        results = snowstorm.findConcepts(ecl='<<123038009')
+        specimen_exclusion_list = []
+        for concept in results:
+            specimen_exclusion_list.append(str(concept))
+
         # Functions needed for audit
         def checkConsecutive(l): 
             try:
