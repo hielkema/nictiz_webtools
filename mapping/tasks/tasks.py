@@ -604,6 +604,15 @@ def audit_async(audit_type=None, project=None, task_id=None):
     else:
         tasks = MappingTask.objects.filter(project_id=project, id=task_id)
 
+    # Delete existing audit hits for tasks (unless whitelisted)
+    for task in tasks:
+            # Print task identification, sanity check
+            logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_titlem, task.id))
+
+            # Delete all old audit hits for this task if not whitelisted
+            delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
+            logger.info(delete)
+
     ###### Slowly moving to separate audit QA scripts.
     logger.info('Spawning QA processes')
     logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
@@ -634,16 +643,12 @@ def audit_async(audit_type=None, project=None, task_id=None):
             except:
                 return False
         # Sanity check
-        logger.info('Starting legacy multiple mapping audit')
+        logger.info('Starting multiple mapping audit')
         logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
         # Loop through all tasks
         for task in tasks:
             # Print task identification, sanity check
             logger.info('Checking task for: {0}'.format(task.source_component.component_title))
-
-            # Delete all old audit hits for this task if not whitelisted
-            delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
-            logger.info(delete)
 
             # Checks for the entire task
             # If source component contains active/deprecated designation ->
