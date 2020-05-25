@@ -22,7 +22,7 @@ logger = get_task_logger(__name__)
 
 @shared_task
 def nhg_loinc_order_vs_observation(taskid):
-    logger.info("Spawned nhg_loinc_order_vs_observation for TASK "+taskid)
+    logger.info("Spawned nhg_loinc_order_vs_observation for TASK "+str(taskid))
     task = MappingTask.objects.get(id=taskid)
     mappings = MappingRule.objects.filter(project_id = task.project_id, source_component = task.source_component)
 
