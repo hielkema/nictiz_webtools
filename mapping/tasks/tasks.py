@@ -1,14 +1,15 @@
 # Create your tasks here
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
+from celery.execute import send_task    
 import time, json
 from celery.task.schedules import crontab
 from celery.result import AsyncResult
 from celery.decorators import periodic_task
 from celery.utils.log import get_task_logger
 import xmltodict
-from .forms import *
-from .models import *
+from ..forms import *
+from ..models import *
 import urllib.request
 from pandas import read_excel, read_csv
 import environ
@@ -24,6 +25,12 @@ environ.Env.read_env(env.str('ENV_PATH', '.env'))
 #     branch+'/snowstorm_client.py'
 # urllib.request.urlretrieve(url, 'snowstorm_client.py')
 from snowstorm_client import Snowstorm
+
+
+from celery.task.control import  inspect
+i = inspect()
+
+# from nictiz_webtools.mapping.tasks.nhg_labcodeset import nhg_loinc_order_vs_observation
 
 logger = get_task_logger(__name__)
 
@@ -356,9 +363,6 @@ def import_palgathesaurus_task():
                 comment_user = User.objects.get(username='mertens')
             )
 
-
-
-
 @shared_task
 def import_diagnosethesaurus_task():
     thesaurusConcept    = read_csv('/webserver/mapping/resources/dhd/20200316_145538_versie4.1_ThesaurusConcept.csv')
@@ -414,7 +418,6 @@ def import_diagnosethesaurus_task():
         }
         obj.component_extra_dict = extra
         obj.save()
-
 
 @shared_task
 def import_nhgbepalingen_task():
@@ -600,6 +603,8 @@ def audit_async(audit_type=None, project=None, task_id=None):
         tasks = MappingTask.objects.filter(project_id=project)
     else:
         tasks = MappingTask.objects.filter(project_id=project, id=task_id)
+    
+    legacy = False
         
     # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
     snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
@@ -608,7 +613,22 @@ def audit_async(audit_type=None, project=None, task_id=None):
     for concept in results:
         specimen_exclusion_list.append(str(concept))
 
-    if audit_type == "multiple_mapping":
+
+    ###### Slowly moving to separate audit QA scripts.
+    logger.info('Spawning QA processes')
+    logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
+    
+    # Spawn QA for labcodeset<->NHG tasks
+    for task in tasks:
+        logger.info('Checking task: {0}'.format(task.id))
+        
+        logger.info('Spawning QA scripts for NHG<->LOINC')
+        send_task('mapping.tasks.nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
+
+
+    ###### Older code, still functional. Needs to be distributed over other QA scripts in the future.
+    if audit_type == "multiple_mapping" and legacy:
+        
         # Functions needed for audit
         def checkConsecutive(l): 
             try:
@@ -616,7 +636,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
             except:
                 return False
         # Sanity check
-        logger.info('Starting multiple mapping audit')
+        logger.info('Starting legacy multiple mapping audit')
         logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
         # Loop through all tasks
         for task in tasks:
