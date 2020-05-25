@@ -603,9 +603,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
         tasks = MappingTask.objects.filter(project_id=project)
     else:
         tasks = MappingTask.objects.filter(project_id=project, id=task_id)
-    
-    legacy = False
-        
+            
     # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
     snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
     results = snowstorm.findConcepts(ecl='<<123038009')
@@ -625,6 +623,8 @@ def audit_async(audit_type=None, project=None, task_id=None):
         logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
 
+    # Also run legacy rules, in addition to rules split in multiple task files?
+    legacy = True
 
     ###### Older code, still functional. Needs to be distributed over other QA scripts in the future.
     if audit_type == "multiple_mapping" and legacy:
