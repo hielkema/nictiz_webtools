@@ -58,3 +58,4 @@ def nhg_loinc_order_vs_observation(taskid):
                                 audit_type="nhg_loinc_order_vs_observation",
                                 hit_reason='Mismatch order/aanvraag',
                             )
+                logger.info(str(obj))
