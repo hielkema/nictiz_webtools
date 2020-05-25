@@ -607,7 +607,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
     # Delete existing audit hits for tasks (unless whitelisted)
     for task in tasks:
             # Print task identification, sanity check
-            logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_titlem, task.id))
+            logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
 
             # Delete all old audit hits for this task if not whitelisted
             delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
@@ -622,7 +622,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
         logger.info('Checking task: {0}'.format(task.id))
         
         logger.info('Spawning QA scripts for NHG<->LOINC')
-        send_task('mapping.tasks.nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
+        send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
 
     # Also run legacy rules, in addition to rules split in multiple task files?
     legacy = True
