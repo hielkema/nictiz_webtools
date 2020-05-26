@@ -346,7 +346,7 @@ class Mapping_Progressreport_overTime(viewsets.ViewSet):
             tasks = MappingTask.objects.all()
             daily_report = {}
 
-            records = MappingProgressRecord.objects.filter(name="TasksPerStatus")
+            records = MappingProgressRecord.objects.filter(name="TasksPerStatus").exclude(project__id = 6)
             for record in records:
                 project = MappingProject.objects.get(id=record.project.id)
                 date = record.time
