@@ -1177,7 +1177,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
 @shared_task
 def mappingProgressDump():
     # Taken per status
-    project_list = MappingProject.objects.filter(active=True)
+    project_list = MappingProject.objects.filter(active=True).exclude(id=6)
     tasks_per_user_dict = []
     tasks_per_status_dict = []
 
