@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 
@@ -47,3 +48,10 @@ class TermspaceProgressReport(models.Model):
     count = models.IntegerField(default=None, null=True, blank=True)
     def __str__(self):
         return str(self.id) + ': ' + str(self.time) + ' ' + str(self.title) + '\t[' + str(self.count) + ']'
+
+class SnomedTree(models.Model):
+    time   = models.DateTimeField(default=timezone.now)
+    title = models.CharField(max_length=500)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, default=None, null=True, blank=True) # ID van gebruiker
+    finished = models.BooleanField(default=False)
+    data = JSONField(encoder=DjangoJSONEncoder, default=None, blank=True, null=True)

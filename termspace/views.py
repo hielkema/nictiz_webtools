@@ -19,6 +19,7 @@ from django.db.models import Max
 import json
 from .forms import *
 from .models import *
+from mapping.models import *
 from .tasks import *
 import time
 import environ
@@ -216,26 +217,62 @@ class eclQueryApi(viewsets.ViewSet):
 class SnomedJSONTree(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
-        def list_children(focus):
-            component = MappingCodesystemComponent.objects.get(component_id=focus)
+        # def list_children(focus):
+        #     component = MappingCodesystemComponent.objects.get(component_id=focus)
             
-            _children = []
-            if component.children != None:
-                for child in list(json.loads(component.children)):
-                    _children.append(list_children(child))
+        #     _children = []
+        #     if component.children != None:
+        #         for child in list(json.loads(component.children)):
+        #             _children.append(list_children(child))
            
-            output = {
-                'id' : focus,
-                'name' : component.component_title,
-                'children' : _children
-            }
+        #     output = {
+        #         'id' : focus,
+        #         'name' : component.component_id+' - '+component.component_title,
+        #         'component_id' : component.component_id,
+        #         'children' : _children
+        #     }
             
-            return(output)
+        #     return(output)
 
-        print('Get tree for',str(pk))
-        children_list = list_children(pk)
+        # print('Get tree for',str(pk))
+        # children_list = [list_children(pk)]
 
-        return Response(children_list)
+        finished_tasks = SnomedTree.objects.filter(title = str(pk), finished = True)
+        if finished_tasks.count() > 0:
+            tree = finished_tasks.last()
+            return Response({
+                'message' : 'loaded',
+                'data': tree.data
+            })
+        else:
+            tree = SnomedTree.objects.filter(title = str(pk))
+            if tree.count() == 0:
+                if MappingCodesystemComponent.objects.filter(component_id = str(pk)).count() == 1:
+                    current_user = User.objects.get(id=request.user.id)
+                    obj = SnomedTree.objects.create(
+                        user = current_user,
+                        title = str(pk),
+                    )
+
+                    generate_snomed_tree.delay({
+                        'db_id' : obj.id,
+                        'conceptid' : str(pk),
+                    })
+
+                    return Response({
+                        'message': 'dispatched',
+                        'data': {},
+                    })
+                else:
+                    return Response({
+                        'message': 'error: nonexistant SCTID',
+                        'data': {},
+                    })
+            else:
+                return Response({
+                        'message': 'running',
+                        'data': {},
+                    })
 
 class Mapping_Progressreport_perStatus(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]

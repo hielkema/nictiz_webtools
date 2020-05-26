@@ -2,6 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from .models import *
+from mapping.models import *
 import time, json
 from urllib.request import urlopen, Request
 import urllib.parse
@@ -11,6 +12,47 @@ import environ
 env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(env.str('ENV_PATH', '.env'))
+
+
+@shared_task
+def generate_snomed_tree(payload):
+    conceptid = payload.get('conceptid')
+    db_id = payload.get('db_id')
+
+    def list_children(focus):
+        component = MappingCodesystemComponent.objects.get(component_id=focus)
+        
+        _children = []
+        if component.children != None:
+            for child in list(json.loads(component.children)):
+                _children.append(list_children(child))
+        
+        refsets = ['todo']
+
+        output = {
+            'id' : focus,
+            'name' : component.component_title,
+
+            'component_id' : component.component_id,
+            'component_title' : component.component_title,
+            'refsets' : refsets,
+
+            'children' : _children
+        }
+        
+        return(output)
+
+    print('Get tree for',str(conceptid))
+    children_list = [list_children(conceptid)]
+
+    obj = SnomedTree.objects.get(id = db_id)
+    
+    obj.data = children_list
+    obj.finished = True
+
+    obj.save()
+
+    return True
 
 
 @shared_task
