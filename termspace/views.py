@@ -342,10 +342,11 @@ class Mapping_Progressreport_overTime(viewsets.ViewSet):
             print('Incorrect or absent secret')
             return Response('error')
         else:
-            projects = MappingProject.objects.all().exclude(id=6)
+            projects = MappingProject.objects.all()
             tasks = MappingTask.objects.all()
             daily_report = {}
 
+            ### INFO - select or exclude projects to include in output here
             records = MappingProgressRecord.objects.filter(name="TasksPerStatus").exclude(project__id = 6)
             for record in records:
                 project = MappingProject.objects.get(id=record.project.id)
