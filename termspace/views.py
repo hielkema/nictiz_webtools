@@ -703,12 +703,15 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
     permission_classes = [Permission_TermspaceProgressReport]
 
     def list(self, request, pk=None):
+        # limit search to last x days
+        last_month = datetime.today() - timedelta(days=30)
         # Get categories - list of days
-        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
-        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True)
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True).filter(time__gte=last_month)
+        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True).filter(time__gte=last_month)
         for title in titles:
             # Selects last time_stamp for each day
             last_entries = (TermspaceProgressReport.objects
+                .filter(time__gte=last_month)
                 .filter(title = title)
                 .annotate(tx_day=TruncDay('time'))
                 .values('tx_day')
@@ -718,11 +721,11 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
             try:
                 query = query | TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
             except:
                 query = TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
         
         categories = []
         series = []
