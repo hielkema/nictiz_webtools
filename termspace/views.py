@@ -20,6 +20,7 @@ import json
 from .forms import *
 from .models import *
 from mapping.models import *
+from datetime import datetime, timedelta
 from .tasks import *
 import time
 import environ
@@ -588,15 +589,16 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
                 .values('tx_day')
                 .annotate(last_entry=Max('time'))
                 .values_list('last_entry', flat=True))
-            # Add queries
+            # Add queries, also filter on last 20 days
+            last_month = datetime.today() - timedelta(days=20)
             try:
                 query = query | TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
             except:
                 query = TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
         # Return entire queryset
         output = []
 
