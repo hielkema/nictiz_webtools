@@ -43,6 +43,8 @@ class MappingCodesystem(models.Model):
     codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
+
+    # extra fields are legacy, older scripts will break by removing
     codesystem_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_3  = models.CharField(max_length=500, default=None, null=True, blank=True)
@@ -79,13 +81,15 @@ class MappingCodesystemComponent(models.Model):
     children            = models.TextField(default=None, null=True, blank=True)
     descendants         = models.TextField(default=None, null=True, blank=True)
     ancestors           = models.TextField(default=None, null=True, blank=True)
+    
+    # extra fields are legacy, older scripts will break by removing
     component_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
 
 
     def __str__(self):
-        return str(self.id) + " " + self.component_title
+        return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_title
 
 
 class MappingTask(models.Model):

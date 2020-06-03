@@ -111,7 +111,7 @@ def update_snomedConcept_async(payload=None):
 
 @shared_task
 def import_labcodeset_async():
-    with open('/webserver/mapping/resources/labcodeset/labconcepts-20190520-100827775.xml') as fd:
+    with open('/webserver/mapping/resources/labcodeset/labconcepts-20200529-093650784.xml') as fd:
         doc = xmltodict.parse(fd.read())
 
         # Lijst voor alle materialen maken
