@@ -226,7 +226,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
                 else:
                     return Response({
-                        'message' : 'Geen toegang.'
+                        'message' : 'Geen toegang. Geen permissies voor audit mass pull, of de status van de RC is \'productie\'.'
                     }, status=status.HTTP_401_UNAUTHORIZED)
             elif (selection == "component") and codesystem and (rc.status != '3'):
                 print('gogogo')
@@ -311,7 +311,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     print("There are now {numrules} rules in the RC database.".format(numrules=rc_rules.count()))
 
             return Response({
-                'message' : 'Taak ontvangen',
+                'message' : 'Taak ontvangen. De taak wordt alleen uitgevoerd als de RC niet als status \'productie\' heeft.',
                 'selection' : selection,
                 'id' : id,
             })
