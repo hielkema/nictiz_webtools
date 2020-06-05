@@ -1004,8 +1004,8 @@ def exportCodesystemToRCRules(rc_id, user_id):
 # Generate FHIR ConceptMap
 @shared_task
 def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
-# Option to return as JSON object, or save to database
-# Database queries
+    # Option to return as JSON object, or save to database
+    # Database queries
     pk = rc_id
     if action == 'output':
         output = MappingReleaseCandidateFHIRConceptMap.objects.get(id=rc_id)
@@ -1071,9 +1071,17 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             for target in single_rule.mapspecifies:
                                 # Lookup data for the target
                                 target_data = MappingCodesystemComponent.objects.get(component_id = target.get('id'))
+                                # Property can be added to designate the product as sample/laterality/etc
+                                # WARNING - hardcoded decision making
+                                # ?? 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                # LOGIC: if descendant of A/B/C, add property value X/Y/Z
+                                property_value = 'http://snomed.info/id/'
+                                if target.get('id') in MappingCodesystemComponent.objects.get(component_id = '123038009').descendants:
+                                    property_value += '276731003' # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
+                                else:
+                                    property_value += 'TODO'
                                 products.append({
-                                    # Property can be added to designate the product as a sample, but this is already implicit in the used concept
-                                    # 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
+                                    'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'code' : target.get('id'),
                                     # 'display' : target.get('title'),
@@ -1087,9 +1095,9 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             # Create output dict
                             output = {
                                 'code' : target_component.get('identifier'),
-                                # 'display' : target_component.get('title'),
                                 'equivalence' : equivalence,
                                 'comment' : single_rule.mapadvice,
+                                # 'display' : target_component.get('title'),
                             }
                             # Add products to output if they exist
                             if len(products) > 0:
