@@ -7,6 +7,7 @@ import time, json
 from urllib.request import urlopen, Request
 import urllib.parse
 import environ
+from snowstorm_client import Snowstorm
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -16,7 +17,17 @@ environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
 @shared_task
 def generate_snomed_tree(payload):
+
+    snowstorm = Snowstorm(
+            baseUrl="https://snowstorm.test-nictiz.nl",
+            # baseUrl="https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct",
+            debug=True,
+            preferredLanguage="nl",
+            defaultBranchPath="MAIN/SNOMEDCT-NL",
+        )
+
     conceptid = payload.get('conceptid')
+    refset = payload.get('refset')
     db_id = payload.get('db_id')
 
     def list_children(focus):
@@ -26,8 +37,14 @@ def generate_snomed_tree(payload):
         if component.children != None:
             for child in list(json.loads(component.children)):
                 _children.append(list_children(child))
+        test = snowstorm.findConcepts(ecl=f"{component.component_id} AND ^{str(refset)}")
+        print(test)
         
-        refsets = ['todo']
+        refsets = snowstorm.getMapMembers(id=str(refset), referencedComponentId=str(component.component_id))
+        if len(refsets) > 0:
+            refsets = True
+        else:
+            refsets = False
 
         output = {
             'id' : focus,

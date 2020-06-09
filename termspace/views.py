@@ -238,6 +238,11 @@ class SnomedJSONTree(viewsets.ViewSet):
         # print('Get tree for',str(pk))
         # children_list = [list_children(pk)]
 
+        payload = pk.split('**')
+        conceptid = payload[0]
+        refset = payload[1]
+        print(conceptid, refset)
+
         finished_tasks = SnomedTree.objects.filter(title = str(pk), finished = True)
         if finished_tasks.count() > 0:
             tree = finished_tasks.last()
@@ -248,16 +253,18 @@ class SnomedJSONTree(viewsets.ViewSet):
         else:
             tree = SnomedTree.objects.filter(title = str(pk))
             if tree.count() == 0:
-                if MappingCodesystemComponent.objects.filter(component_id = str(pk)).count() == 1:
+                if MappingCodesystemComponent.objects.filter(component_id = conceptid).count() == 1:
                     current_user = User.objects.get(id=request.user.id)
                     obj = SnomedTree.objects.create(
                         user = current_user,
                         title = str(pk),
                     )
 
+                    
                     generate_snomed_tree.delay({
                         'db_id' : obj.id,
-                        'conceptid' : str(pk),
+                        'conceptid' : conceptid,
+                        'refset' : refset,
                     })
 
                     return Response({
