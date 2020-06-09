@@ -37,8 +37,8 @@ def generate_snomed_tree(payload):
         if component.children != None:
             for child in list(json.loads(component.children)):
                 _children.append(list_children(child))
-        test = snowstorm.findConcepts(ecl=f"{component.component_id} AND ^{str(refset)}")
-        print(test)
+        # test = snowstorm.findConcepts(ecl=f"{component.component_id} AND ^{str(refset)}")
+        # print(test)
         
         refsets = snowstorm.getMapMembers(id=str(refset), referencedComponentId=str(component.component_id))
         if len(refsets) > 0:
