@@ -402,6 +402,23 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
 
                 })
                 # TODO - not validated yet 
+                accepted_nvmm   = False
+                accepted_nvkc   = False
+                accepted_nictiz = False
+                accepted_nhg    = False
+                accepted_palga  = False
+                if rule.accepted.count() > 0:
+                    if 'groepen | nictiz' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nictiz = True
+                    if 'groepen | palga' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_palga = True
+                    if 'groepen | nhg' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nhg = True
+                    if 'groepen | nvmm' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvmm = True
+                    if 'groepen | nvkc' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvkc = True
+
                 if rule.rejected.count() > 0:
                     rejected = True
                     for user in rule.rejected.values_list('username', flat=True):
@@ -451,6 +468,12 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'rejected_me' : veto_me,
                 'accepted' : accepted,
                 'rejected' : rejected,
+
+                'accepted_nvmm'     : accepted_nvmm,
+                'accepted_nvkc'     : accepted_nvkc,
+                'accepted_nictiz'   : accepted_nictiz,
+                'accepted_nhg'      : accepted_nhg,
+                'accepted_palga'    : accepted_palga,
             })
 
         status_options = [
