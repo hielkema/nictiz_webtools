@@ -286,9 +286,12 @@ class EventsAndComments(viewsets.ViewSet):
                 })
             events = MappingEventLog.objects.filter(task_id=pk).order_by('-event_time') 
             for item in events:
-                data =  json.dumps(item.new_data, sort_keys=True, indent=4)
                 created = item.event_time.strftime('%B %d %Y')
-                
+                try:
+                    snapshot = json.loads(item.new_data)
+                except:
+                    snapshot = "FALLBACK: "+item.new_data
+
                 try:
                     # Make it break if user not set
                     item.action_user.username
@@ -298,7 +301,7 @@ class EventsAndComments(viewsets.ViewSet):
                 events_list.append({
                     'id' : item.id,
                     'text' : action_user.username + ': ' + item.old + ' -> ' + item.new,
-                    'data' : data,
+                    'data' : snapshot,
                     'action_user' : {
                         'id' : action_user.id,
                         'name' : action_user.username,

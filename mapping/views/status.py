@@ -76,9 +76,10 @@ class MappingStatuses(viewsets.ViewSet):
             # Save snapshot to database
             source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
             mappingquery = MappingRule.objects.filter(source_component_id=source_component.id)
-            mappingrules = {}
+            mappingrules = []
             for rule in mappingquery:
-                mappingrules.update({rule.id : {
+                mappingrules.append({
+                    'Rule ID': rule.id,
                     'Project ID' : rule.project_id.id,
                     'Project' : rule.project_id.title,
                     'Target component ID' : rule.target_component.component_id,
@@ -89,7 +90,7 @@ class MappingStatuses(viewsets.ViewSet):
                     'Mapadvice' : rule.mapadvice,
                     'Maprule' : rule.maprule,
                     'Active' : rule.active,
-                }})
+                })
 
             event = MappingEventLog.objects.create(
                 task=task,
@@ -97,7 +98,7 @@ class MappingStatuses(viewsets.ViewSet):
                 action_user=current_user,
                 action_description='Status:',
                 old_data='',
-                new_data=str(mappingrules),
+                new_data=json.dumps(mappingrules),
                 old=old_status,
                 new=task.status.status_title,
                 user_source=current_user,

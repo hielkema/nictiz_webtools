@@ -76,9 +76,10 @@ class MappingUsers(viewsets.ViewSet):
             # Save snapshot to database
             source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
             mappingquery = MappingRule.objects.filter(source_component_id=source_component.id)
-            mappingrules = {}
+            mappingrules = []
             for rule in mappingquery:
-                mappingrules.update({rule.id : {
+                mappingrules.append({
+                    'Rule ID' : rule.id,
                     'Project ID' : rule.project_id.id,
                     'Project' : rule.project_id.title,
                     'Target component ID' : rule.target_component.component_id,
@@ -89,7 +90,7 @@ class MappingUsers(viewsets.ViewSet):
                     'Mapadvice' : rule.mapadvice,
                     'Maprule' : rule.maprule,
                     'Active' : rule.active,
-                }})            
+                })            
             # print(str(mappingrules))
             event = MappingEventLog.objects.create(
                     task=task,
@@ -97,7 +98,7 @@ class MappingUsers(viewsets.ViewSet):
                     action_user=current_user,
                     action_description='Gebruiker:',
                     old_data='',
-                    new_data=str(mappingrules),
+                    new_data=json.dumps(mappingrules),
                     old=str(source_user),
                     new=str(target_user),
                     user_source=source_user,
