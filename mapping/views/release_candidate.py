@@ -73,7 +73,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     For retrieve, use PK
     For create, use rc_id, action='save', title, rc_notes (releasenotes)
     """
-    permission_classes = [Permission_MappingRcAudit]
+    permission_classes = [permissions.AllowAny]
     def create(self, request):
         payload = request.data
         print(payload)
