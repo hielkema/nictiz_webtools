@@ -1124,9 +1124,9 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                 # Add the group to the group list
                 groups.append({
                     # 'DEBUG_projecttitle' : project.title,
-                    'source' : project.source_codesystem.codesystem_title,
+                    'source' : project.source_codesystem.codesystem_fhir_uri,
                     'sourceVersion' : project.source_codesystem.codesystem_version,
-                    'target' : project.target_codesystem.codesystem_title,
+                    'target' : project.target_codesystem.codesystem_fhir_uri,
                     'targetVersion': project.target_codesystem.codesystem_version,
                     'element' : elements,
                 })
