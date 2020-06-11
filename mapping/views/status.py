@@ -78,10 +78,14 @@ class MappingStatuses(viewsets.ViewSet):
             mappingquery = MappingRule.objects.filter(source_component_id=source_component.id)
             mappingrules = []
             for rule in mappingquery:
+                bindings = []
+                for binding in rule.mapspecifies.all():
+                    bindings.append(binding.id)
                 mappingrules.append({
                     'Rule ID': rule.id,
                     'Project ID' : rule.project_id.id,
                     'Project' : rule.project_id.title,
+                    'Target codesystem' : rule.target_component.codesystem_id.codesystem_title,
                     'Target component ID' : rule.target_component.component_id,
                     'Target component Term' : rule.target_component.component_title,
                     'Mapgroup' : rule.mapgroup,
@@ -90,6 +94,7 @@ class MappingStatuses(viewsets.ViewSet):
                     'Mapadvice' : rule.mapadvice,
                     'Maprule' : rule.maprule,
                     'Active' : rule.active,
+                    'Bindings' : bindings,
                 })
 
             event = MappingEventLog.objects.create(
