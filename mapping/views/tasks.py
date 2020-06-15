@@ -171,13 +171,13 @@ class Tasklist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        # List all projects
+        # List all tasks
         # TODO filter on which projects the user has access to
          # Get data
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
-        data = MappingTask.objects.filter(project_id=project).order_by('id')
-    
+        data = MappingTask.objects.select_related('source_component','status','user','source_component__codesystem_id').filter(project_id=project).order_by('id')
+
         task_list = []
         for task in data:
             try:
