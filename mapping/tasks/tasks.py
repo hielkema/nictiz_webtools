@@ -761,7 +761,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     for other_rule in other_rules:
                         other_tasks = MappingTask.objects.filter(source_component=other_rule.source_component)
                         for other_task in other_tasks:
-                            other_tasks_same_target.append(other_task.id)
+                            other_tasks_same_target.append(f"{other_task.source_component.component_id} - {other_task.source_component.component_title}")
 
                     for other_rule in other_rules:
                         # Separate rule for project 3 (NHG Diagn-LOINC/SNOMED)    
