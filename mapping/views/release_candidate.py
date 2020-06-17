@@ -524,3 +524,198 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             },
             'rules' : task_list,
         })
+
+
+class exportReleaseCandidateRulesV2(viewsets.ViewSet):
+    """
+    Exporteert regels vanuit de productiedatabase naar de RC database
+    Stuur een POST request met het volgende format:
+    {
+        'rc_id' : int, # Release candidate ID in database
+        'selection' : str # 'codesystem' or 'component'
+        ['id'] : int, # component identifier, requiered in the case of selection == component
+        ['codesystem'] : int, # required in the case of selection == component
+    }
+    Of een GET met een RC ID voor een lijst met rules in die RC
+    """
+    permission_classes = [Permission_MappingRcAudit]
+            
+    def retrieve(self, request, pk=None):
+        task_list = []
+        id = int(pk)
+        # Get RC
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.select_related(
+            'codesystem'
+        ).get(id = id, access__username=current_user)
+        
+        ## DEBUG RULE - REMOVE FOR PRODUCTION
+        print('Exporting RC',rc)
+        
+        # Total number of components in codesystem linked to RC
+        source_codesystem = MappingCodesystemComponent.objects.select_related(
+            'codesystem_id'
+        ).filter(codesystem_id = rc.codesystem)
+        
+        # Fetch all rules from the database
+        db_rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc).select_related(
+            'export_rc', 
+            'export_user', 
+            'export_task',
+            'export_task__source_component', 
+            'export_task__source_codesystem', 
+            'export_rule',
+            'export_rule__project_id', 
+            'source_component', 
+            'source_component__codesystem_id', 
+            'target_component',
+            'target_component__codesystem_id',
+            ).prefetch_related(
+                'accepted',
+                'rejected',
+            )
+        
+        ## DEBUG RULE - REMOVE FOR PRODUCTION
+        print('Exporting',db_rules.count(),'rules')
+        
+        # rules = list(db_rules.values())
+        rules = db_rules
+        db_rules_list = db_rules.values(
+            'static_source_component_ident',
+            'mapspecifies',
+            'mapcorrelation',
+            'mappriority',
+            'mapadvice',
+            'mapgroup',
+            'maprule',
+            'export_rc',
+            'export_date',
+            'export_user',
+            'export_task',
+            'export_rule',
+            'task_status',
+            'task_user',
+            'source_component',
+            'static_source_component_ident',
+            'static_source_component',
+            'target_component',
+            'static_target_component_ident',
+            'static_target_component',
+            'accepted', 
+            'accepted__groups', 
+            'rejected',
+            'rejected__groups',
+            )
+        # Get unique source component ID's
+        source_components = list()
+        for rule in rules[:100]:
+            source_components.append(rule.static_source_component_ident)
+        source_components = sorted(set(source_components))
+
+        task_list = list()
+
+        # Loop over all unique source component_id's - we assume each unique component is a task
+        for source_component_ident in source_components:
+            ## DEBUG RULE - REMOVE FOR PRODUCTION
+            print("Handling",source_component_ident)
+
+            rule_list = []
+            filtered_rule_list = []
+            rejected = False
+            rejected_list = []
+            fiat_me = False
+            veto_me = False
+            accepted = None
+            accepted_list = []
+            ignore_list = []
+
+            # Get all items from the rules dictionary where 'source_component' is the same
+            for _rule in list(filter(lambda x: x['static_source_component_ident'] == source_component_ident, db_rules_list)): 
+                # Add ID's used as binding target to ignore list: don't show twice
+                mapspecifies = _rule['mapspecifies']
+                for value in mapspecifies:
+                    # print('Added',value.get('id'),'to ignore list')
+                    ignore_list.append(value.get('id'))
+                # If no specifies are mentioned; false to hide rule in table
+                if len(mapspecifies) == 0:
+                    mapspecifies = False
+
+                # Translate correlation options
+                correlation_options = [
+                    # (code, readable)
+                    ('447559001', 'Broad to narrow'),
+                    ('447557004', 'Exact match'),
+                    ('447558009', 'Narrow to broad'),
+                    ('447560006', 'Partial overlap'),
+                    ('447556008', 'Not mappable'),
+                    ('447561005', 'Not specified'),
+                ]
+                correlation = _rule['mapcorrelation']
+                for code, readable in correlation_options:
+                    mapcorrelation = _rule['mapcorrelation'].replace(code, readable)
+
+                # Handle foreign keys that could have been removed in dev path
+                try:
+                    rule_id = _rule['export_rule']
+                except:
+                    rule_id = '[deleted]'
+
+                try:
+                    export_task_id = _rule['export_task']
+                except:
+                    export_task_id = '[deleted]'
+
+
+                rule_list.append({
+                    'rule_id'       : rule_id,
+                    'task_id'       : export_task_id,
+
+                    'task_status'   : _rule['task_status'],
+                    'task_user'     : _rule['task_user'],
+
+                    'codesystem'    : _rule['static_target_component']['codesystem']['name'],
+                    'target'        : _rule['static_target_component'],
+
+                    'mapgroup'      : _rule['mapgroup'],
+                    'mappriority'   : _rule['mappriority'],
+                    'mapcorrelation': correlation,
+                    'mapadvice'     : _rule['mapadvice'],
+                    'maprule'       : _rule['maprule'],
+                    'mapspecifies'  : mapspecifies,
+
+                    'accepted'      : _rule['accepted'],
+                    'accepted_groups'      : _rule['accepted__groups'],
+                    'rejected'      : _rule['rejected'],
+                    'rejected_groups'      : _rule['rejected__groups'],
+                    
+                    # 'raw' : _rule,
+                })
+
+                # Filter -> ID not in rejected list
+                for single_rule in rule_list:
+                    # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
+                    # print(ignore_list)
+                    if single_rule.get('target').get('identifier') in ignore_list:
+                        # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
+                        True
+                    else:
+                        # print("ADDED")
+                        filtered_rule_list.append(single_rule)
+
+            task_list.append({
+                'source' : source_component_ident,
+                'targets' : filtered_rule_list,
+            })
+            
+
+
+        # Task list for export
+        # task_list = source_components
+
+        return Response({
+            'message' : 'Lijst met alle items voor RC',
+            # 'stats' : {
+            #     'num_tasks': num_tasks,
+            # },
+            'rules' : task_list,
+        })
