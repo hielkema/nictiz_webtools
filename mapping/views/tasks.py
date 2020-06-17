@@ -176,7 +176,7 @@ class Tasklist(viewsets.ViewSet):
          # Get data
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
-        data = MappingTask.objects.select_related('source_component','status','user','source_component__codesystem_id').filter(project_id=project).order_by('id')
+        data = MappingTask.objects.select_related('status','user','source_component','source_component__codesystem_id').filter(project_id=project).order_by('id')
 
         task_list = []
         for task in data:
@@ -217,7 +217,7 @@ class TaskDetails(viewsets.ViewSet):
         # List all projects
         # TODO filter on which projects the user has access to
          # Get data
-        task = MappingTask.objects.get(id=pk)
+        task = MappingTask.objects.select_related('project_id','user','source_component','source_component__codesystem_id','status').get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
 

@@ -324,9 +324,26 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         rc = MappingReleaseCandidate.objects.get(id = id, access__username=current_user)
         print('Exporting RC',rc)
         # Total number of components in codesystem linked to RC
-        source_codesystem = MappingCodesystemComponent.objects.filter(codesystem_id = rc.codesystem)
+        source_codesystem = MappingCodesystemComponent.objects.select_related(
+            'codesystem_id'
+        ).filter(codesystem_id = rc.codesystem)
         # Identify all unique tasks in order to group the rules for export
-        rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc)
+        rules = MappingReleaseCandidateRules.objects.select_related(
+            'export_rc', 
+            'export_user', 
+            'export_task', 
+            'export_task__source_component', 
+            'export_task__source_codesystem', 
+            'export_rule',
+            'export_rule__project_id', 
+            'source_component', 
+            'source_component__codesystem_id', 
+            'target_component',
+            'target_component__codesystem_id',
+            ).prefetch_related(
+                'accepted',
+                'rejected',    
+            ).filter(export_rc = rc)
         print('Exporting',rules.count(),'rules')
         source_components = rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
         print('Found',len(source_components),'distinct source components / =tasks')
