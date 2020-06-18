@@ -623,6 +623,9 @@ def audit_async(audit_type=None, project=None, task_id=None):
         
         logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
+        
+        logger.info('Spawning general QA scripts for SNOMED')
+        send_task('mapping.tasks.qa_snomed.snomed_daily_build_active', [], {'taskid':task.id})
 
     # Also run legacy rules, in addition to rules split in multiple task files?
     legacy = True
