@@ -42,6 +42,14 @@ class Permission_MappingProject_Access(permissions.BasePermission):
         if 'mapping | access' in request.user.groups.values_list('name', flat=True):
             return True
 
+class Permission_MappingProject_Whitelist(permissions.BasePermission):
+    """
+    Global permission check rights to use the whitelist functionality.
+    """
+    def has_permission(self, request, view):
+        if 'mapping | audit whitelist' in request.user.groups.values_list('name', flat=True):
+            return True
+
 class MappingAudits(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
@@ -59,6 +67,35 @@ class MappingAudits(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+
+class MappingAuditWhitelist(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Whitelist]
+
+    def retrieve(self, request, pk=None):
+        audit_hit = MappingTaskAudit.objects.get(id=pk)
+        audit_hit.ignore = True
+        audit_hit.save()
+        
+        return Response(str(audit_hit))
+
+class MappingAuditRemoveWhitelist(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Whitelist]
+
+    def retrieve(self, request, pk=None):
+        audit_hit = MappingTaskAudit.objects.get(id=pk)
+        audit_hit.ignore = False
+        audit_hit.save()
+        
+        return Response(str(audit_hit))
+
+class MappingAuditRemove(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Whitelist]
+
+    def retrieve(self, request, pk=None):
+        audit_hit = MappingTaskAudit.objects.get(id=pk)
+        audit_hit.delete()
+        
+        return Response(f'{pk} deleted')
 
 class MappingAuditsPerProject(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
