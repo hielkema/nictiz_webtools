@@ -497,7 +497,10 @@ class MappingTargets(viewsets.ViewSet):
                 queries = MappingEclPart.objects.filter(task=task).select_related(
                     'task'
                 )
+                unfinished = False
                 for query in queries:
+                    if query.finished == False:
+                        unfinished = True
                     query_list.append({
                         'id' : query.id,
                         'description' : query.description,
@@ -535,6 +538,7 @@ class MappingTargets(viewsets.ViewSet):
 
                 return Response({
                     'queries': query_list,
+                    'unfinished' : unfinished,
                     'allResults' : all_results,
                 })
 
