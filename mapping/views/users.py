@@ -67,7 +67,10 @@ class MappingUsers(viewsets.ViewSet):
         if MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
 
             newuser = User.objects.get(id=request.data.get('user'))
-            source_user = User.objects.get(id=task.user.id)
+            if task.user == None:    
+                source_user = User.objects.get(id=1)
+            else:
+                source_user = User.objects.get(id=task.user.id)
             target_user = User.objects.get(id=request.data.get('user'))
             current_user = User.objects.get(id=request.user.id)
             task.user = newuser

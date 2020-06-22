@@ -167,6 +167,7 @@ class CreateTasks(viewsets.ViewSet):
             })
         else:
             return Response('Error: Geen toegang')
+
 class Tasklist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 

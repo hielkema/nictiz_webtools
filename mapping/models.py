@@ -148,6 +148,9 @@ class MappingRule(models.Model):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
 
 class MappingEclQuery(models.Model):
+    ###
+    ### Only for use with the legacy (non-vue) tooling
+    ###
     project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
     query               = models.TextField(default=None, blank=True, null=True)
@@ -167,6 +170,30 @@ class MappingEclQuery(models.Model):
         ('3', 'Custom'),
     ]
     query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
+
+class MappingEclPart(models.Model):
+    ##
+    ##  For use with the vue mapping tooling
+    ##  Used to create groups of ECL queries, with their own separate correlation options
+    ##
+    task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
+    query               = models.TextField(default=None, blank=True, null=True)
+    finished               = models.BooleanField(default=False)
+    failed               = models.BooleanField(default=False)
+    error               = models.TextField(default=None, blank=True, null=True)
+    description         = models.TextField(default=None, blank=True, null=True)
+    result              = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+
+    correlation_options = [
+        # (code, readable)
+        ('447559001', 'Broad to narrow'),
+        ('447557004', 'Exact match'),
+        ('447558009', 'Narrow to broad'),
+        ('447560006', 'Partial overlap'),
+        ('447556008', 'Not mappable'),
+        ('447561005', 'Not specified'),
+    ]
+    mapcorrelation  = models.CharField(max_length=50, choices=correlation_options, default=None, blank=True, null=True)
 
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)

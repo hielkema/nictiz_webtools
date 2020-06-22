@@ -35,6 +35,46 @@ i = inspect()
 logger = get_task_logger(__name__)
 
 @shared_task
+def UpdateECL1Task(record_id, query):
+    currentQuery = MappingEclPart.objects.get(id = record_id)
+    currentQuery.finished = False
+    currentQuery.error = None
+    currentQuery.failed = False
+    currentQuery.save()
+    try:
+        snowstorm = Snowstorm(
+            baseUrl="https://snowstorm.test-nictiz.nl",
+            debug=False,
+            preferredLanguage="nl",
+            defaultBranchPath="MAIN/SNOMEDCT-NL",
+        )
+        result = snowstorm.findConcepts(ecl=query.strip())
+
+        currentQuery.result = {
+            'concepts': result,
+            'numResults': len(result),
+        }
+        currentQuery.finished = True
+        currentQuery.error = None
+        currentQuery.failed = False
+        currentQuery.save()
+        return str(currentQuery)
+    except Exception as e:
+        currentQuery.result = {
+            'concepts': {},
+            'numResults': 0,
+        }
+        currentQuery.finished = True
+        currentQuery.failed = False
+        currentQuery.error = str(e)
+        currentQuery.save()
+        return {
+            'query' : str(currentQuery),
+            'error' : str(e),
+        }
+
+
+@shared_task
 def import_snomed_async(focus=None):
     snowstorm = Snowstorm(
         baseUrl="https://snowstorm.test-nictiz.nl",

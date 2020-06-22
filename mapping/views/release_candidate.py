@@ -581,6 +581,7 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
         # rules = list(db_rules.values())
         rules = db_rules
         db_rules_list = db_rules.values(
+            'id',
             'static_source_component_ident',
             'mapspecifies',
             'mapcorrelation',
@@ -601,14 +602,14 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
             'target_component',
             'static_target_component_ident',
             'static_target_component',
-            'accepted', 
-            'accepted__groups', 
-            'rejected',
-            'rejected__groups',
+            # 'accepted', 
+            # 'accepted__groups', 
+            # 'rejected',
+            # 'rejected__groups',
             )
         # Get unique source component ID's
         source_components = list()
-        for rule in rules[:100]:
+        for rule in rules:
             source_components.append(rule.static_source_component_ident)
         source_components = sorted(set(source_components))
 
@@ -630,7 +631,12 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
             ignore_list = []
 
             # Get all items from the rules dictionary where 'source_component' is the same
-            for _rule in list(filter(lambda x: x['static_source_component_ident'] == source_component_ident, db_rules_list)): 
+            _rules = list(filter(lambda x: x['static_source_component_ident'] == source_component_ident, db_rules_list))
+            print(_rules)
+            for _rule in _rules: 
+                ## DEBUG RULE - REMOVE FOR PRODUCTION
+                print("Rule:",_rule['export_rule'])
+                
                 # Add ID's used as binding target to ignore list: don't show twice
                 mapspecifies = _rule['mapspecifies']
                 for value in mapspecifies:
@@ -665,6 +671,38 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                 except:
                     export_task_id = '[deleted]'
 
+                # TO BE FIXED - results in many extra queries due to many-many relationships
+                current_rule = db_rules.get(id=_rule['id'])
+                accepted_nvmm   = False
+                accepted_nvkc   = False
+                accepted_nictiz = False
+                accepted_nhg    = False
+                accepted_palga  = False
+                if current_rule.accepted.count() > 0:
+                    if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nictiz = True
+                    if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_palga = True
+                    if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nhg = True
+                    if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvmm = True
+                    if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvkc = True
+                    if current_rule.accepted.count() > 0:
+                        accepted = True
+                        for user in current_rule.accepted.values_list('username', flat=True):
+                            accepted_list.append(user)
+                        if request.user.username in accepted_list:
+                            fiat_me = True
+                if current_rule.rejected.count() > 0:
+                    rejected = True
+                    for user in current_rule.rejected.values_list('username', flat=True):
+                        rejected_list.append(user)
+                    if request.user.username in rejected_list:
+                        veto_me = True
+                
+
 
                 rule_list.append({
                     'rule_id'       : rule_id,
@@ -683,11 +721,16 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                     'maprule'       : _rule['maprule'],
                     'mapspecifies'  : mapspecifies,
 
-                    'accepted'      : _rule['accepted'],
-                    'accepted_groups'      : _rule['accepted__groups'],
-                    'rejected'      : _rule['rejected'],
-                    'rejected_groups'      : _rule['rejected__groups'],
-                    
+                    'rejected_me' : veto_me,
+                    'accepted' : accepted,
+                    'rejected' : rejected,
+
+                    'accepted_nvmm'     : accepted_nvmm,
+                    'accepted_nvkc'     : accepted_nvkc,
+                    'accepted_nictiz'   : accepted_nictiz,
+                    'accepted_nhg'      : accepted_nhg,
+                    'accepted_palga'    : accepted_palga,
+
                     # 'raw' : _rule,
                 })
 

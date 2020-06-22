@@ -7,7 +7,7 @@ SECRET_KEY = '+kbl$5-%8x4dn$l_cf%^^6kjb0+f5lm3rvlt56+z!)*#_^-5gm'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 SESSION_COOKIE_DOMAIN = "localhost"
 CSRF_COOKIE_DOMAIN = 'localhost'
 
@@ -21,11 +21,18 @@ CORS_SUPPORTS_CREDENTIALS = True
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE=None
 
+def show_toolbar(request):
+    return True
+DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK" : show_toolbar,
+}
 
-INSTALLED_APPS += ('debug_toolbar',)
-MIDDLEWARE     += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+INSTALLED_APPS = ('debug_toolbar',) + INSTALLED_APPS
+MIDDLEWARE     = ('debug_toolbar.middleware.DebugToolbarMiddleware',) + MIDDLEWARE
 INTERNAL_IPS = [
     '127.0.0.1',
+    '0.0.0.0',
+    'localhost',
 ]
 
 DATABASES = {
