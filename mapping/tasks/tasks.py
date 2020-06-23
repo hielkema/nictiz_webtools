@@ -37,6 +37,7 @@ logger = get_task_logger(__name__)
 @shared_task
 def UpdateECL1Task(record_id, query):
     currentQuery = MappingEclPart.objects.get(id = record_id)
+    currentQuery.result = {}
     currentQuery.finished = False
     currentQuery.error = None
     currentQuery.failed = False
@@ -50,9 +51,15 @@ def UpdateECL1Task(record_id, query):
         )
         result = snowstorm.findConcepts(ecl=query.strip())
 
+        try:
+            num_results = len(result)
+        except Exception as e:
+            num_results = 0
+            print("Error in UpdateECL1Task:",e)
+
         currentQuery.result = {
             'concepts': result,
-            'numResults': len(result),
+            'numResults': num_results,
         }
         currentQuery.finished = True
         currentQuery.error = None
@@ -65,8 +72,8 @@ def UpdateECL1Task(record_id, query):
             'numResults': 0,
         }
         currentQuery.finished = True
-        currentQuery.failed = False
-        currentQuery.error = str(e)
+        currentQuery.failed = True
+        currentQuery.error = f"Fout in Snowstorm connectie. Waarschijnlijk is de ECL query niet juist. Error: {str(e)}"
         currentQuery.save()
         return {
             'query' : str(currentQuery),
