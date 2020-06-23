@@ -496,7 +496,7 @@ class MappingTargets(viewsets.ViewSet):
                 query_list = list()
                 queries = MappingEclPart.objects.filter(task=task).select_related(
                     'task'
-                )
+                ).order_by('id')
                 unfinished = False
                 for query in queries:
                     if query.finished == False:
@@ -561,6 +561,7 @@ class MappingReverse(viewsets.ViewSet):
                     'codesystem' : {
                         'title': mapping.target_component.codesystem_id.codesystem_title,
                     },
+                    'correlation' : mapping.mapcorrelation,
                 })
 
         elif task.project_id.project_type == "4":
@@ -575,6 +576,7 @@ class MappingReverse(viewsets.ViewSet):
                     'codesystem' : {
                         'title': mapping.target_component.codesystem_id.codesystem_title,
                     },
+                    'correlation' : mapping.mapcorrelation,
                 })
 
         # output = " /".join(reverse)
