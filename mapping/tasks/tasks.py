@@ -375,7 +375,7 @@ def import_omaha_task():
     df=df.fillna(value=False)
 
     for index, row in df.iterrows():
-        codesystem = MappingCodesystem.objects.get(id='6')
+        codesystem = MappingCodesystem.objects.get(id='8')
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
             component_id=row[0],
