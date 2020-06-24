@@ -115,6 +115,7 @@ class MappingAuditsPerProject(viewsets.ViewSet):
                 'type':audit.audit_type,
                 'reason':audit.hit_reason,
                 'ignore':audit.ignore,
+                'sticky':audit.sticky,
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)

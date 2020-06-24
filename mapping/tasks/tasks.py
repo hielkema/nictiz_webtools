@@ -841,7 +841,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 if extra_dict.get('Actief') == "False":
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
-                                audit_type=audit_type,
+                                audit_type="Deprecated source",
                                 hit_reason='Item in bron-codesystem is vervallen',
                             )
 
@@ -883,20 +883,20 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     if rule.project_id.use_mappriority:
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Priority error",
                                     hit_reason='Regel heeft geen prioriteit',
                                 )
                 if rule.mapadvice == '':
                     if rule.project_id.use_mapadvice:
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Mapadvice error",
                                     hit_reason='Regel heeft geen mapadvice',
                                 )
                 if rule.source_component == rule.target_component:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
-                                audit_type=audit_type,
+                                audit_type="Maps to self",
                                 hit_reason='Regel mapt naar zichzelf',
                             )
 
@@ -907,7 +907,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     if extra_dict.get('Actief') == "False":
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Deprecated target",
                                     hit_reason='Item in target-codesystem is vervallen',
                                 )
 
@@ -921,7 +921,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 if check == False:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Missing target",
                                     hit_reason='Mapt niet naar <<specimen',
                                 )
                 # Check if one of the targets is a LOINC item
@@ -932,7 +932,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 if check == False:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Missing target",
                                     hit_reason='Mapt niet naar labcodeset',
                                 )
 
@@ -954,7 +954,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             if (other_rule.source_component != task.source_component) and (task.source_component.codesystem_id == other_rule.source_component.codesystem_id):
                                 obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Target used in multiple tasks",
                                     hit_reason='Meerdere taken {} gebruiken hetzelfde target: component #{} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
                                 )
                             
@@ -964,13 +964,13 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 if rules[0].mappriority != 1 and rules[0].project_id.use_mappriority:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
-                            audit_type=audit_type,
+                            audit_type="Priority error",
                             hit_reason='Taak heeft 1 mapping rule: prioriteit is niet 1'
                         )
                 if rules[0].mapadvice != 'Altijd' and rules[0].project_id.use_mapadvice:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
-                            audit_type=audit_type,
+                            audit_type="Advice error",
                             hit_reason='Taak heeft 1 mapping rule: map advice is niet Altijd'
                         )
             elif rules.count() > 1:
@@ -982,7 +982,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 if not checkConsecutive(groups_ex_duplicates):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
-                            audit_type=audit_type,
+                            audit_type="Priority error",
                             hit_reason='Taak heeft meerdere mapping groups: geen opeenvolgende prioriteit'
                         )
 
@@ -996,20 +996,20 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     if not checkConsecutive(priority_list):
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
-                                audit_type=audit_type,
+                                audit_type="Priority error",
                                 hit_reason='Groep heeft meerdere mapping rules: geen opeenvolgende prioriteit'
                             )
                     try:
                         if sorted(priority_list)[0] != 1:
                             obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Priority error",
                                     hit_reason='Groep heeft meerdere mapping rules: geen mapprioriteit 1'
                                 )
                     except:
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
-                                    audit_type=audit_type,
+                                    audit_type="Priority error",
                                     hit_reason='Probleem met controleren prioriteiten: meerdere regels zonder prioriteit?'
                                 )
                     # if rules.last().mapadvice != 'Anders':
