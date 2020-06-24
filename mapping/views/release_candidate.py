@@ -469,6 +469,22 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 project_title = '[unknown]'
                 project_id = '[unknown]'
             static_source_component = rule.static_source_component
+
+            # Add audit hits
+            audit_hits = MappingTaskAudit.objects.filter(task = rule.export_task, ignore = False)
+            audits = []
+            audits_present = False
+            for audit in audit_hits:
+                audits.append({
+                    'id':audit.id,
+                    'type':audit.audit_type,
+                    'reason':audit.hit_reason,
+                    'ignore':audit.ignore,
+                    'sticky':audit.sticky,
+                    'timestamp':audit.first_hit_time,
+                })
+                audits_present = True
+
             task_list.append({
                 'status' : rule.task_status,
                 'source' : static_source_component,
@@ -477,6 +493,10 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'project_id' : project_id,
                 'group' : static_source_component.get('extra',{}).get('Groep',''),
                 'rules' : filtered_rule_list,
+
+                'audit' : audits,
+                'audit_present' : audits_present,
+
                 'accepted_list' : set(accepted_list),
                 'num_accepted' : len(set(accepted_list)),
                 'accepted_me' : fiat_me,
