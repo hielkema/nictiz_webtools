@@ -136,6 +136,21 @@ def update_snomedConcept_async(payload=None):
     )
     print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
     # Add data not used for matching
+    #### Add sticky audit hit if concept was already in database and title changed
+    if (obj.component_title != None) and (obj.component_title != concept['fsn']['term']):
+        print(f"{obj.component_title} in database != {concept['fsn']['term']} - audit hit maken")
+        # Find tasks using this component
+        tasks = MappingTask.objects.filter(source_component = obj)
+        for task in tasks:
+            audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                    task=task,
+                    audit_type="IMPORT",
+                    sticky=True,
+                    hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                )
+    else:
+        print(f"{obj.component_title} in database == {concept['fsn']['term']} - geen hits")
+
     obj.component_title = str(concept['fsn']['term'])
     extra = {
         'Preferred term' : str(concept['pt']['term']),
@@ -231,6 +246,23 @@ def import_labcodeset_async():
 
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
+            #### TODO add sticky audit hit if concept was already in database and title changed
+
+            #### Add sticky audit hit if concept was already in database and title changed
+            if (obj.component_title != None) and (obj.component_title != term_en):
+                print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+                # Find tasks using this component
+                tasks = MappingTask.objects.filter(source_component = obj)
+                for task in tasks:
+                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                            task=task,
+                            audit_type="IMPORT",
+                            sticky=True,
+                            hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                        )
+            else:
+                print(f"{obj.component_title} in database == {term_en} - geen hits")
+
             obj.component_title     = term_en
             obj.component_extra_dict   = {
                 'Nederlands'            : term_nl,
@@ -304,6 +336,22 @@ def import_nhgverrichtingen_task():
             component_id=row[0],
         )
         # Add data not used for matching
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row[1]):
+            print(f"{obj.component_title} in database != {row[1]} - audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row[1]} - geen hits")
+
         obj.component_title     = row[1]
 
         extra = {
@@ -457,6 +505,22 @@ def import_diagnosethesaurus_task():
             title = list(filter(lambda x : x['type'] == 'voorkeursterm', descriptions))[0].get('term','[Geen titel]')
         except:
             title = "[Geen titel]"
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != title):
+            print(f"{obj.component_title} in database != {title} - audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {title} - geen hits")
+
         obj.component_title = title
         obj.descriptions = descriptions
         extra = {
@@ -535,11 +599,28 @@ def import_nhgbepalingen_task():
         if row[2] == 'XP': voorstel_materiaal = '119397002 Specimen from penis (specimen)'
         if row[2] == 'YX': voorstel_materiaal = '119347001 Seminal fluid specimen (specimen)'
         if not voorstel_materiaal: voorstel_materiaal = "Geen voorstel gevonden"
+
         codesystem = MappingCodesystem.objects.get(id='4')
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
             component_id=row[0],
         )
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row[4]):
+            print(f"{obj.component_title} in database != {row[4]} - audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row[4]} - geen hits")
+
         obj.component_title = row[4]
         
         # Check status van NHG term
@@ -629,6 +710,21 @@ def import_icpc_task():
             component_id=str(row['ICPC Code']),
         )
         
+        #### Sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row['ICPC Titel']):
+            print(f"{obj.component_title} in database != {row['ICPC Titel']} - audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row['ICPC Titel']} - geen hits")
+
         obj.component_title = row['ICPC Titel']
 
         actief_concept = 'True'
@@ -657,7 +753,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
             logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
 
             # Delete all old audit hits for this task if not whitelisted
-            delete = MappingTaskAudit.objects.filter(task=task, ignore=False).delete()
+            delete = MappingTaskAudit.objects.filter(task=task, ignore=False, sticky=False).delete()
             logger.info(delete)
 
     ###### Slowly moving to separate audit QA scripts.

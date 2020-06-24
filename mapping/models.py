@@ -230,8 +230,9 @@ class MappingTaskAudit(models.Model):
     task = models.ForeignKey("MappingTask", on_delete=models.PROTECT)
     hit_reason = models.TextField(default=None, blank=True, null=True)
     comment = models.TextField(default=None, blank=True, null=True)
-    ignore = models.BooleanField(default=False)
-    ignore_user = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)
+    ignore = models.BooleanField(default=False) # Whitelist
+    sticky = models.BooleanField(default=False) # True = will not be removed with each audit cycle
+    ignore_user = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT) # User adding the whitelist
     first_hit_time  = models.DateTimeField(default=timezone.now)
 
 class MappingReleaseCandidate(models.Model):
