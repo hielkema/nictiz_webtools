@@ -312,6 +312,11 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
                 print("Let's go")
                 import_palgathesaurus_task.delay()
 
+            print('Omaha', json.loads(request.POST.get('codesystem[omaha]')))
+            if json.loads(request.POST.get('codesystem[omaha]')):
+                print("Importeren Omaha")
+                import_omaha_task.delay()
+
             context = {
                 'result': "success",
             }

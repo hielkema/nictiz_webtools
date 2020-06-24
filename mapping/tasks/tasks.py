@@ -369,6 +369,41 @@ def import_nhgverrichtingen_task():
         obj.save()
 
 @shared_task
+def import_omaha_task():
+    df = read_excel('/webserver/mapping/resources/omaha/omaha.xlsx')
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='6')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=row[0],
+        )
+        # Add data not used for matching
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row[1]):
+            print(f"{obj.component_title} in database != {row[1]} - audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row[1]} - geen hits")
+
+        obj.component_title     = row[1]
+
+        obj.component_extra_dict = {}
+        # Save
+        obj.save()
+
+@shared_task
 def import_palgathesaurus_task():
     df = read_excel('/webserver/mapping/resources/palga/Thesaurus_20200401.xls')
     # Vervang lege cellen door False
