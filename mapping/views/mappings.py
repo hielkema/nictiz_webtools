@@ -560,62 +560,10 @@ class MappingEclToRules(viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         print(request.user,"Creating mapping rules for ECL queries associated with task",pk)
-
-        # Put the results of all ECL queries for the task in 1 list
-        all_results = list()
-        task = MappingTask.objects.get(id=pk)
-        queries = MappingEclPart.objects.filter(task__id=pk).select_related(
-            'task'
-        ).order_by('id')
         
-        if queries:
-            for query in queries:
-                print("Found query",query.id)
-                if query.finished == False:
-                    queries_unfinished = True
-                # query_list.append({
-                #     'id' : query.id,
-                #     'description' : query.description,
-                #     'query' : query.query,
-                #     'finished' : query.finished,
-                #     'error' : query.error,
-                #     'failed' : query.failed,
-                #     'result' : query.result,
-                #     'correlation' : query.mapcorrelation,
-                # })
-                if query.finished:
-                    print("Query is finished, let's go")
-                    # Add all results to a list for easy viewing
-                    try:
-                        for key, result in query.result.get('concepts').items():
-                            # print(result)   
-                            _query = result
-                            _query.update({
-                                # 'queryId' : query.id,
-                                'query' : query.query,
-                                # 'description' : query.description,
-                                'correlation' : query.mapcorrelation,
-                            })
-                            all_results.append(_query)
-                    except:
-                        print("Retrieve mappings: No results")
-
-
-                    celery = createRulesFromEcl.delay(
-                        taskid = task.id,
-                        ecl_results = all_results,
-                    )
-
-                else:
-                    return Response("Not all queries have returned; wait for all queries to be finished, and don't go making random requests when the button is hidden.")
-        else:
-            # No queries - remove all relevant mapping rules
-            rules = MappingRule.objects.filter(
-                project_id = task.project_id,
-                target_component = task.source_component,
-            ).delete()
-            celery = "No queries, no celery"
-
+        celery = createRulesFromEcl.delay(
+            taskid = pk,
+        )
         return Response(str(celery))
 
 class MappingReverse(viewsets.ViewSet):
