@@ -34,6 +34,8 @@ def createRulesFromEcl(taskid):
     
     if queries:
         # Create list of rules that should be present
+        # Using a dictionary means that every component can only be present in 1 rule - last one in the loop below wins.
+        # This is on purpose; duplicate rules cannot exist.
         valid_rules = {}
 
         # Set all relevant ECL queries to 'running'
@@ -101,19 +103,25 @@ def createRulesFromEcl(taskid):
                 print(f"Already {existing.count()} rules in database - skip creating another")
 
         # Cleanup - Remove rules that should not be there
+        print(f"Valid rules:\n {valid_rules}")
         ## Get all rules for this task
         rules = MappingRule.objects.filter(
             project_id = task.project_id,
             target_component = task.source_component,
         )
         for rule in rules:
-            if valid_rules.get(rule.target_component.component_id):
-                if rule.mapcorrelation == valid_rules.get(rule.target_component.component_id).get('correlation'):
-                    # Corret; can stay
+            print(f"Checking {str(rule)}")
+            if valid_rules.get(rule.source_component.component_id):
+                if rule.mapcorrelation == valid_rules.get(rule.source_component.component_id).get('correlation'):
+                    # Correct ID and correlation; can stay
                     True
                 else:
-                    # Make it gone
+                    # Correct ID, wrong correlation; Make it gone
                     rule.delete()
+            else:
+                # Not present in valid_rules at all - delete
+                rule.delete()
+
 
         # Set all relevant ECL queries to 'done'
         eclqueries = MappingEclPart.objects.filter(task=task)
