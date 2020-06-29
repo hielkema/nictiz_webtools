@@ -460,47 +460,57 @@ class MappingTargets(viewsets.ViewSet):
             # Handle ECL-1 mapping targets
             elif task.project_id.project_type == '4':
                 ### Get all definitive mappings
-                # mappings = MappingRule.objects.filter(
-                #     project_id=task.project_id, 
-                #     target_component=task.source_component).select_related(
-                #         'source_component',
-                #         'target_component',
-                #     )
-                # mappings = mappings.order_by('mapgroup', 'mappriority')
-                # mapping_list = []
-                # dependency_list = []
-                # for mapping in mappings:
-                #     mapping_list.append({
-                #         'id' : mapping.id,
-                #         'source' : {
-                #             'id': mapping.source_component.id,
-                #             'component_id': mapping.source_component.component_id,
-                #             'component_title': mapping.source_component.component_title,
-                #         },
-                #         'target' : {
-                #             'id': mapping.target_component.id,
-                #             'component_id': mapping.target_component.component_id,
-                #             'component_title': mapping.target_component.component_title,
-                #             'extra' : extra,
-                #             'codesystem': {
-                #                 'title' : mapping.target_component.codesystem_id.codesystem_title,
-                #                 'version' : mapping.target_component.codesystem_id.codesystem_version,
-                #                 'id' : mapping.target_component.codesystem_id.id,
-                #             },
-                #         },
-                #         'correlation' : mapping.mapcorrelation,
-                #     })
+                mappings = MappingRule.objects.filter(
+                    project_id=task.project_id, 
+                    target_component=task.source_component).select_related(
+                        'source_component',
+                        'target_component',
+                    )
+                mappings = mappings.order_by('mapgroup', 'mappriority')
+                mapping_list = []
+                dependency_list = []
+                try:
+                    extra = mapping.target_component.component_extra_dict
+                except:
+                    extra = ""
+                for mapping in mappings:
+                    mapping_list.append({
+                        'id' : mapping.id,
+                        'source' : {
+                            'id': mapping.source_component.id,
+                            'component_id': mapping.source_component.component_id,
+                            'component_title': mapping.source_component.component_title,
+                        },
+                        'target' : {
+                            'id': mapping.target_component.id,
+                            'component_id': mapping.target_component.component_id,
+                            'component_title': mapping.target_component.component_title,
+                            'extra' : extra,
+                            'codesystem': {
+                                'title' : mapping.target_component.codesystem_id.codesystem_title,
+                                'version' : mapping.target_component.codesystem_id.codesystem_version,
+                                'id' : mapping.target_component.codesystem_id.id,
+                            },
+                        },
+                        'correlation' : mapping.mapcorrelation,
+                    })
                 
+
                 # Get all ECL Queries - including cached snowstorm response
                 all_results = list()
                 query_list = list()
                 queries = MappingEclPart.objects.filter(task=task).select_related(
                     'task'
                 ).order_by('id')
-                unfinished = False
+                queries_unfinished = False
+                mapping_list_unfinished = False
+                i=0
                 for query in queries:
+                    i+=1
                     if query.finished == False:
-                        unfinished = True
+                        queries_unfinished = True
+                    if query.export_finished == False:
+                        mapping_list_unfinished = True
                     query_list.append({
                         'id' : query.id,
                         'description' : query.description,
@@ -537,10 +547,76 @@ class MappingTargets(viewsets.ViewSet):
                 })
 
                 return Response({
-                    'queries': query_list,
-                    'unfinished' : unfinished,
-                    'allResults' : all_results,
+                    'queries': query_list, # List of ECL queries
+                    'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
+                    'allResults' : all_results, # Results of all ECL queries combined in 1 list
+
+                    'mappings' : mapping_list,
+                    'mappings_unfinished' : mapping_list_unfinished,
                 })
+
+class MappingEclToRules(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def retrieve(self, request, pk=None):
+        print(request.user,"Creating mapping rules for ECL queries associated with task",pk)
+
+        # Put the results of all ECL queries for the task in 1 list
+        all_results = list()
+        task = MappingTask.objects.get(id=pk)
+        queries = MappingEclPart.objects.filter(task__id=pk).select_related(
+            'task'
+        ).order_by('id')
+        
+        if queries:
+            for query in queries:
+                print("Found query",query.id)
+                if query.finished == False:
+                    queries_unfinished = True
+                # query_list.append({
+                #     'id' : query.id,
+                #     'description' : query.description,
+                #     'query' : query.query,
+                #     'finished' : query.finished,
+                #     'error' : query.error,
+                #     'failed' : query.failed,
+                #     'result' : query.result,
+                #     'correlation' : query.mapcorrelation,
+                # })
+                if query.finished:
+                    print("Query is finished, let's go")
+                    # Add all results to a list for easy viewing
+                    try:
+                        for key, result in query.result.get('concepts').items():
+                            # print(result)   
+                            _query = result
+                            _query.update({
+                                # 'queryId' : query.id,
+                                'query' : query.query,
+                                # 'description' : query.description,
+                                'correlation' : query.mapcorrelation,
+                            })
+                            all_results.append(_query)
+                    except:
+                        print("Retrieve mappings: No results")
+
+
+                    celery = createRulesFromEcl.delay(
+                        taskid = task.id,
+                        ecl_results = all_results,
+                    )
+
+                else:
+                    return Response("Not all queries have returned; wait for all queries to be finished, and don't go making random requests when the button is hidden.")
+        else:
+            # No queries - remove all relevant mapping rules
+            rules = MappingRule.objects.filter(
+                project_id = task.project_id,
+                target_component = task.source_component,
+            ).delete()
+            celery = "No queries, no celery"
+
+        return Response(str(celery))
 
 class MappingReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]

@@ -178,11 +178,12 @@ class MappingEclPart(models.Model):
     ##
     task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
     query               = models.TextField(default=None, blank=True, null=True)
-    finished               = models.BooleanField(default=False)
-    failed               = models.BooleanField(default=False)
+    finished            = models.BooleanField(default=False) # Retrieved result of query from Snowstorm?
+    failed              = models.BooleanField(default=False) # Query or export failed?
     error               = models.TextField(default=None, blank=True, null=True)
     description         = models.TextField(default=None, blank=True, null=True)
     result              = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+    export_finished     = models.BooleanField(default=True) # Export to mapping rules finished?
 
     correlation_options = [
         # (code, readable)
