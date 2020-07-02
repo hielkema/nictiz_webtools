@@ -813,11 +813,14 @@ def audit_async(audit_type=None, project=None, task_id=None):
     ###### Older code, still functional. Needs to be distributed over other QA scripts in the future.
     if audit_type == "multiple_mapping" and legacy:
         # Create exclusion lists for targets such as specimen in project NHG diagnostische bepalingen -> LOINC+Snomed
-        snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
-        results = snowstorm.findConcepts(ecl='<<123038009')
-        specimen_exclusion_list = []
-        for concept in results:
-            specimen_exclusion_list.append(str(concept))
+        # snowstorm = Snowstorm(baseUrl="https://snowstorm.test-nictiz.nl", defaultBranchPath="MAIN/SNOMEDCT-NL", debug=True)
+        # results = snowstorm.findConcepts(ecl='<<123038009')
+        # specimen_exclusion_list = []
+        # for concept in results:
+        #     specimen_exclusion_list.append(str(concept))
+        # Now using the local exclusion list built in the concept
+        specimen_exclusion_list = json.loads(MappingCodesystemComponent.objects.get(component_id='123038009').descendants)
+
 
         # Functions needed for audit
         def checkConsecutive(l): 
