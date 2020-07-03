@@ -1270,7 +1270,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'code' : target.get('id'),
-                                    # 'display' : target.get('title'),
+                                    'display' : target.get('title'), ## TODO - remove for production
                                 })
 
                             # Translate the map correlation
@@ -1283,7 +1283,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 'code' : target_component.get('identifier'),
                                 'equivalence' : equivalence,
                                 'comment' : single_rule.mapadvice,
-                                # 'display' : target_component.get('title'),
+                                'display' : target_component.get('title'), ## TODO - remove for production
                             }
                             # Add products to output if they exist
                             if len(products) > 0:
@@ -1313,7 +1313,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                         # 'DEBUG_numrules' : rules_for_task.count(),
                         # 'DEBUG_productlist' : product_list,
                         'code' : source_component.get('identifier'),
-                        # 'display' : source_component.get('title'),
+                        'display' : source_component.get('title'), ## TODO - remove for production
                         'target' : targets,
                     }
                     elements.append(output)
