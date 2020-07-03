@@ -1293,19 +1293,30 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             targets.append(output)
 
                     # Add this source component with all targets and products to the element list
-                    # Only if it has approves and no rejects
-                    accepted_count = single_rule.accepted.count()
-                    rejected_count = single_rule.rejected.count()
-                    if (accepted_count > 0) and (rejected_count == 0):
-                        source_component = single_rule.static_source_component
-                        output = {
-                            # 'DEBUG_numrules' : rules_for_task.count(),
-                            # 'DEBUG_productlist' : product_list,
-                            'code' : source_component.get('identifier'),
-                            # 'display' : source_component.get('title'),
-                            'target' : targets,
-                        }
-                        elements.append(output)
+                    # # Only if it has approves and no rejects
+                    # accepted_count = single_rule.accepted.count()
+                    # rejected_count = single_rule.rejected.count()
+                    # if (accepted_count > 0) and (rejected_count == 0):
+                    #     source_component = single_rule.static_source_component
+                    #     output = {
+                    #         # 'DEBUG_numrules' : rules_for_task.count(),
+                    #         # 'DEBUG_productlist' : product_list,
+                    #         'code' : source_component.get('identifier'),
+                    #         # 'display' : source_component.get('title'),
+                    #         'target' : targets,
+                    #     }
+                    #     elements.append(output)
+                    
+                    # Alternative: export all rules, regardless of veto / approve. Responsibility for checking veto lies with exporter.
+                    source_component = single_rule.static_source_component
+                    output = {
+                        # 'DEBUG_numrules' : rules_for_task.count(),
+                        # 'DEBUG_productlist' : product_list,
+                        'code' : source_component.get('identifier'),
+                        # 'display' : source_component.get('title'),
+                        'target' : targets,
+                    }
+                    elements.append(output)
 
                 # Add the group to the group list
                 groups.append({
