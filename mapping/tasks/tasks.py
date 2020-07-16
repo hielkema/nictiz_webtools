@@ -802,6 +802,9 @@ def audit_async(audit_type=None, project=None, task_id=None):
         logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
         
+        logger.info('Spawning QA scripts for ECL-1 queries')
+        send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+        
         logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
         if tasks.count() == 1:

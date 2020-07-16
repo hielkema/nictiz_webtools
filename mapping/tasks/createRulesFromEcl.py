@@ -6,6 +6,7 @@ from celery.task.schedules import crontab
 from celery.result import AsyncResult
 from celery.decorators import periodic_task
 from celery.utils.log import get_task_logger
+from celery.execute import send_task
 import xmltodict
 from ..forms import *
 from ..models import *
@@ -128,6 +129,7 @@ def createRulesFromEcl(taskid):
         for query in eclqueries:
             query.export_finished = True
             query.save()
+        send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
     else:
         # No queries - remove all relevant mapping rules
         rules = MappingRule.objects.filter(
