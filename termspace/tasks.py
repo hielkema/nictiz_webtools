@@ -400,6 +400,8 @@ def dump_termspace_progress():
         'timmer',
         'e.degroot',
         'krul',
+        'dijkstra',
+        'h.groot',
     ]
     output = []
     for employee in terminologists:
