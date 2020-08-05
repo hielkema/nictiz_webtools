@@ -21,6 +21,8 @@ from .forms import *
 from .models import *
 from mapping.models import *
 from datetime import datetime, timedelta
+from django.utils import timezone
+import pytz
 from .tasks import *
 import time
 import environ
@@ -653,7 +655,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         output = []
         categories = []
-        last_month = datetime.today() - timedelta(days=30)
+        last_month = timezone.now() - timedelta(days=30)
         reports = TermspaceUserReport.objects.filter(time__gte=last_month)
 
         if pk == 'all':
