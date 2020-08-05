@@ -653,10 +653,12 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
     """
     permission_classes = [Permission_TermspaceProgressReport]
     def retrieve(self, request, pk=None):
+        print(f"[fetch_termspace_user_tasksupply] Starting view fetch_termspace_user_tasksupply with pk={pk}")
         output = []
         categories = []
         last_month = timezone.now() - timedelta(days=30)
         reports = TermspaceUserReport.objects.filter(time__gte=last_month)
+        print(f"[fetch_termspace_user_tasksupply] Found {reports.count()} reports.")
 
         if pk == 'all':
             statuses = reports.distinct('status').values_list('status', flat=True)
@@ -666,6 +668,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
         users = reports.distinct('username').values_list('username', flat=True)
 
         for user in users:
+            print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
             # User loop - now go over every status and get totals per day
             for status in statuses:
                 user_output = []
@@ -700,6 +703,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                     'name' : user + ' ' + str(status),
                     'data' : user_output,
                 })
+        print(f"Response: {len(categories)} days / {len(output)} users.")
         return Response({
             'progress' : {
                     'categories' : categories,
