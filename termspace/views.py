@@ -701,7 +701,7 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                             else:
                                 user_output.append(_query.last().count)
                         else:
-                            user_output.append("0")
+                            user_output.append(0)
                         # days.append(day.strftime('%d-%m-%Y'))
                 except Exception as e:
                     print(f"[fetch_termspace_user_tasksupply] Error handling {user} / {status}. Error: {e}.")
