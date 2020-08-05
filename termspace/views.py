@@ -653,7 +653,8 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         output = []
         categories = []
-        reports = TermspaceUserReport.objects.all()
+        last_month = datetime.today() - timedelta(days=30)
+        reports = TermspaceUserReport.objects.filter(time__gte=last_month)
 
         if pk == 'all':
             statuses = reports.distinct('status').values_list('status', flat=True)
