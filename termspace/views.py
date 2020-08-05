@@ -668,41 +668,44 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
         users = reports.distinct('username').values_list('username', flat=True)
 
         for user in users:
-            print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
-            # User loop - now go over every status and get totals per day
-            for status in statuses:
-                user_output = []
-                for day in (reports
-                        .annotate(tx_day=TruncDay('time'))
-                        .values('tx_day')
-                        .order_by('tx_day')
-                        .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
-                    # print('Unique day:',day)
-                    
-                    # Selects last time_stamp for each day
-                    last_entries = (TermspaceUserReport.objects
-                        .filter(username = user, status=status)
-                        .annotate(tx_day=TruncDay('time'))
-                        .order_by('tx_day')
-                        .values('tx_day')
-                        .annotate(last_entry=Max('time'))
-                        .values_list('last_entry', flat=True))
-                    query = TermspaceUserReport.objects.filter(
-                        time__in=last_entries,
-                    )
-                    # print('Looking up: ', status, user)
-                    _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
-                    if _query.last().time.strftime('%d-%m-%Y') not in categories:
-                        categories.append(_query.last().time.strftime('%d-%m-%Y'))
-                    if _query.count() == 0:
-                        user_output.append(0)
-                    else:
-                        user_output.append(_query.last().count)
-                    # days.append(day.strftime('%d-%m-%Y'))
-                output.append({
-                    'name' : user + ' ' + str(status),
-                    'data' : user_output,
-                })
+            try:
+                print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
+                # User loop - now go over every status and get totals per day
+                for status in statuses:
+                    user_output = []
+                    for day in (reports
+                            .annotate(tx_day=TruncDay('time'))
+                            .values('tx_day')
+                            .order_by('tx_day')
+                            .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
+                        # print('Unique day:',day)
+                        
+                        # Selects last time_stamp for each day
+                        last_entries = (TermspaceUserReport.objects
+                            .filter(username = user, status=status)
+                            .annotate(tx_day=TruncDay('time'))
+                            .order_by('tx_day')
+                            .values('tx_day')
+                            .annotate(last_entry=Max('time'))
+                            .values_list('last_entry', flat=True))
+                        query = TermspaceUserReport.objects.filter(
+                            time__in=last_entries,
+                        )
+                        # print('Looking up: ', status, user)
+                        _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
+                        if _query.last().time.strftime('%d-%m-%Y') not in categories:
+                            categories.append(_query.last().time.strftime('%d-%m-%Y'))
+                        if _query.count() == 0:
+                            user_output.append(0)
+                        else:
+                            user_output.append(_query.last().count)
+                        # days.append(day.strftime('%d-%m-%Y'))
+                    output.append({
+                        'name' : user + ' ' + str(status),
+                        'data' : user_output,
+                    })
+            except Exception as e:
+                print(f"[fetch_termspace_user_tasksupply] Error handling {user}. Error: {e}.")
         print(f"Response: {len(categories)} days / {len(output)} users.")
         return Response({
             'progress' : {
