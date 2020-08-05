@@ -668,11 +668,11 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
         users = reports.distinct('username').values_list('username', flat=True)
 
         for user in users:
-            try:
-                print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
-                # User loop - now go over every status and get totals per day
-                for status in statuses:
-                    user_output = []
+            print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
+            # User loop - now go over every status and get totals per day
+            for status in statuses:
+                user_output = []
+                try:
                     for day in (reports
                             .annotate(tx_day=TruncDay('time'))
                             .values('tx_day')
@@ -700,12 +700,13 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         else:
                             user_output.append(_query.last().count)
                         # days.append(day.strftime('%d-%m-%Y'))
-                    output.append({
-                        'name' : user + ' ' + str(status),
-                        'data' : user_output,
-                    })
-            except Exception as e:
-                print(f"[fetch_termspace_user_tasksupply] Error handling {user}. Error: {e}.")
+                except Exception as e:
+                    print(f"[fetch_termspace_user_tasksupply] Error handling {user} / {status}. Error: {e}.")
+                output.append({
+                    'name' : user + ' ' + str(status),
+                    'data' : user_output,
+                })
+            
         print(f"Response: {len(categories)} days / {len(output)} users.")
         return Response({
             'progress' : {
