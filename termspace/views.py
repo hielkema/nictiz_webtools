@@ -693,12 +693,15 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
                         )
                         # print('Looking up: ', status, user)
                         _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
-                        if _query.last().time.strftime('%d-%m-%Y') not in categories:
-                            categories.append(_query.last().time.strftime('%d-%m-%Y'))
-                        if _query.count() == 0:
-                            user_output.append(0)
+                        if _query.count() > 0:
+                            if _query.last().time.strftime('%d-%m-%Y') not in categories:
+                                categories.append(_query.last().time.strftime('%d-%m-%Y'))
+                            if _query.count() == 0:
+                                user_output.append(0)
+                            else:
+                                user_output.append(_query.last().count)
                         else:
-                            user_output.append(_query.last().count)
+                            user_output.append("0")
                         # days.append(day.strftime('%d-%m-%Y'))
                 except Exception as e:
                     print(f"[fetch_termspace_user_tasksupply] Error handling {user} / {status}. Error: {e}.")
