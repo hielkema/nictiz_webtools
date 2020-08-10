@@ -1060,7 +1060,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
         # Loop through tasks
         for task in tasks:
             if task.status is not task.project_id.status_complete:
-                print(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status_title}] other than completed [{task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
+                print(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 debug_list.append(f"Ignored a task {str(task.id)} with a status [{task.status_title}] other than completed [{task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 # Remove all rules in the RC database originating from this task, since it is rejected.
                 rc_rules = MappingReleaseCandidateRules.objects.filter(
