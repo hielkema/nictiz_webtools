@@ -1060,7 +1060,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
         # Loop through tasks
         for task in tasks:
             if task.status != task.project_id.status_complete:
-                logger.debug('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
+                debug_list.append('Ignored a task with a status other than completed - should probably be removed from the dev database, Ok ok ill do this now... Task ID:',task.id)
                 # Remove all rules in the RC database originating from this task, since it is rejected.
                 rc_rules = MappingReleaseCandidateRules.objects.filter(
                         static_source_component_ident = task.source_component.component_id,
@@ -1069,11 +1069,13 @@ def exportCodesystemToRCRules(rc_id, user_id):
                 rc_rules.delete()
 
             else:
+                print(f"Handle task {task.id}")
                 rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
                 
                 ## First: check if any of the rules for this task have changes
                 ## if so: delete all existing rules in RC and replace them all
                 for rule in rules:
+                    print(f"Handle rule {rule.id} of task {task.id}")
                     # Handle bindings / specifications / products
                     mapspecifies = []
                     for binding in rule.mapspecifies.all():
@@ -1105,6 +1107,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
                     )
                     # Check if rules with this criterium exist without changes (ignoring veto/fiat), if so: let it be and go to the next rule
                     if rc_rule.count() == 1:
+                        print(f"Pre-existing rule - skip")
                         rc_rule = rc_rule.first()
                         debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
                     else:
@@ -1113,12 +1116,14 @@ def exportCodesystemToRCRules(rc_id, user_id):
                             export_rc = rc,
                         )
                         if rc_rule_todelete.count() > 0:
+                            print(f"Rule with changes - delete everything in rc in prep for copying")
                             debug_list.append('Found rule(s) with changes for component {} - deleting all RC rules for this task.'.format(task.source_component.component_id))
                             rc_rule_todelete.delete()
                 ### End check for changes
                 
                 ## Now copy the new rules where needed
                 for rule in rules:
+                    print(f"Copy rule {rule.id} for task {task.id}")
                     # Handle bindings / specifications / products
                     mapspecifies = []
                     for binding in rule.mapspecifies.all():
@@ -1150,15 +1155,18 @@ def exportCodesystemToRCRules(rc_id, user_id):
                     )
                     # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
                     if rc_rule.count() == 1:
+                        print('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
                         rc_rule = rc_rule.first()
                         debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
 
                     elif rc_rule.count() > 1:
-                        logger.info(rc_rule.all())
-                        logger.info("Multiple RC rules exists for a single dev rule. PASS.")
+                        debug_list.append(rc_rule.all())
+                        print("Multiple RC rules exists for a single dev rule. PASS.")
+                        debug_list.append("Multiple RC rules exists for a single dev rule. PASS.")
                         pass
                     # If not, make a new one
                     else:
+                        print(f"Add rule {rule.id} to database.")
                         rc_rule = MappingReleaseCandidateRules.objects.create(
                             export_rule = rule,
                             export_rc = rc,
