@@ -1155,8 +1155,8 @@ def exportCodesystemToRCRules(rc_id, user_id):
                     )
                     # Check if rules with this criterium exist, if so: let it be and go to the next rule in order to avoid duplicates
                     if rc_rule.count() == 1:
-                        print('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
                         rc_rule = rc_rule.first()
+                        print('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
                         debug_list.append('Found a pre-existing exported rule [dev {}/{} = rc {}] that is equal to dev path - skipping'.format(task.source_component.component_id, rule.id, rc_rule.id))
 
                     elif rc_rule.count() > 1:
