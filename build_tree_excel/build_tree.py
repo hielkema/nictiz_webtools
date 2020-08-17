@@ -1,5 +1,5 @@
 from __future__ import division
-import json, requests, re, time, sys, pandas, pprint, pickle, datetime
+import json, requests, re, time, sys, pandas, pickle, datetime
 from array import array
 from .snowstorm_client import *
 from openpyxl import Workbook

@@ -19,8 +19,6 @@ from .models import *
 import time
 import environ
 
-from pprint import pprint
-
 from rest_framework import viewsets
 from .serializers import *
 from rest_framework import views
@@ -59,7 +57,7 @@ class PostcoExpression(viewsets.ViewSet):
     permission_classes = [AllowAny]
     def create(self, request):
         data = request.data
-        pprint(data)
+        print(data)
         print("\n ------------")
 
         string =    f"=== {data.get('rootConcept').get('sctid')} |{data.get('rootConcept').get('fsn')} : \n"

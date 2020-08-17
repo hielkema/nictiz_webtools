@@ -16,7 +16,6 @@ import environ
 from .build_tree import *
 
 import csv, multiprocessing, pandas, sys, os
-from pprint import pprint
 from openpyxl import Workbook
 from os import listdir
 import glob

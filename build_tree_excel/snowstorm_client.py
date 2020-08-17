@@ -2,7 +2,7 @@
 # No caching to files
 
 # import
-import json, requests, re, time, sys, pandas, pprint, pickle
+import json, requests, re, time, sys, pandas, pickle
 
 # Server IP
 server_ip = 'https://snowstorm.test-nictiz.nl'
@@ -199,7 +199,6 @@ def get_map(concept):
                 for value in maps_local['items']:
                     conceptList[len(conceptList)+ 1] = value
                 print("lengte: ",len(conceptList))
-                #dataprint.pprint(conceptList)
         except:
             error = 1
         print("Aan einde loop lengte: {}".format(len(conceptList)))
@@ -217,22 +216,20 @@ def get_map(concept):
 if __name__ == "__main__":
     concept = '36653000'
     data = get_concept(concept)
-    dataprint = pprint.PrettyPrinter(indent=4)
-    # dataprint.pprint(data)
     print("=== Concept client ===")
     print("NL:")
-    dataprint.pprint(data['nl'])
+    print(data['nl'])
     print("Patient:")
-    dataprint.pprint(data['nlpatient'])
+    print(data['nlpatient'])
     print("EN:")
-    dataprint.pprint(data['en'])
+    print(data['en'])
 
     print("\n Search:")
-    dataprint.pprint(search_term("Bowen disease of skin"))
+    print(search_term("Bowen disease of skin"))
 
     print("\n Map: geen test")
 
     concept = '74739000'
     data = get_alternative(concept)
     print("\n Alternatief:")
-    dataprint.pprint(data)
+    print(data)

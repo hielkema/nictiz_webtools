@@ -17,7 +17,7 @@ from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
 import json
-from .forms import *
+# from .forms import *
 from .models import *
 from mapping.models import *
 from datetime import datetime, timedelta

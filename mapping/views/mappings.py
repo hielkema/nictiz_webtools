@@ -15,7 +15,6 @@ from celery.task.control import inspect, revoke
 from pandas import read_excel, read_csv
 import xmltodict
 import sys, os
-import pprint
 import environ
 import time
 import random

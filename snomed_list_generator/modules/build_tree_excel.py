@@ -1,5 +1,5 @@
 from __future__ import division
-import json, requests, re, time, sys, pandas, pprint, pickle, datetime
+import json, requests, re, time, sys, pandas, pickle, datetime
 from array import array
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter

@@ -67,6 +67,7 @@ INSTALLED_APPS = (
     'termspace',
     'dhd',
     'postcoordination',
+    'validation',
 )
 
 MIDDLEWARE = (

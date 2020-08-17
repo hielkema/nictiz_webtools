@@ -1,4 +1,4 @@
-import pandas, json, requests, re, pickle, pprint, xlwt, xlrd, time, datetime, sys, os
+import pandas, json, requests, re, pickle, xlwt, xlrd, time, datetime, sys, os
 from xlutils.copy import copy
 from xlrd import open_workbook
 from xlwt import easyxf
@@ -23,7 +23,6 @@ def med_lookup(zoekterm):
     #bst902t = pandas.read_csv(directory+"/resources/gstandaard/bst902t.csv", sep=";", encoding = "ISO-8859-1")
     #bst902t = bst902t.applymap(str)
 
-    #dataprint = pprint.PrettyPrinter(indent=4)
     print("Data:")
 
     #tijdVoorBestandsnaam = str(start)
