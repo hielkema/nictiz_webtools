@@ -225,129 +225,135 @@ class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-            print(str(request.data)[:100],"........")
-            task = MappingTask.objects.get(id=request.data.get('task'))
-            current_user = User.objects.get(id=request.user.id)
+        try:
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                print(str(request.data)[:100],"........")
+                task = MappingTask.objects.get(id=request.data.get('task'))
+                current_user = User.objects.get(id=request.user.id)
 
-            if MappingProject.objects.get(id=task.project_id.id, access__username=current_user) and task.user == current_user:
-                # Handle 1-Many mapping targets
-                if task.project_id.project_type == '1':
-                    print('\n\n----------------------------------\n')
-                    for target in request.data.get('targets'):
-                        print("ID",             target.get('target').get('id'))     
-                        print("NIEUW",          target.get('target').get('new'))     
-                        print("component_id",   target.get('target').get('component_id'))     
-                        print("component_title",target.get('target').get('component_title'))
-                        print("rule",           target.get('rule'))
-                        print("correlation",    target.get('correlation'))
-                        print("advice",         target.get('advice'))
-                        print("group",          target.get('group'))
-                        print("priority",       target.get('priority'))
-                        print("dependency",     target.get('dependency'))
-                        print("DELETE",         target.get('delete'))
-                        print("")
+                if MappingProject.objects.get(id=task.project_id.id, access__username=current_user) and task.user == current_user:
+                    # Handle 1-Many mapping targets
+                    if task.project_id.project_type == '1':
+                        print('\n\n----------------------------------\n')
+                        for target in request.data.get('targets'):
+                            print("ID",             target.get('target').get('id'))     
+                            print("NIEUW",          target.get('target').get('new'))     
+                            print("component_id",   target.get('target').get('component_id'))     
+                            print("component_title",target.get('target').get('component_title'))
+                            print("rule",           target.get('rule'))
+                            print("correlation",    target.get('correlation'))
+                            print("advice",         target.get('advice'))
+                            print("group",          target.get('group'))
+                            print("priority",       target.get('priority'))
+                            print("dependency",     target.get('dependency'))
+                            print("DELETE",         target.get('delete'))
+                            print("")
 
-                        if target.get('delete') == True:
-                            print('Get ready to delete')
-                            mapping_rule = MappingRule.objects.get(id=target.get('id'))
-                            print(mapping_rule)
-                            mapping_rule.delete()
-                            print(mapping_rule)
-                        elif target.get('id') != 'extra':
-                            print("Aanpassen mapping", target.get('id'))
-                            mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                            if target.get('delete') == True:
+                                print('Get ready to delete')
+                                mapping_rule = MappingRule.objects.get(id=target.get('id'))
+                                print(mapping_rule)
+                                mapping_rule.delete()
+                                print(mapping_rule)
+                            elif target.get('id') != 'extra':
+                                print("Aanpassen mapping", target.get('id'))
+                                mapping_rule = MappingRule.objects.get(id=target.get('id'))
 
-                            mapping_rule.mapgroup           = target.get('group')
-                            mapping_rule.mappriority        = target.get('priority')
-                            mapping_rule.mapcorrelation     = target.get('correlation')
-                            mapping_rule.mapadvice          = target.get('advice')
-                            mapping_rule.maprule            = target.get('rule')
+                                mapping_rule.mapgroup           = target.get('group')
+                                mapping_rule.mappriority        = target.get('priority')
+                                mapping_rule.mapcorrelation     = target.get('correlation')
+                                mapping_rule.mapadvice          = target.get('advice')
+                                mapping_rule.maprule            = target.get('rule')
 
-                            # Handle specifies/dependency/rule binding
-                            if target.get('dependency'):
-                                for dependency in target.get('dependency'):
-                                    print("Handling",dependency) # TODO debug
-                                    # If binding should be true:
-                                    # First check if the relationship exists in DB, otherwise create it.
-                                    if dependency.get('binding'):
-                                        # Check if binding does not exists in DB
-                                        print('Binding should be present')
-                                        if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                            print("Binding (many to many) not present in DB - creating")
-                                            addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                            print('Adding relationship to rule', addrule)
-                                            mapping_rule.mapspecifies.add(addrule)
-                                            # Sanity check: success?
-                                            if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                                print("Created")
+                                # Handle specifies/dependency/rule binding
+                                if target.get('dependency'):
+                                    for dependency in target.get('dependency'):
+                                        print("Handling",dependency) # TODO debug
+                                        # If binding should be true:
+                                        # First check if the relationship exists in DB, otherwise create it.
+                                        if dependency.get('binding'):
+                                            # Check if binding does not exists in DB
+                                            print('Binding should be present')
+                                            if not mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                                print("Binding (many to many) not present in DB - creating")
+                                                addrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                                print('Adding relationship to rule', addrule)
+                                                mapping_rule.mapspecifies.add(addrule)
+                                                # Sanity check: success?
+                                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                                    print("Created")
+                                                else:
+                                                    print("Failed")
                                             else:
-                                                print("Failed")
+                                                print('Binding already present')
+                                        # If binding should not exist:
+                                        # Check if present, if so: remove
                                         else:
-                                            print('Binding already present')
-                                    # If binding should not exist:
-                                    # Check if present, if so: remove
-                                    else:
-                                        print('Binding should not be present')
-                                        # Check if binding exists in DB
-                                        if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                            print("Binding (many to many) present in DB but should not be - removing")
-                                            remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
-                                            mapping_rule.mapspecifies.remove(remrule)
-                                            # Sanity check: success?
+                                            print('Binding should not be present')
+                                            # Check if binding exists in DB
                                             if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
-                                                print("Still present")
+                                                print("Binding (many to many) present in DB but should not be - removing")
+                                                remrule = MappingRule.objects.get(id=dependency.get('rule_id'))
+                                                mapping_rule.mapspecifies.remove(remrule)
+                                                # Sanity check: success?
+                                                if mapping_rule.mapspecifies.filter(id=dependency.get('rule_id')).exists():
+                                                    print("Still present")
+                                                else:
+                                                    print("Succesfully removed")
                                             else:
-                                                print("Succesfully removed")
-                                        else:
-                                            print('Binding was already absent')
-                                print("Done handling dependency for",dependency)
-                            mapping_rule.save()
+                                                print('Binding was already absent')
+                                    print("Done handling dependency for",dependency)
+                                mapping_rule.save()
 
-                    audit_async.delay('multiple_mapping', task.project_id.id, task.id)
-                    return Response([])
-                # Handle ECL-1 mapping targets
-                elif task.project_id.project_type == '4':
-                    print("MappingTargets/create - Handling ECL-1 mapping targets for task",task.id)
-                    
-                    queries = request.data.get('targets').get('queries')
-                    for query in queries:
-                        print("Handling query",str(query)[:100],".........")
-                        if query.get('delete') == True:
-                            print('delete query ',query.get('id'))
-                            current_query = MappingEclPart.objects.get(id = query.get('id'))
-                            current_query.delete()
-                        else:                           
-                            if query.get('id') == 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
-                                print(f"Creating new query with description {query.get('description')} and query {query.get('query')}")
-                                currentQuery = MappingEclPart.objects.create(
-                                    task = task,
-                                    description = query.get('description'),
-                                    query = query.get('query'),
-                                    mapcorrelation = query.get('correlation'),
-                                )
-                                UpdateECL1Task.delay(currentQuery.id, query.get('query'))
-                            elif query.get('id') != 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
-                                print(f"Editing existing query {query.get('id')}")
-                                currentQuery = MappingEclPart.objects.get(id = query.get('id'))
-                                UpdateECL1Task.delay(currentQuery.id, query.get('query'))
-                                currentQuery.description = query.get('description')
-                                currentQuery.query = query.get('query')
-                                currentQuery.mapcorrelation = query.get('correlation')
-                                currentQuery.save()
-                            else:
-                                print("Empty query?")
-
+                        audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                        return Response([])
+                    # Handle ECL-1 mapping targets
+                    elif task.project_id.project_type == '4':
+                        print("MappingTargets/create - Handling ECL-1 mapping targets for task",task.id)
                         
-                    return Response({
-                        'message': 'ECL-1 targets',
-                    })
-            # Error - no access due to project or task requirements
+                        queries = request.data.get('targets').get('queries')
+                        for query in queries:
+                            print("Handling query",str(query)[:100],".........")
+                            if query.get('delete') == True:
+                                print('delete query ',query.get('id'))
+                                current_query = MappingEclPart.objects.get(id = query.get('id'))
+                                current_query.delete()
+                            else:                           
+                                if query.get('id') == 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
+                                    print(f"Creating new query with description {query.get('description')} and query {query.get('query')}")
+                                    currentQuery = MappingEclPart.objects.create(
+                                        task = task,
+                                        description = query.get('description'),
+                                        query = query.get('query'),
+                                        mapcorrelation = query.get('correlation'),
+                                    )
+                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
+                                elif query.get('id') != 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
+                                    print(f"Editing existing query {query.get('id')}")
+                                    currentQuery = MappingEclPart.objects.get(id = query.get('id'))
+                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
+                                    currentQuery.description = query.get('description')
+                                    currentQuery.query = query.get('query')
+                                    currentQuery.mapcorrelation = query.get('correlation')
+                                    currentQuery.save()
+                                else:
+                                    print("Empty query?")
+
+                            
+                        return Response({
+                            'message': 'ECL-1 targets',
+                        })
+                # Error - no access due to project or task requirements
+                else:
+                    return Response('Geen toegang. Niet jouw taak? Geen toegang tot het project?')
+            # Error - no acces due to no rights
             else:
-                return Response('Geen toegang. Niet jouw taak? Geen toegang tot het project?')
-        # Error - no acces due to no rights
-        else:
-            return Response('Geen toegang tot -edit mapping-')
+                return Response('Geen toegang tot -edit mapping-')
+        except Exception as e:
+            print("\n\nException caught")
+            print("Request by",str(request.user))
+            print(e)
+            print("\n\n")
 
 
     def retrieve(self, request, pk=None):
