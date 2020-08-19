@@ -226,7 +226,7 @@ class MappingTargets(viewsets.ViewSet):
 
     def create(self, request):
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-            print(request.data)
+            print(str(request.data)[:100],"........")
             task = MappingTask.objects.get(id=request.data.get('task'))
             current_user = User.objects.get(id=request.user.id)
 
@@ -312,7 +312,7 @@ class MappingTargets(viewsets.ViewSet):
                     
                     queries = request.data.get('targets').get('queries')
                     for query in queries:
-                        print("Handling query",query)
+                        print("Handling query",str(query)[:100],".........")
                         if query.get('delete') == True:
                             print('delete query ',query.get('id'))
                             current_query = MappingEclPart.objects.get(id = query.get('id'))
