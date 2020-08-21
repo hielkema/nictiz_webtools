@@ -28,8 +28,9 @@ class Task(models.Model):
     created     = models.DateTimeField(default=timezone.now)
     project     = models.ForeignKey('Project', related_name="task_project_validation", on_delete=models.PROTECT, blank=True, null=True, default=None)
     data        = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
-    status      = models.ForeignKey('Status', related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
-    user        = models.ForeignKey(User, related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
+    # status      = models.ForeignKey('Status', related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
+    access      = models.ManyToManyField(User, related_name="validation_task_users", default=None, blank=True)
+    # user        = models.ForeignKey(User, related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
     
 # class Question(models.Model):
 #     created     = models.DateTimeField(default=timezone.now)

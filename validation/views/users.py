@@ -15,6 +15,7 @@ from django.contrib.postgres.search import SearchQuery, SearchVector, SearchRank
 from django.db.models import Q
 from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth.models import User
 from django.db.models import Max
 import json
 from ..forms import * 
@@ -32,7 +33,7 @@ from rest_framework import viewsets
 from ..serializers import *
 from rest_framework import views
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions 
 
 from snowstorm_client import Snowstorm
 
@@ -49,14 +50,41 @@ class Permission_Validation_access(permissions.BasePermission):
         if 'validation | access' in request.user.groups.values_list('name', flat=True):
             return True
 
-# Search termspace comments
-class record_answer(viewsets.ViewSet):
+# Return all users for admin purposes
+class all_users(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    def retrieve(self, request, pk=None):
+    def list(self, request):
   
-        context = {
-            'test' : True,
-            'pk' : pk,
-        }
+        users = User.objects.all()
 
+        output = []
+        for user in users:
+            output.append({
+                'id' : user.id,
+                'username' : user.username,
+            })
+
+        context = output
+        return Response(context)
+
+# Return tasks per user
+class user_stats(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    def list(self, request):
+  
+        users = User.objects.all()
+
+        output = []
+        for user in users:
+            # Fetch tasks for user
+            tasks = Task.objects.filter(access = user)
+            if tasks.count() > 0:
+                output.append({
+                    'id' : user.id,
+                    'username' : user.username,
+                    'task_count' : tasks.count(),
+                    'task_ids' : tasks.values('data__sortIndex')
+                })
+
+        context = output
         return Response(context)

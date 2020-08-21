@@ -32,7 +32,7 @@ from rest_framework import viewsets
 from ..serializers import *
 from rest_framework import views
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions 
 
 from snowstorm_client import Snowstorm
 
@@ -50,49 +50,42 @@ class Permission_Validation_access(permissions.BasePermission):
             return True
 
 # Search termspace comments
-class import_tasks(viewsets.ViewSet):
+class receive_form(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    def retrieve(self, request, pk=None):
-
-        # Select correct project
-        project = Project.objects.get(title = 'Validatie patiëntvriendelijke beschrijvingen AMC')
-        print(project)
-
-        # Get data from .tsv file
-        df = pd.read_csv('./validation/resources/importdata.tsv', sep='\t', encoding = "ISO-8859-1")
-        
-        output = []
-        for index, row in df.iterrows():
-            # sortIndex sctId	dtId	preferredTerm	text
-            data = {
-                'sortIndex'     : int(row[0]),
-                'sctId'         : int(row[1]),
-                'dtId'          : int(row[2]),
-                'preferredTerm' : str(row[3]),
-                'text'          : str(row[4]),
-            }
-            output.append(data)
-            obj, created = Task.objects.get_or_create(
-                project = project,
-                data = data,
-
-            )
-            if created:
-                obj.status = project.new_status
-                obj.save()
-            data.update({
-                'created' : created,
-            })
-        
-        context = output
-
-        return Response(context)
-
-class import_tasks(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
     def create(self, request):
+  
+        data = request.data.get('payload')
+        print(f"Received form from {str(request.user)} => {data}")
 
+        current_user = User.objects.get(id = request.user.id)
+        print(f"Task ID = {request.data.get('payload').get('taskId')}")
+        task = Task.objects.get(id = request.data.get('payload').get('taskId'))
 
-        context = "test"
+        # Some logic
+        if data.get('errors') == 0:
+            data['what_errors'] = ''
+        if data.get('cannot_validate') == 0:
+            data['why_no_validate'] = ''
+        elif data.get('cannot_validate') == 1:
+            data['errors'] = None
+            data['what_errors'] = None
+            data['clarity'] = None
+            data['relevance'] = None
+            data['acceptable'] = None
+            data['complete'] = None
+            data['feedback'] = None
+
+        obj = Answer.objects.create(
+            task = task,
+            user = current_user,
+            data = data,
+        )
+
+        task.access.remove(current_user)
+
+        context = {
+            'received' : request.data.get('payload'),
+            'obj' : str(obj),
+        }
+
         return Response(context)
