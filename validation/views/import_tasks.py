@@ -87,12 +87,3 @@ class import_tasks(viewsets.ViewSet):
         context = output
 
         return Response(context)
-
-class import_tasks(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def create(self, request):
-
-
-        context = "test"
-        return Response(context)
