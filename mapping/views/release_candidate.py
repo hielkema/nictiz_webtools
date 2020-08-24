@@ -73,10 +73,13 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     For retrieve, use PK
     For create, use rc_id, action='save', title, rc_notes (releasenotes)
     """
-    permission_classes = [Permission_MappingRcAudit]
+    permission_classes = [permissions.AllowAny]
     def create(self, request):
         payload = request.data
         print(payload)
+        # Check permissions
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.get(id=payload.get('rc_id'), access__username=current_user)
         # Start celery task voor creating
         GenerateFHIRConceptMap.delay(
             rc_id=payload.get('rc_id'),
@@ -128,35 +131,38 @@ class RCRuleReview(viewsets.ViewSet):
         action = str(payload.get('action'))
 
         print('Checking RC {}.'.format(rc_id))
-        rc = MappingReleaseCandidate.objects.get(id=rc_id)
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.get(id=rc_id, access__username=current_user)
         print('Found RC',rc,'.')
 
-        print("Printing first few rules")
-        test_rules = MappingRule.objects.all()[:10]
-        for rule in test_rules:
-            print(rule, rule.source_component.component_id)
+        # Only allow review on non-production RC's
+        if rc.status != '3':
+            print("Printing first few rules")
+            test_rules = MappingRule.objects.all()[:10]
+            for rule in test_rules:
+                print(rule, rule.source_component.component_id)
 
-        # Identify rules in RC DB
-        rules = MappingReleaseCandidateRules.objects.filter(
-            static_source_component_ident = component_id,
-            export_rc = rc,
-        )
-        print('Found {} rules for concept {} in RC {}.'.format(rules.count(), component_id, rc_id))
-        for rule in rules:
-            user = User.objects.get(id=request.user.id)
-            if action == 'fiat':
-                # Add fiat
-                rule.accepted.add(user)
-                # Remove veto if it exists
-                rule.rejected.remove(user)
-            elif action == 'veto':
-                rule.rejected.add(user)
-                rule.accepted.remove(user)
-            rule.save()
-            print('Accepted bindings for:')
-            print(rule, rule.accepted.all(), rc_id, component_id, action)
-            print('Rejected bindings for:')
-            print(rule, rule.rejected.all(), rc_id, component_id, action)
+            # Identify rules in RC DB
+            rules = MappingReleaseCandidateRules.objects.filter(
+                static_source_component_ident = component_id,
+                export_rc = rc,
+            )
+            print('Found {} rules for concept {} in RC {}.'.format(rules.count(), component_id, rc_id))
+            for rule in rules:
+                user = User.objects.get(id=request.user.id)
+                if action == 'fiat':
+                    # Add fiat
+                    rule.accepted.add(user)
+                    # Remove veto if it exists
+                    rule.rejected.remove(user)
+                elif action == 'veto':
+                    rule.rejected.add(user)
+                    rule.accepted.remove(user)
+                rule.save()
+                print('Accepted bindings for:')
+                print(rule, rule.accepted.all(), rc_id, component_id, action)
+                print('Rejected bindings for:')
+                print(rule, rule.rejected.all(), rc_id, component_id, action)
 
         return Response('output')
 
@@ -167,7 +173,8 @@ class ReleaseCandidates(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def list(self, request, pk=None):
-        rc_list = MappingReleaseCandidate.objects.all().order_by('-created')
+        current_user = User.objects.get(id=request.user.id)
+        rc_list = MappingReleaseCandidate.objects.filter(access__username=current_user).order_by('-created')
         output = []
         status_options = [
             # (code, readable)
@@ -211,110 +218,132 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
         codesystem = int(payload.get('codesystem',0))
         id = int(payload.get('id',0))
 
-        # TODO - move to celery task
-        if selection == 'codesystem':
-            if 'mapping | audit mass pull changes' in request.user.groups.values_list('name', flat=True):
-                exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
-            else:
-                return Response({
-                    'message' : 'Geen toegang.'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-        elif selection == "component" and codesystem:
-            def component_dump(codesystem=None, component_id=None):
-                component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
-                output = {
-                    'identifier'    : component.component_id,
-                    'title'         : component.component_title,
-                    'extra'         : component.component_extra_dict,
-                    'created'       : str(component.component_created),
-                    'codesystem'    : {
-                        'id'        : component.codesystem_id.id,
-                        'name'      : component.codesystem_id.codesystem_title,
-                        'version'   : component.codesystem_id.codesystem_version,
-                        'fhir_uri'  : component.codesystem_id.codesystem_fhir_uri,
-                    }
-                }
-                return output
-            # Get all tasks for requested component - based on the identifier of the source component
-            tasks = MappingTask.objects.filter(source_component__component_id = id)
-            rc = MappingReleaseCandidate.objects.get(id = rc_id)
-            print("Received update request for RC {rc} for component {component}. Found {numtasks} tasks.".format(rc=rc, component=id, codesystem=codesystem, numtasks=tasks.count()))
-            if not tasks.count() == 1:
-                print("Error: did not find exactly 1 task with the given attributes.")
-            else:
-                # Select the task
-                task = tasks.first()
-                # Find all rules in development using this source component
-                rules = MappingRule.objects.filter(source_component=task.source_component)
-                # Provide useful entertainment.
-                print("Nice. Found exactly one task. This task has {numrules} rules associated in the development database. Continue.".format(numrules = rules.count()))
-                
-                # Find all rules in the RC database with these characteristics and delete them.
-                rc_rules = MappingReleaseCandidateRules.objects.filter(
-                    export_task = task,
-                    export_rc = rc,
-                    )
-                rc_rules_count = rc_rules.count()
-                rc_rules.delete()
-                print("Found {numrules} rules in the RC database. Deleting these.".format(numrules=rc_rules_count))
-                
-                # Only continue if the task does not have status - rejected, otherwise skip re-adding the rules.
-                if task.status == task.project_id.status_rejected:
-                    print("Stop adding rules derived from now rejected task: {}".format(task.id))
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.get(id = rc_id, access__username=current_user)
+        if rc:
+            if selection == 'codesystem':
+                if ('mapping | audit mass pull changes' in request.user.groups.values_list('name', flat=True)) and (rc.status != '3'):
+                    exportCodesystemToRCRules.delay(rc_id=rc_id, user_id=request.user.id)
                 else:
-                    # Loop through the rules in development, and update RC database with data from the development database
-                    for rule in rules:
-                        # Handle bindings / specifications / products
-                        mapspecifies = []
-                        for binding in rule.mapspecifies.all():
-                            mapspecifies.append({
-                                'id' : binding.target_component.component_id,
-                                'title' : binding.target_component.component_title,
-                            })
-                        # Create the actual rule in the RC database
-                        rc_rule = MappingReleaseCandidateRules.objects.create(
-                                export_rc = rc,
-                                export_user = User.objects.get(id=request.user.id),
-                                export_task = task,
-                                export_rule = rule,
-                                task_status = task.status.status_title,
-                                task_user = task.user.username,
-                                source_component = rule.source_component,
-                                static_source_component_ident = rule.source_component.component_id,
-                                static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
-                                target_component = rule.target_component,
-                                static_target_component_ident = rule.target_component.component_id,
-                                static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
-                                mapgroup = rule.mapgroup,
-                                mappriority = rule.mappriority,
-                                mapcorrelation = rule.mapcorrelation,
-                                mapadvice = rule.mapadvice,
-                                maprule = rule.maprule,
-                                mapspecifies = mapspecifies,
-                            )
-                        rc_rule.save()
-                        print("Added {rule}".format(rule=rc_rule))
-                rc_rules = MappingReleaseCandidateRules.objects.filter(
-                    export_task = task,
-                    export_rc = rc,
-                    )
-                print("There are now {numrules} rules in the RC database.".format(numrules=rc_rules.count()))
+                    return Response({
+                        'message' : 'Geen toegang. Geen permissies voor audit mass pull, of de status van de RC is \'productie\'.'
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+            elif (selection == "component") and codesystem and (rc.status != '3'):
+                print('gogogo')
+                def component_dump(codesystem=None, component_id=None):
+                    component = MappingCodesystemComponent.objects.get(component_id = component_id, codesystem_id=codesystem)
+                    output = {
+                        'identifier'    : component.component_id,
+                        'title'         : component.component_title,
+                        'extra'         : component.component_extra_dict,
+                        'created'       : str(component.component_created),
+                        'codesystem'    : {
+                            'id'        : component.codesystem_id.id,
+                            'name'      : component.codesystem_id.codesystem_title,
+                            'version'   : component.codesystem_id.codesystem_version,
+                            'fhir_uri'  : component.codesystem_id.codesystem_fhir_uri,
+                        }
+                    }
+                    return output
+                # Get all tasks for requested component - based on the identifier of the source component
+                tasks = MappingTask.objects.filter(source_component__component_id = id)
+                rc = MappingReleaseCandidate.objects.get(id = rc_id)
+                print("Received update request for RC {rc} for component {component}. Found {numtasks} tasks.".format(rc=rc, component=id, codesystem=codesystem, numtasks=tasks.count()))
+                if not tasks.count() == 1:
+                    print("Error: did not find exactly 1 task with the given attributes.")
+                else:
+                    # Select the task
+                    task = tasks.first()
+                    # Find all rules in development using this source component
+                    rules = MappingRule.objects.filter(source_component=task.source_component)
+                    # Provide useful entertainment.
+                    print("Nice. Found exactly one task. This task has {numrules} rules associated in the development database. Continue.".format(numrules = rules.count()))
+                    
+                    # Find all rules in the RC database with these characteristics and delete them.
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                        export_task = task,
+                        export_rc = rc,
+                        )
+                    rc_rules_count = rc_rules.count()
+                    rc_rules.delete()
+                    print("Found {numrules} rules in the RC database. Deleting these.".format(numrules=rc_rules_count))
+                    
+                    # Only continue if the task does not have status - rejected, otherwise skip re-adding the rules.
+                    if task.status == task.project_id.status_rejected:
+                        print("Stop adding rules derived from now rejected task: {}".format(task.id))
+                    else:
+                        # Loop through the rules in development, and update RC database with data from the development database
+                        for rule in rules:
+                            # Handle bindings / specifications / products
+                            mapspecifies = []
+                            for binding in rule.mapspecifies.all():
+                                mapspecifies.append({
+                                    'id' : binding.target_component.component_id,
+                                    'title' : binding.target_component.component_title,
+                                })
+                            # Create the actual rule in the RC database
+                            rc_rule = MappingReleaseCandidateRules.objects.create(
+                                    export_rc = rc,
+                                    export_user = User.objects.get(id=request.user.id),
+                                    export_task = task,
+                                    export_rule = rule,
+                                    task_status = task.status.status_title,
+                                    task_user = task.user.username,
+                                    source_component = rule.source_component,
+                                    static_source_component_ident = rule.source_component.component_id,
+                                    static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                                    target_component = rule.target_component,
+                                    static_target_component_ident = rule.target_component.component_id,
+                                    static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                                    mapgroup = rule.mapgroup,
+                                    mappriority = rule.mappriority,
+                                    mapcorrelation = rule.mapcorrelation,
+                                    mapadvice = rule.mapadvice,
+                                    maprule = rule.maprule,
+                                    mapspecifies = mapspecifies,
+                                )
+                            rc_rule.save()
+                            print("Added {rule}".format(rule=rc_rule))
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                        export_task = task,
+                        export_rc = rc,
+                        )
+                    print("There are now {numrules} rules in the RC database.".format(numrules=rc_rules.count()))
 
-        return Response({
-            'message' : 'Taak ontvangen',
-            'selection' : selection,
-            'id' : id,
-        })
+            return Response({
+                'message' : 'Taak ontvangen. De taak wordt alleen uitgevoerd als de RC niet als status \'productie\' heeft.',
+                'selection' : selection,
+                'id' : id,
+            })
+            
     def retrieve(self, request, pk=None):
         task_list = []
         id = int(pk)
         # Get RC
-        rc = MappingReleaseCandidate.objects.get(id = id)
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.get(id = id, access__username=current_user)
         print('Exporting RC',rc)
         # Total number of components in codesystem linked to RC
-        source_codesystem = MappingCodesystemComponent.objects.filter(codesystem_id = rc.codesystem)
+        source_codesystem = MappingCodesystemComponent.objects.select_related(
+            'codesystem_id'
+        ).filter(codesystem_id = rc.codesystem)
         # Identify all unique tasks in order to group the rules for export
-        rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc)
+        rules = MappingReleaseCandidateRules.objects.select_related(
+            'export_rc', 
+            'export_user', 
+            'export_task', 
+            'export_task__source_component', 
+            'export_task__source_codesystem', 
+            'export_rule',
+            'export_rule__project_id', 
+            'source_component', 
+            'source_component__codesystem_id', 
+            'target_component',
+            'target_component__codesystem_id',
+            ).prefetch_related(
+                'accepted',
+                'rejected',    
+            ).filter(export_rc = rc)
         print('Exporting',rules.count(),'rules')
         source_components = rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
         print('Found',len(source_components),'distinct source components / =tasks')
@@ -366,6 +395,11 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 except:
                     rule_id = '[deleted]'
 
+                try:
+                    export_task_id = rule.export_task.id
+                except:
+                    export_task_id = '[deleted]'
+
                 rule_list.append({
                     'from_project' : from_project,
                     'rule_id' : rule_id,
@@ -385,6 +419,23 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
 
                 })
                 # TODO - not validated yet 
+                accepted_nvmm   = False
+                accepted_nvkc   = False
+                accepted_nictiz = False
+                accepted_nhg    = False
+                accepted_palga  = False
+                if rule.accepted.count() > 0:
+                    if 'groepen | nictiz' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nictiz = True
+                    if 'groepen | palga' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_palga = True
+                    if 'groepen | nhg' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nhg = True
+                    if 'groepen | nvmm' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvmm = True
+                    if 'groepen | nvkc' in rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvkc = True
+
                 if rule.rejected.count() > 0:
                     rejected = True
                     for user in rule.rejected.values_list('username', flat=True):
@@ -413,15 +464,39 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             # Handle foreign key info that might be deleted in dev path
             try:
                 project_title = rule.export_rule.project_id.title
+                project_id = rule.export_rule.project_id.id
             except:
                 project_title = '[unknown]'
+                project_id = '[unknown]'
             static_source_component = rule.static_source_component
+
+            # Add audit hits
+            audit_hits = MappingTaskAudit.objects.filter(task = rule.export_task, ignore = False)
+            audits = []
+            audits_present = False
+            for audit in audit_hits:
+                audits.append({
+                    'id':audit.id,
+                    'type':audit.audit_type,
+                    'reason':audit.hit_reason,
+                    'ignore':audit.ignore,
+                    'sticky':audit.sticky,
+                    'timestamp':audit.first_hit_time,
+                })
+                audits_present = True
+
             task_list.append({
                 'status' : rule.task_status,
                 'source' : static_source_component,
+                'task_id': export_task_id,
                 'project' : project_title,
+                'project_id' : project_id,
                 'group' : static_source_component.get('extra',{}).get('Groep',''),
                 'rules' : filtered_rule_list,
+
+                'audit' : audits,
+                'audit_present' : audits_present,
+
                 'accepted_list' : set(accepted_list),
                 'num_accepted' : len(set(accepted_list)),
                 'accepted_me' : fiat_me,
@@ -430,6 +505,12 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 'rejected_me' : veto_me,
                 'accepted' : accepted,
                 'rejected' : rejected,
+
+                'accepted_nvmm'     : accepted_nvmm,
+                'accepted_nvkc'     : accepted_nvkc,
+                'accepted_nictiz'   : accepted_nictiz,
+                'accepted_nhg'      : accepted_nhg,
+                'accepted_palga'    : accepted_palga,
             })
 
         status_options = [
@@ -461,5 +542,243 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 },
                 'text' : rc.title + ' [' + str(rc.created) + ']',
             },
+            'rules' : task_list,
+        })
+
+
+class exportReleaseCandidateRulesV2(viewsets.ViewSet):
+    """
+    Exporteert regels vanuit de productiedatabase naar de RC database
+    Stuur een POST request met het volgende format:
+    {
+        'rc_id' : int, # Release candidate ID in database
+        'selection' : str # 'codesystem' or 'component'
+        ['id'] : int, # component identifier, requiered in the case of selection == component
+        ['codesystem'] : int, # required in the case of selection == component
+    }
+    Of een GET met een RC ID voor een lijst met rules in die RC
+    """
+    permission_classes = [Permission_MappingRcAudit]
+            
+    def retrieve(self, request, pk=None):
+        task_list = []
+        id = int(pk)
+        # Get RC
+        current_user = User.objects.get(id=request.user.id)
+        rc = MappingReleaseCandidate.objects.select_related(
+            'codesystem'
+        ).get(id = id, access__username=current_user)
+        
+        ## DEBUG RULE - REMOVE FOR PRODUCTION
+        print('Exporting RC',rc)
+        
+        # Total number of components in codesystem linked to RC
+        source_codesystem = MappingCodesystemComponent.objects.select_related(
+            'codesystem_id'
+        ).filter(codesystem_id = rc.codesystem)
+        
+        # Fetch all rules from the database
+        db_rules = MappingReleaseCandidateRules.objects.filter(export_rc = rc).select_related(
+            'export_rc', 
+            'export_user', 
+            'export_task',
+            'export_task__source_component', 
+            'export_task__source_codesystem', 
+            'export_rule',
+            'export_rule__project_id', 
+            'source_component', 
+            'source_component__codesystem_id', 
+            'target_component',
+            'target_component__codesystem_id',
+            ).prefetch_related(
+                'accepted',
+                'rejected',
+            )
+        
+        ## DEBUG RULE - REMOVE FOR PRODUCTION
+        print('Exporting',db_rules.count(),'rules')
+        
+        # rules = list(db_rules.values())
+        rules = db_rules
+        db_rules_list = db_rules.values(
+            'id',
+            'static_source_component_ident',
+            'mapspecifies',
+            'mapcorrelation',
+            'mappriority',
+            'mapadvice',
+            'mapgroup',
+            'maprule',
+            'export_rc',
+            'export_date',
+            'export_user',
+            'export_task',
+            'export_rule',
+            'task_status',
+            'task_user',
+            'source_component',
+            'static_source_component_ident',
+            'static_source_component',
+            'target_component',
+            'static_target_component_ident',
+            'static_target_component',
+            # 'accepted', 
+            # 'accepted__groups', 
+            # 'rejected',
+            # 'rejected__groups',
+            )
+        # Get unique source component ID's
+        source_components = list()
+        for rule in rules:
+            source_components.append(rule.static_source_component_ident)
+        source_components = sorted(set(source_components))
+
+        task_list = list()
+
+        # Loop over all unique source component_id's - we assume each unique component is a task
+        for source_component_ident in source_components:
+            ## DEBUG RULE - REMOVE FOR PRODUCTION
+            print("Handling",source_component_ident)
+
+            rule_list = []
+            filtered_rule_list = []
+            rejected = False
+            rejected_list = []
+            fiat_me = False
+            veto_me = False
+            accepted = None
+            accepted_list = []
+            ignore_list = []
+
+            # Get all items from the rules dictionary where 'source_component' is the same
+            _rules = list(filter(lambda x: x['static_source_component_ident'] == source_component_ident, db_rules_list))
+            print(_rules)
+            for _rule in _rules: 
+                ## DEBUG RULE - REMOVE FOR PRODUCTION
+                print("Rule:",_rule['export_rule'])
+                
+                # Add ID's used as binding target to ignore list: don't show twice
+                mapspecifies = _rule['mapspecifies']
+                for value in mapspecifies:
+                    # print('Added',value.get('id'),'to ignore list')
+                    ignore_list.append(value.get('id'))
+                # If no specifies are mentioned; false to hide rule in table
+                if len(mapspecifies) == 0:
+                    mapspecifies = False
+
+                # Translate correlation options
+                correlation_options = [
+                    # (code, readable)
+                    ('447559001', 'Broad to narrow'),
+                    ('447557004', 'Exact match'),
+                    ('447558009', 'Narrow to broad'),
+                    ('447560006', 'Partial overlap'),
+                    ('447556008', 'Not mappable'),
+                    ('447561005', 'Not specified'),
+                ]
+                correlation = _rule['mapcorrelation']
+                for code, readable in correlation_options:
+                    mapcorrelation = _rule['mapcorrelation'].replace(code, readable)
+
+                # Handle foreign keys that could have been removed in dev path
+                try:
+                    rule_id = _rule['export_rule']
+                except:
+                    rule_id = '[deleted]'
+
+                try:
+                    export_task_id = _rule['export_task']
+                except:
+                    export_task_id = '[deleted]'
+
+                # TO BE FIXED - results in many extra queries due to many-many relationships
+                current_rule = db_rules.get(id=_rule['id'])
+                accepted_nvmm   = False
+                accepted_nvkc   = False
+                accepted_nictiz = False
+                accepted_nhg    = False
+                accepted_palga  = False
+                if current_rule.accepted.count() > 0:
+                    if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nictiz = True
+                    if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_palga = True
+                    if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nhg = True
+                    if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvmm = True
+                    if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
+                        accepted_nvkc = True
+                    if current_rule.accepted.count() > 0:
+                        accepted = True
+                        for user in current_rule.accepted.values_list('username', flat=True):
+                            accepted_list.append(user)
+                        if request.user.username in accepted_list:
+                            fiat_me = True
+                if current_rule.rejected.count() > 0:
+                    rejected = True
+                    for user in current_rule.rejected.values_list('username', flat=True):
+                        rejected_list.append(user)
+                    if request.user.username in rejected_list:
+                        veto_me = True
+                
+
+
+                rule_list.append({
+                    'rule_id'       : rule_id,
+                    'task_id'       : export_task_id,
+
+                    'task_status'   : _rule['task_status'],
+                    'task_user'     : _rule['task_user'],
+
+                    'codesystem'    : _rule['static_target_component']['codesystem']['name'],
+                    'target'        : _rule['static_target_component'],
+
+                    'mapgroup'      : _rule['mapgroup'],
+                    'mappriority'   : _rule['mappriority'],
+                    'mapcorrelation': correlation,
+                    'mapadvice'     : _rule['mapadvice'],
+                    'maprule'       : _rule['maprule'],
+                    'mapspecifies'  : mapspecifies,
+
+                    'rejected_me' : veto_me,
+                    'accepted' : accepted,
+                    'rejected' : rejected,
+
+                    'accepted_nvmm'     : accepted_nvmm,
+                    'accepted_nvkc'     : accepted_nvkc,
+                    'accepted_nictiz'   : accepted_nictiz,
+                    'accepted_nhg'      : accepted_nhg,
+                    'accepted_palga'    : accepted_palga,
+
+                    # 'raw' : _rule,
+                })
+
+                # Filter -> ID not in rejected list
+                for single_rule in rule_list:
+                    # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
+                    # print(ignore_list)
+                    if single_rule.get('target').get('identifier') in ignore_list:
+                        # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
+                        True
+                    else:
+                        # print("ADDED")
+                        filtered_rule_list.append(single_rule)
+
+            task_list.append({
+                'source' : source_component_ident,
+                'targets' : filtered_rule_list,
+            })
+            
+
+
+        # Task list for export
+        # task_list = source_components
+
+        return Response({
+            'message' : 'Lijst met alle items voor RC',
+            # 'stats' : {
+            #     'num_tasks': num_tasks,
+            # },
             'rules' : task_list,
         })

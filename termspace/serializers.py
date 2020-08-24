@@ -25,7 +25,7 @@ class MappingComponentSerializer(serializers.ModelSerializer):
         return ret
     class Meta:
         model = MappingCodesystemComponent
-        fields = ("component_title", "component_id", "ancestors", "parents", "children", "descendants")
+        fields = ("component_title", "component_id", "ancestors", "parents", "children", "descendants", "descriptions")
 
 class EclQueryResultsSerializer(serializers.ModelSerializer):
     parents = serializers.JSONField(required=False, allow_null=True)

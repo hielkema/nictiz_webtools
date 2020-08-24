@@ -1,6 +1,6 @@
 # Create your tasks here
 from __future__ import absolute_import, unicode_literals
-from celery import shared_task
+from celery import shared_task, current_task
 import time, json
 from celery.task.schedules import crontab
 from celery.result import AsyncResult
@@ -13,8 +13,9 @@ import urllib.request
 from pandas import read_excel, read_csv
 import environ
 
+from .build_tree import *
+
 import csv, multiprocessing, pandas, sys, os
-from pprint import pprint
 from openpyxl import Workbook
 from os import listdir
 import glob

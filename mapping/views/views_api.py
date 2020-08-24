@@ -15,7 +15,6 @@ from celery.task.control import inspect, revoke
 from pandas import read_excel, read_csv
 import xmltodict
 import sys, os
-import pprint
 import environ
 import time
 import random
@@ -32,9 +31,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import *
 
 # Get latest snowstorm client once on startup. Set master or develop
-branch = "develop"
-url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
-    branch+'/snowstorm_client.py'
+try:
+    branch = "develop"
+    url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
+        branch+'/snowstorm_client.py'
+except:
+    print('Could not get latest Snowstorm client')
 # urllib.request.urlretrieve(url, 'snowstorm_client.py')
 from snowstorm_client import Snowstorm
 from ..tasks import *
@@ -303,6 +305,16 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             print('nhgICPC', json.loads(request.POST.get('codesystem[icpc]')))
             if json.loads(request.POST.get('codesystem[icpc]')):
                 import_icpc_task.delay()
+
+            print('Palga', json.loads(request.POST.get('codesystem[palga]')))
+            if json.loads(request.POST.get('codesystem[palga]')):
+                print("Let's go")
+                import_palgathesaurus_task.delay()
+
+            print('Omaha', json.loads(request.POST.get('codesystem[omaha]')))
+            if json.loads(request.POST.get('codesystem[omaha]')):
+                print("Importeren Omaha")
+                import_omaha_task.delay()
 
             context = {
                 'result': "success",
@@ -947,7 +959,7 @@ class vue_MappingIndex(UserPassesTestMixin,TemplateView):
         # TODO - Check if active projects exist, otherwise -> error.
         # TODO - Check if active projects exist, otherwise -> error.
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
         project_dict = []
         for project in project_list:
             tasks = MappingTask.objects.filter(project_id=project)
@@ -981,7 +993,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         # Taken per status
         try:
             current_user = User.objects.get(id=request.user.id)
-            project_list = MappingProject.objects.filter(active=True)
+            project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
             tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
             
@@ -1115,7 +1127,7 @@ class vue_ProjectIndex(UserPassesTestMixin,TemplateView):
         print("TASKS", tasks)
 
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
         tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).order_by('id')
         total_num_tasks = len(tasks)

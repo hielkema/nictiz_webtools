@@ -11,6 +11,8 @@ class MappingProject(models.Model):
     status_complete = models.ForeignKey('MappingTaskStatus', related_name="status_complete", on_delete=models.PROTECT, blank=True, null=True, default=None)
     status_rejected = models.ForeignKey('MappingTaskStatus', related_name="status_rejected", on_delete=models.PROTECT, blank=True, null=True, default=None)
 
+    access = models.ManyToManyField(User, related_name="access_users", default=None, blank=True)
+
     project_types_options = [
         # (code, readable)
         ('1', 'One to Many'),
@@ -19,6 +21,8 @@ class MappingProject(models.Model):
         ('4', 'Snomed ECL to one'),
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
+
+    tags = JSONField(default=None, null=True, blank=True)
 
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
     target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_target', default=None, blank=True, null=True)
@@ -39,6 +43,8 @@ class MappingCodesystem(models.Model):
     codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
+
+    # extra fields are legacy, older scripts will break by removing
     codesystem_extra_1  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_2  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_3  = models.CharField(max_length=500, default=None, null=True, blank=True)
@@ -75,13 +81,15 @@ class MappingCodesystemComponent(models.Model):
     children            = models.TextField(default=None, null=True, blank=True)
     descendants         = models.TextField(default=None, null=True, blank=True)
     ancestors           = models.TextField(default=None, null=True, blank=True)
+    
+    # extra fields are legacy, older scripts will break by removing
     component_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
 
 
     def __str__(self):
-        return str(self.id) + " " + self.component_title
+        return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_title
 
 
 class MappingTask(models.Model):
@@ -105,7 +113,7 @@ class MappingTaskStatus(models.Model):
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     status_title = models.CharField(max_length=50) # Uniek ID in codesystem = MappingCodesystemComponent:id
     status_id = models.IntegerField() # Uniek ID van codesystem waar vandaan in deze taak gemapt moet worden
-    status_description = models.CharField(max_length=50) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
+    status_description = models.TextField(default=None, blank=True, null=True) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
     status_next = models.CharField(max_length=50) # ID van gebruiker
 
     def __str__(self):
@@ -140,6 +148,9 @@ class MappingRule(models.Model):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
 
 class MappingEclQuery(models.Model):
+    ###
+    ### Only for use with the legacy (non-vue) tooling
+    ###
     project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
     target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
     query               = models.TextField(default=None, blank=True, null=True)
@@ -159,6 +170,31 @@ class MappingEclQuery(models.Model):
         ('3', 'Custom'),
     ]
     query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
+
+class MappingEclPart(models.Model):
+    ##
+    ##  For use with the vue mapping tooling
+    ##  Used to create groups of ECL queries, with their own separate correlation options
+    ##
+    task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
+    query               = models.TextField(default=None, blank=True, null=True)
+    finished            = models.BooleanField(default=False) # Retrieved result of query from Snowstorm?
+    failed              = models.BooleanField(default=False) # Query or export failed?
+    error               = models.TextField(default=None, blank=True, null=True)
+    description         = models.TextField(default=None, blank=True, null=True)
+    result              = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+    export_finished     = models.BooleanField(default=True) # Export to mapping rules finished?
+
+    correlation_options = [
+        # (code, readable)
+        ('447559001', 'Broad to narrow'),
+        ('447557004', 'Exact match'),
+        ('447558009', 'Narrow to broad'),
+        ('447560006', 'Partial overlap'),
+        ('447556008', 'Not mappable'),
+        ('447561005', 'Not specified'),
+    ]
+    mapcorrelation  = models.CharField(max_length=50, choices=correlation_options, default=None, blank=True, null=True)
 
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
@@ -195,8 +231,9 @@ class MappingTaskAudit(models.Model):
     task = models.ForeignKey("MappingTask", on_delete=models.PROTECT)
     hit_reason = models.TextField(default=None, blank=True, null=True)
     comment = models.TextField(default=None, blank=True, null=True)
-    ignore = models.BooleanField(default=False)
-    ignore_user = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT)
+    ignore = models.BooleanField(default=False) # Whitelist
+    sticky = models.BooleanField(default=False) # True = will not be removed with each audit cycle
+    ignore_user = models.ForeignKey(User, default=None, blank=True, null=True, on_delete=models.PROTECT) # User adding the whitelist
     first_hit_time  = models.DateTimeField(default=timezone.now)
 
 class MappingReleaseCandidate(models.Model):
@@ -213,6 +250,8 @@ class MappingReleaseCandidate(models.Model):
     metadata_copyright = models.TextField(default=None, blank=True, null=True)
     metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
 
+    access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
+    
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
     finished = models.BooleanField(default=False)
     # Perhaps status should be coming from the status DB table - text for now
@@ -225,6 +264,8 @@ class MappingReleaseCandidate(models.Model):
     ]
     status = models.CharField(default=None, max_length=50, blank=True, null=True, choices=status_options)
     created = models.DateTimeField(default=timezone.now)
+    def __str__(self):
+        return str(self.title)
 
 class MappingReleaseCandidateFHIRConceptMap(models.Model):
     title = models.TextField(default=None, blank=True, null=True)

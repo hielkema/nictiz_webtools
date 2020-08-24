@@ -2,15 +2,74 @@
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from .models import *
+from mapping.models import *
 import time, json
 from urllib.request import urlopen, Request
 import urllib.parse
 import environ
+from snowstorm_client import Snowstorm
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
 # reading .env file
 environ.Env.read_env(env.str('ENV_PATH', '.env'))
+
+
+@shared_task
+def generate_snomed_tree(payload):
+
+    snowstorm = Snowstorm(
+            baseUrl="https://snowstorm.test-nictiz.nl",
+            # baseUrl="https://snowstorm.ihtsdotools.org/snowstorm/snomed-ct",
+            debug=True,
+            preferredLanguage="nl",
+            defaultBranchPath="MAIN/SNOMEDCT-NL",
+        )
+
+    conceptid = payload.get('conceptid')
+    refset = payload.get('refset')
+    db_id = payload.get('db_id')
+
+    def list_children(focus):
+        component = MappingCodesystemComponent.objects.get(component_id=focus)
+        
+        _children = []
+        if component.children != None:
+            for child in list(json.loads(component.children)):
+                _children.append(list_children(child))
+        # test = snowstorm.findConcepts(ecl=f"{component.component_id} AND ^{str(refset)}")
+        # print(test)
+        
+        refsets = snowstorm.getMapMembers(id=str(refset), referencedComponentId=str(component.component_id))
+        if len(refsets) > 0:
+            refsets = True
+        else:
+            refsets = False
+
+        output = {
+            'id' : focus,
+            'name' : component.component_title,
+
+            'component_id' : component.component_id,
+            'component_title' : component.component_title,
+            'refsets' : refsets,
+
+            'children' : _children
+        }
+        
+        return(output)
+
+    print('Get tree for',str(conceptid))
+    children_list = [list_children(conceptid)]
+
+    obj = SnomedTree.objects.get(id = db_id)
+    
+    obj.data = children_list
+    obj.finished = True
+
+    obj.save()
+
+    return True
 
 
 @shared_task
@@ -341,6 +400,8 @@ def dump_termspace_progress():
         'timmer',
         'e.degroot',
         'krul',
+        'dijkstra',
+        'h.groot',
     ]
     output = []
     for employee in terminologists:
@@ -460,12 +521,14 @@ def load_termspace_comments():
                     concept = task.get('terminologyComponent').get('id'),
                     task_id = task.get('_id'),
                     fsn = task.get('terminologyComponent').get('name'),
-                    assignee = comment.get('author'),
                     comment = comment.get('text'),
                     time = comment.get('time'),
                     folder = task.get('folder'),
-                    status = task.get('workflowState'),
                 )
+                obj.status = task.get('workflowState')
+                obj.assignee = comment.get('author')
+                obj.save()
+
     print('Got',retrieved_tasks,'tasks from termspace.')
 
     pass

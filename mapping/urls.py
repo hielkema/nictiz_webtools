@@ -9,15 +9,42 @@ app_name = 'mapping'
 # Define DRF URL router
 router_1_0 = SimpleRouter()
 router_1_0.register(r'export_rc_rules', views.exportReleaseCandidateRules, basename="export_rc_rules")
+router_1_0.register(r'export_rc_rules_v2', views.exportReleaseCandidateRulesV2, basename="export_rc_rules")
 router_1_0.register(r'rc_export_fhir_json', views.RCFHIRConceptMap, basename="RC FHIR ConceptMap")
 router_1_0.register(r'fhir_conceptmap_list', views.RCFHIRConceptMapList, basename="RC_FHIR_ConceptMap_List")
 router_1_0.register(r'export_rcs', views.ReleaseCandidates, basename="export_rcs")
 router_1_0.register(r'rc_rule_review', views.RCRuleReview, basename="rc_rule_review")
 
-router_1_0.register(r'tasks', views.MappingTasks, basename="Mapping_Tasks")
+router_1_0.register(r'tasks_manager', views.MappingTasks, basename="Mapping_Tasks")
 router_1_0.register(r'change_tasks', views.ChangeMappingTasks, basename="Change_Mapping_Tasks")
+router_1_0.register(r'create_tasks', views.CreateTasks, basename="Create_Mapping_Tasks")
 
 router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
+
+
+router_1_0.register(r'audits', views.MappingAudits, basename="Audits")
+router_1_0.register(r'audits_per_project', views.MappingAuditsPerProject, basename="Audits per project")
+router_1_0.register(r'audit_whitelist', views.MappingAuditWhitelist, basename="Audits whitelist")
+router_1_0.register(r'audit_remove_whitelist', views.MappingAuditRemoveWhitelist, basename="Audits remove whitelist")
+router_1_0.register(r'audit_remove', views.MappingAuditRemove, basename="Audits remove")
+
+router_1_0.register(r'codesystems', views.Codesystems, basename="Mapping Codesystems")
+router_1_0.register(r'projects', views.Projects, basename="Mapping Projects")
+router_1_0.register(r'tasklist', views.Tasklist, basename="Mapping tasks")
+router_1_0.register(r'taskdetails', views.TaskDetails, basename="Mapping tasks")
+router_1_0.register(r'events_and_comments', views.EventsAndComments, basename="Mapping events and comments")
+router_1_0.register(r'mappings', views.MappingTargets, basename="Mappings")
+router_1_0.register(r'mappings_ecl_to_rules', views.MappingEclToRules, basename="Mapping ECL To Rules")
+
+router_1_0.register(r'reverse', views.MappingReverse, basename="Reverse mappings")
+router_1_0.register(r'mapping_dialog', views.MappingDialog, basename="Mappings")
+router_1_0.register(r'componentsearch', views.MappingTargetSearch, basename="Component search endpoint")
+router_1_0.register(r'search_by_component', views.RuleSearchByComponent, basename="Search by mapping rule components")
+router_1_0.register(r'statuses', views.MappingStatuses, basename="Mapping statuses for selected project")
+router_1_0.register(r'users', views.MappingUsers, basename="Mapping users for selected project")
+router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping comments for selected task")
+
+router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
 
 urlpatterns = [
     # DRF router
@@ -70,7 +97,6 @@ urlpatterns = [
     url(r'taskmanager/(?P<project>\w+)', views.TaskManagerPageView.as_view(), name='taskmanager_project'),
     url(r'taskmanager', views.TaskManagerPageView.as_view(), name='taskmanager'),
 
-    url(r'ajaxprogressreport/(?P<secret>\w+)', views.AjaxProgressRecordPageView.as_view(), name='ajaxprogressreport'),
     url(r'audit/(?P<project>\w+)/(?P<audit_type>\w+)', views.AuditPageView.as_view(), name='audit'),
 
     url(r'task_create', views.TaskCreatePageView.as_view(), name='task_create'),

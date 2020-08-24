@@ -20,10 +20,12 @@ import random
 import json
 import urllib.request
 # Get latest snowstorm client once on startup. Set master or develop
-branch = "develop"
-url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
-    branch+'/snowstorm_client.py'
-urllib.request.urlretrieve(url, 'snowstorm_client.py')
+try:
+    branch = "develop"
+    url = 'https://raw.githubusercontent.com/mertenssander/python_snowstorm_client/' + \
+        branch+'/snowstorm_client.py'
+except:
+    print('Could not get latest Snowstorm client')
 from snowstorm_client import Snowstorm
 from ..tasks import *
 from ..forms import *
@@ -513,96 +515,6 @@ class AjaxEclQueryMapResults(UserPassesTestMixin,TemplateView):
                 'exception' : e,
                 })
 
-class AjaxProgressRecordPageView(UserPassesTestMixin, TemplateView):
-    '''
-    Class used to save progress on all tasks on a daily basis, called from a cronjob.
-    Only accessible with the right cronjob_secret, as set in .env.
-    '''
-    def handle_no_permission(self):
-        return redirect('login')
-    def test_func(self):
-        # return self.request.user.has_perm('Build_Tree.make_taskRecord')
-        print(self.kwargs['secret'], env('cronjob_secret'))
-        if self.kwargs['secret'] == env('cronjob_secret'):
-            return True
-        else:
-            return False
-
-    
-    # TODO - daily chronjob to this endpoint / OR get celery beat working
-    def get(self, request, **kwargs):
-        # Taken per status
-        project_list = MappingProject.objects.filter(active=True)
-        tasks_per_user_dict = []
-        tasks_per_status_dict = []
-
-        for project in project_list:        
-            try:
-                project_list = MappingProject.objects.filter(active=True)
-                current_project = MappingProject.objects.get(id=project.id, active=True)
-                
-                status_list = MappingTaskStatus.objects.filter(project_id=project.id).order_by('status_id')#.exclude(id=current_project.status_complete.id)
-                tasks_per_status_labels = []
-                tasks_per_status_values = []
-                tasks_per_status_dict = []
-                user_list = User.objects.filter()
-                tasks_per_user_labels = []
-                tasks_per_user_values = []
-                tasks_per_user_dict = []
-                for user in user_list:
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
-                    if num_tasks > 0:
-                        num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, user=user).exclude(status=current_project.status_complete).exclude(status=current_project.status_rejected).count()
-                        tasks_per_user_labels.append(user.username)
-                        tasks_per_user_values.append(num_tasks)
-                        tasks_per_user_dict.append({
-                        'user' : user.username,
-                        'num_tasks' : num_tasks,
-                        })
-                for status in status_list:            
-                    num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).exclude(status=current_project.status_rejected).count()
-                    tasks_per_status_labels.append(status.status_title)
-                    tasks_per_status_values.append(num_tasks)
-                    tasks_per_status_dict.append({
-                        'status' : status.status_title,
-                        'num_tasks' : num_tasks,
-                        })
-            except:
-                tasks_per_status_labels = []
-                tasks_per_status_values = []
-                tasks_per_user_labels = []
-                tasks_per_user_values = []
-            
-            # print(tasks_per_user_dict)
-            # print(tasks_per_status_dict)
-            try:
-                MappingProgressRecord.objects.create(
-                    name = 'TasksPerStatus',
-                    project = project,
-                    labels = '',
-                    values = json.dumps(tasks_per_status_dict)
-                )
-            except Exception as e:
-                print(e)
-            try:
-                MappingProgressRecord.objects.create(
-                    name = 'TasksPerUser',
-                    project = project,
-                    labels = '',
-                    values = json.dumps(tasks_per_user_dict)
-                )
-            except Exception as e:
-                print(e)
-            
-        try:
-            return JsonResponse({
-            'project' : project.id,
-            'results' : tasks_per_status_dict,
-            })
-        except Exception as e:
-            print(e)
-            return redirect('login')
-
 class TaskCreatePageView(UserPassesTestMixin,TemplateView):
     '''
     Class for creating tasks pageview.
@@ -661,7 +573,7 @@ class TaskCreatePageView(UserPassesTestMixin,TemplateView):
                     else:
                         present = False
                         obj = MappingTask.objects.create(
-                            project_id=project,
+                            project_id=project, # Wel matchen op project - anders kan het zijn dat je geen taak voor een mapping naar een ander stels kan maken - denk palga & NHG parallel.
                             source_component=component_obj,
                         )
                         # Add data not used for matching
@@ -750,7 +662,8 @@ class MappingIndexPageView(UserPassesTestMixin,TemplateView):
 
     def get(self, request, **kwargs):
         # TODO - Check if active projects exist, otherwise -> error.
-        project_list = MappingProject.objects.filter(active=True).order_by('id')
+        current_user = User.objects.get(id=request.user.id)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
         return render(request, 'mapping/index.html', {
             'page_title': 'Mapping project',
             'project_list': project_list,
@@ -774,7 +687,7 @@ class ProjectIndexPageView(UserPassesTestMixin,TemplateView):
         # Taken per status
         try:
             current_user = User.objects.get(id=request.user.id)
-            project_list = MappingProject.objects.filter(active=True).order_by('id')
+            project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user).order_by('id')
             current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
             tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
             
@@ -908,7 +821,7 @@ class ProjectIndexPageView(UserPassesTestMixin,TemplateView):
         print("TASKS", tasks)
 
         current_user = User.objects.get(id=request.user.id)
-        project_list = MappingProject.objects.filter(active=True)
+        project_list = MappingProject.objects.filter(active=True).filter(access__username=current_user)
         current_project = MappingProject.objects.get(id=kwargs.get('project'), active=True)
         tasks = MappingTask.objects.filter(user=current_user, project_id_id=current_project.id).exclude(status=current_project.status_complete).order_by('id')
         total_num_tasks = len(tasks)

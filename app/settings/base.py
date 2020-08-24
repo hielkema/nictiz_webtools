@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 import environ
+from datetime import timedelta
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -65,6 +66,8 @@ INSTALLED_APPS = (
     'epd',
     'termspace',
     'dhd',
+    'postcoordination',
+    'validation',
 )
 
 MIDDLEWARE = (
@@ -89,6 +92,12 @@ REST_FRAMEWORK = {
             "rest_framework_simplejwt.authentication.JWTAuthentication",
         ],
     }
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
+
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',

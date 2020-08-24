@@ -14,6 +14,10 @@ router.register(r'children', searchChipsoftChildren, basename="children")
 router.register(r'parents', searchChipsoftParents, basename="parents")
 router.register(r'concept', searchChipsoftConcept, basename="concept")
 
+router.register(r'postcodemo_templates', searchChipsoftConcept, basename="postco templates")
+router.register(r'postcodemo_attributevalues', searchChipsoftConcept, basename="postco templates attr-values")
+
+
 # router.register(r'test_post_endpoint', ShareView, basename="testpoint_post")
 
 # urlpatterns = router.urls

@@ -1,23 +1,7 @@
 version: '3'
 volumes:
-  pgdata:
   static_files:
-  pgadmin:
 services:
-  postgres:
-    image: postgres:10.3
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_PASS}
-      POSTGRES_PASS: ${POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    # ports:
-    #   - 5432:5432
-    links:
-      - python
-    networks:
-      - webtools
   python: &python
     # image: python:3.4
     image: mertenssander/nictiz_webtools:latest
@@ -32,6 +16,7 @@ services:
     command: gunicorn -w 4 app.wsgi -b 0.0.0.0:8000
     networks:
       - webtools
+      - postgres_network
   
   nginx:
     # image: nginx
@@ -42,8 +27,6 @@ services:
       - static_files:/webserver/static_files
     links:
       - python
-    # ports:
-    #   - ${PORT}:${PORT}
     expose:
       - "${PORT}"
     networks:
@@ -68,9 +51,9 @@ services:
     restart: always
     depends_on:
       - rabbitmq
-      - postgres
     networks:
       - webtools
+      - postgres_network
   celery_beat:
     # Copy template from service Python
     <<: *python
@@ -79,46 +62,24 @@ services:
     restart: always
     depends_on:
       - rabbitmq
-      - postgres
     networks:
       - webtools
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - "PGADMIN_DEFAULT_EMAIL=${PGADMIN_USER}"
-      - "PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}"
-
-      # - VIRTUAL_HOST=${PGADMIN_DOMAIN}
-      # - VIRTUAL_PORT=${PGADMIN_PORT}
-      # - LETSENCRYPT_HOST=${PGADMIN_DOMAIN}
-      # - LETSENCRYPT_EMAIL=${EMAIL}
-    ports:
-      - 9124:${PGADMIN_PORT}
-    volumes:
-      - pgadmin:/var/lib/pgadmin
-    networks:
-      - webtools
-      - proxy
-    expose:
-      - "${PGADMIN_PORT}"
+      - postgres_network
   # GUI for taskmanager Celery
   flower:
     image: mher/flower
     command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888", "--basic_auth=${FLOWER_USER}:${FLOWER_PASSWORD}"]
     restart: always
     expose:
-      - "${FLOWER_PORT}"
-    # environment:
-    #   - VIRTUAL_HOST=${FLOWER_DOMAIN}
-    #   - VIRTUAL_PORT=${FLOWER_PORT}
-    #   - LETSENCRYPT_HOST=${FLOWER_DOMAIN}
-    #   - LETSENCRYPT_EMAIL=${EMAIL}
+      - "80"
     ports:
-      - ${FLOWER_PORT}:${FLOWER_PORT}
+      - 9125:80
     networks:
       - webtools
       - proxy
 networks:
   webtools:
+  postgres_network:
+    external: true
   proxy:
     external: true

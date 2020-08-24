@@ -351,14 +351,16 @@ class Snowstorm():
                 self.cache_concepts.update({
                     str(index): value
                 })
+            # Clean all relevant self.variables used in this function
+            self.cacheTemp = {}
+            return results
         except Exception as e:
             print(type(e))
             print(e)
-            exit()
+            self.cacheTemp = {}
+            return e
 
-        # Clean all relevant self.variables used in this function
-        self.cacheTemp = {}
-        return results
+        
 
     def getDescriptions(self, id, full_output=False):
         # If concepts' descriptions present in cache, do not request

@@ -17,8 +17,12 @@ from django.db.models.functions import Trunc, TruncMonth, TruncYear, TruncDay
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Max
 import json
-from .forms import *
+# from .forms import *
 from .models import *
+from mapping.models import *
+from datetime import datetime, timedelta
+from django.utils import timezone
+import pytz
 from .tasks import *
 import time
 import environ
@@ -216,26 +220,69 @@ class eclQueryApi(viewsets.ViewSet):
 class SnomedJSONTree(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def retrieve(self, request, pk=None):
-        def list_children(focus):
-            component = MappingCodesystemComponent.objects.get(component_id=focus)
+        # def list_children(focus):
+        #     component = MappingCodesystemComponent.objects.get(component_id=focus)
             
-            _children = []
-            if component.children != None:
-                for child in list(json.loads(component.children)):
-                    _children.append(list_children(child))
+        #     _children = []
+        #     if component.children != None:
+        #         for child in list(json.loads(component.children)):
+        #             _children.append(list_children(child))
            
-            output = {
-                'id' : focus,
-                'name' : component.component_title,
-                'children' : _children
-            }
+        #     output = {
+        #         'id' : focus,
+        #         'name' : component.component_id+' - '+component.component_title,
+        #         'component_id' : component.component_id,
+        #         'children' : _children
+        #     }
             
-            return(output)
+        #     return(output)
 
-        print('Get tree for',str(pk))
-        children_list = list_children(pk)
+        # print('Get tree for',str(pk))
+        # children_list = [list_children(pk)]
 
-        return Response(children_list)
+        payload = pk.split('**')
+        conceptid = payload[0]
+        refset = payload[1]
+        print(conceptid, refset)
+
+        finished_tasks = SnomedTree.objects.filter(title = str(pk), finished = True)
+        if finished_tasks.count() > 0:
+            tree = finished_tasks.last()
+            return Response({
+                'message' : 'loaded',
+                'data': tree.data
+            })
+        else:
+            tree = SnomedTree.objects.filter(title = str(pk))
+            if tree.count() == 0:
+                if MappingCodesystemComponent.objects.filter(component_id = conceptid).count() == 1:
+                    current_user = User.objects.get(id=request.user.id)
+                    obj = SnomedTree.objects.create(
+                        user = current_user,
+                        title = str(pk),
+                    )
+
+                    
+                    generate_snomed_tree.delay({
+                        'db_id' : obj.id,
+                        'conceptid' : conceptid,
+                        'refset' : refset,
+                    })
+
+                    return Response({
+                        'message': 'dispatched',
+                        'data': {},
+                    })
+                else:
+                    return Response({
+                        'message': 'error: nonexistant SCTID',
+                        'data': {},
+                    })
+            else:
+                return Response({
+                        'message': 'running',
+                        'data': {},
+                    })
 
 class Mapping_Progressreport_perStatus(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -283,7 +330,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
             else:
                 for component in components:
                     tasks = MappingTask.objects.filter(source_component = component)
-                    extra = json.loads(component.component_extra_dict)
+                    extra = component.component_extra_dict
                     aub = extra.get('Aanvraag/Uitslag/Beide')
                     if aub == 'A': aub="Aanvraag"
                     if aub == 'B': aub="Aanvraag en uitslag"
@@ -346,7 +393,8 @@ class Mapping_Progressreport_overTime(viewsets.ViewSet):
             tasks = MappingTask.objects.all()
             daily_report = {}
 
-            records = MappingProgressRecord.objects.filter(name="TasksPerStatus")
+            ### INFO - select or exclude projects to include in output here
+            records = MappingProgressRecord.objects.filter(name="TasksPerStatus").exclude(project__id = 6)
             for record in records:
                 project = MappingProject.objects.get(id=record.project.id)
                 date = record.time
@@ -550,15 +598,16 @@ class fetch_termspace_tasksupply(viewsets.ViewSet):
                 .values('tx_day')
                 .annotate(last_entry=Max('time'))
                 .values_list('last_entry', flat=True))
-            # Add queries
+            # Add queries, also filter on last 20 days
+            last_month = datetime.today() - timedelta(days=20)
             try:
                 query = query | TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
             except:
                 query = TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
         # Return entire queryset
         output = []
 
@@ -604,9 +653,12 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
     """
     permission_classes = [Permission_TermspaceProgressReport]
     def retrieve(self, request, pk=None):
+        print(f"[fetch_termspace_user_tasksupply] Starting view fetch_termspace_user_tasksupply with pk={pk}")
         output = []
-        days = []
-        reports = TermspaceUserReport.objects.all()
+        categories = []
+        last_month = timezone.now() - timedelta(days=30)
+        reports = TermspaceUserReport.objects.filter(time__gte=last_month)
+        print(f"[fetch_termspace_user_tasksupply] Found {reports.count()} reports.")
 
         if pk == 'all':
             statuses = reports.distinct('status').values_list('status', flat=True)
@@ -614,47 +666,54 @@ class fetch_termspace_user_tasksupply(viewsets.ViewSet):
             statuses = [str(pk)]
         
         users = reports.distinct('username').values_list('username', flat=True)
-        
-        
+
         for user in users:
+            print(f"[fetch_termspace_user_tasksupply] Handling reports for {user}.")
             # User loop - now go over every status and get totals per day
             for status in statuses:
                 user_output = []
-                for day in (reports
-                        .annotate(tx_day=TruncDay('time'))
-                        .values('tx_day')
-                        .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
-                    # print('Unique day:',day)
-                    
-                    # Selects last time_stamp for each day
-                    last_entries = (TermspaceUserReport.objects
-                        .filter(username = user, status=status)
-                        .annotate(tx_day=TruncDay('time'))
-                        .values('tx_day')
-                        .annotate(last_entry=Max('time'))
-                        .values_list('last_entry', flat=True))
-                    query = TermspaceUserReport.objects.filter(
-                        time__in=last_entries,
-                    )
-                    # print('Looking up: ', status, user)
-                    _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
-                        # _query is the newest record for this user with this status
-                        # Add it to the output
-                    # print(_query.count())
-                    if _query.count() == 0:
-                        user_output.append(None)
-                    else:
-                        user_output.append(_query.last().count)
-                    days.append(day.strftime('%d-%m-%Y'))
+                try:
+                    for day in (reports
+                            .annotate(tx_day=TruncDay('time'))
+                            .values('tx_day')
+                            .order_by('tx_day')
+                            .annotate(last_entry=Max('time'))).values_list('tx_day', flat=True):
+                        # print('Unique day:',day)
+                        
+                        # Selects last time_stamp for each day
+                        last_entries = (TermspaceUserReport.objects
+                            .filter(username = user, status=status)
+                            .annotate(tx_day=TruncDay('time'))
+                            .order_by('tx_day')
+                            .values('tx_day')
+                            .annotate(last_entry=Max('time'))
+                            .values_list('last_entry', flat=True))
+                        query = TermspaceUserReport.objects.filter(
+                            time__in=last_entries,
+                        )
+                        # print('Looking up: ', status, user)
+                        _query = query.filter(status = str(status), username = user, time__day=day.day, time__month=day.month, time__year=day.year)
+                        if _query.count() > 0:
+                            if _query.last().time.strftime('%d-%m-%Y') not in categories:
+                                categories.append(_query.last().time.strftime('%d-%m-%Y'))
+                            if _query.count() == 0:
+                                user_output.append(0)
+                            else:
+                                user_output.append(_query.last().count)
+                        else:
+                            user_output.append(0)
+                        # days.append(day.strftime('%d-%m-%Y'))
+                except Exception as e:
+                    print(f"[fetch_termspace_user_tasksupply] Error handling {user} / {status}. Error: {e}.")
                 output.append({
                     'name' : user + ' ' + str(status),
                     'data' : user_output,
                 })
-
-
+            
+        print(f"Response: {len(categories)} days / {len(output)} users.")
         return Response({
             'progress' : {
-                    'categories' : set(days),
+                    'categories' : categories,
                     'series':output,
                 }
         })
@@ -665,12 +724,15 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
     permission_classes = [Permission_TermspaceProgressReport]
 
     def list(self, request, pk=None):
+        # limit search to last x days
+        last_month = datetime.today() - timedelta(days=30)
         # Get categories - list of days
-        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True)
-        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True)
+        days = TermspaceProgressReport.objects.all().annotate(tx_day=TruncDay('time')).distinct('tx_day').values_list('tx_day', flat=True).filter(time__gte=last_month)
+        titles = TermspaceProgressReport.objects.all().distinct('title').values_list('title', flat=True).filter(time__gte=last_month)
         for title in titles:
             # Selects last time_stamp for each day
             last_entries = (TermspaceProgressReport.objects
+                .filter(time__gte=last_month)
                 .filter(title = title)
                 .annotate(tx_day=TruncDay('time'))
                 .values('tx_day')
@@ -680,17 +742,17 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
             try:
                 query = query | TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
             except:
                 query = TermspaceProgressReport.objects.filter(
                     time__in=last_entries,
-                )
+                ).filter(time__gte=last_month)
         
         categories = []
         series = []
-        for day in days:
-            # List all unique days
-            categories.append(day.strftime('%d-%m-%Y'))
+        # for day in days:
+        #     # List all unique days
+        #     categories.append(day.strftime('%d-%m-%Y'))
         # Loop over all unique titles
         for title in titles:
             _data = []
@@ -701,8 +763,11 @@ class fetch_termspace_tasksupply_v2(viewsets.ViewSet):
                 day_query = day_query.filter(title = title)
                 if day_query.count() == 1:
                     _data.append(day_query.last().count)
+                    if day_query.last().time.strftime('%d-%m-%Y') not in categories:
+                        categories.append(day.strftime('%d-%m-%Y'))
                 else:
                     _data.append(None)
+                
             series.append({
                 'name': title,
                 'data' : _data,
