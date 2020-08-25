@@ -73,7 +73,8 @@ class export_answers(viewsets.ViewSet):
             'Relevance'         : 'Relevance',
             'Clarity'           : 'Clarity',
             'IsAcceptable'      : 'IsAcceptable',
-            'Feedback'          : 'Feedback',
+            'NotAcceptableNotes': 'NotAcceptableNotes',
+            'Suggestion'        : 'Suggestion',
             })
 
 
@@ -100,8 +101,41 @@ class export_answers(viewsets.ViewSet):
                 'Relevance'         : answer.data.get('relevance',None),
                 'Clarity'           : answer.data.get('clarity',None),
                 'IsAcceptable'      : answer.data.get('acceptable',None),
-                'Feedback'          : answer.data.get('feedback',None),
+                'NotAcceptableNotes': answer.data.get('feedback_notes',None),
+                'Suggestion'        : answer.data.get('feedback_suggestion',None),
             })
+
+        context = output
+
+        return Response(context)
+
+
+class export_tasks(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+    def list(self, request):
+  
+        output = []
+
+        # Add one row with column names for use with power query
+        output.append({
+                'user' : 'Gebruiker',
+                'task' : 'Taak ID (tool intern)',
+                'sortIndex' : 'SortIndex',
+             })
+
+        users = User.objects.all()
+
+        for user in users:
+            tasks = Task.objects.filter(access = user)
+
+            if tasks.count() > 0:
+                # Add task to output list
+                for task in tasks:
+                    output.append({
+                        'task' : task.id,
+                        'sortIndex' : task.data.get('sortIndex'),
+                        'user' : user.username,
+                    })
 
         context = output
 

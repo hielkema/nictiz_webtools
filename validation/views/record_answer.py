@@ -73,7 +73,8 @@ class receive_form(viewsets.ViewSet):
             data['relevance'] = None
             data['acceptable'] = None
             data['complete'] = None
-            data['feedback'] = None
+            data['feedback_notes'] = None
+            data['feedback_suggestion'] = None
 
         obj = Answer.objects.create(
             task = task,
