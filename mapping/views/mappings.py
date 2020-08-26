@@ -166,58 +166,65 @@ class MappingDialog(viewsets.ViewSet):
 
     def create(self, request):
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-            print(request.data)
+            print(f"[MappingDialog/create] @ {request.user.username}")
+            print(f"Data: {request.data}")
   
-            task = MappingTask.objects.get(id=request.data.get('task'))
-            current_user = User.objects.get(id=request.user.id)
-            if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
-                try:
-                    if task.project_id.project_type == "1": # One to many
-                        source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
-                        print('Project type 1')
-                    elif task.project_id.project_type == "2": # Many to one
-                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        print('Project type 2')
-                    elif task.project_id.project_type == "4": # ECL to one
-                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        print('Project type 4')
+            if request.data.get('new'):
+                print("Target is bekend - uitvoeren")
+                task = MappingTask.objects.get(id=request.data.get('task'))
+                current_user = User.objects.get(id=request.user.id)
+                if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
+                    try:
+                        if task.project_id.project_type == "1": # One to many
+                            source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
+                            print('Project type 1')
+                        elif task.project_id.project_type == "2": # Many to one
+                            source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                            target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            print('Project type 2')
+                        elif task.project_id.project_type == "4": # ECL to one
+                            source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                            target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            print('Project type 4')
+                        else:
+                            print("No support for this project type in MappingDialog POST method [type 3?]")
+                    except Exception as e:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        error = 'Exc [MappingDialog/create] error type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                        print(error)
+
+                    print('Mapping:', request.data.get('mapping'),'\n\n')
+                    if request.data.get('mapping').get('id') == 'extra':
+                        print('ID=extra -> Zou een nieuwe mapping moeten worden.')
+                        print('Task',request.data.get('task'))
+                        print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
+                        new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        mapping = MappingRule.objects.create(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                            target_component = new_target,
+                            active = True,
+                        )
+                        mapping.save()
                     else:
-                        print("No support for this project type in MappingDialog POST method [type 3?]")
-                except Exception as e:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    error = 'Exc MappingDialog/create type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
-                    print(error)
+                        print('Betreft bestaande mapping.')
+                        print('Replacing mapping',request.data.get('mapping',{}).get('id'))
+                        print(f"New target: {request.data.get('new')}")
+                        print(f"Target is ingesteld - wordt aangepast")
+                        mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
+                        new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        mapping.target_component = new_target
+                        mapping.save()
+                        print(f"Mapping object: {str(mapping)}")
 
-                print('\n\n','Raw request data',request.data,'\n\n')
-
-                print('Mapping:', request.data.get('mapping'),'\n\n')
-                if request.data.get('mapping').get('id') == 'extra':
-                    print('Zou een nieuwe mapping moeten worden.')
-                    print('Task',request.data.get('task'))
-                    print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
-                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    mapping = MappingRule.objects.create(
-                        project_id = task.project_id,
-                        source_component = task.source_component,
-                        target_component = new_target,
-                        active = True,
-                    )
-                    mapping.save()
-                else:
-                    print('Betreft bestaande mapping.')
-                    print('New target:', request.data.get('new'),'\n\n')
-                    print('User',request.user.username,': Replacing mapping',request.data.get('mapping').get('id'),'with',request.data.get('new').get('component').get('id'))
-                    mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
-                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    mapping.target_component = new_target
-                    mapping.save()
-
-                audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                    print("Start audit")
+                    audit_async.delay('multiple_mapping', task.project_id.id, task.id)
 
                 return Response(str(mapping))
+            else:
+                print("Target is niet bekend - geen actie ondernomen")
+                return Response(None)
         else:
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
 
@@ -225,6 +232,8 @@ class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
+        print(f"[MappingTargets/create] @ {request.user.username}")
+
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
                 print(str(request.data)[:100],"........")
