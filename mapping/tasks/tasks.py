@@ -775,6 +775,49 @@ def import_icpc_task():
         obj.save()
 
 @shared_task
+def import_gstandaardDiagnoses_task():
+    df = read_excel(
+        '/webserver/mapping/resources/gstandaard/diagnosenLijst_20200824.xlsx',
+        )
+    i=0
+    # Vervang lege cellen door lege string
+    df=df.fillna(value='')
+
+    # Verwerk dataset -> database
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='9')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=str(row['Parameternummer']),
+        )
+        
+        # #### Sticky audit hit if concept was already in database and title changed
+        # if (obj.component_title != None) and (obj.component_title != row['ICPC Titel']):
+        #     print(f"{obj.component_title} in database != {row['ICPC Titel']} - audit hit maken")
+        #     # Find tasks using this component
+        #     tasks = MappingTask.objects.filter(source_component = obj)
+        #     for task in tasks:
+        #         audit, created_audit = MappingTaskAudit.objects.get_or_create(
+        #                 task=task,
+        #                 audit_type="IMPORT",
+        #                 sticky=True,
+        #                 hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+        #             )
+        # else:
+        #     print(f"{obj.component_title} in database == {row['ICPC Titel']} - geen hits")
+
+        obj.component_title = row['diagnose']
+
+        actief_concept = 'True'
+
+        extra = {
+            'Opmerking' : row['opmerking'],
+        }
+        # print(extra)
+        obj.component_extra_dict = extra
+        obj.save()
+
+@shared_task
 def audit_async(audit_type=None, project=None, task_id=None):
     project = MappingProject.objects.get(id=project)
     if task_id == None:
@@ -802,8 +845,9 @@ def audit_async(audit_type=None, project=None, task_id=None):
         logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
         
-        logger.info('Spawning QA scripts for ECL-1 queries')
-        send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+        if task.project_id.project_type == '4':
+            logger.info('Spawning QA scripts for ECL-1 queries')
+            send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
         
         logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.

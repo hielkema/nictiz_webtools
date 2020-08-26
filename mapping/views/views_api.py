@@ -276,6 +276,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
                     error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
                     print(error)
 
+            print('G-Standaard Diagnoses', json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')))
+            if json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')):
+                import_gstandaardDiagnoses_task.delay()
+
             print('Snomed', json.loads(request.POST.get('codesystem[snomed]')))
             if json.loads(request.POST.get('codesystem[snomed]')): # codesystem 1 = snomed
                 import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
