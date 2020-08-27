@@ -345,10 +345,11 @@ class MappingTargets(viewsets.ViewSet):
                                     currentQuery.query = query.get('query')
                                     currentQuery.mapcorrelation = query.get('correlation')
                                     currentQuery.save()
-                                    print(f"---\nUsed the following data for update:\nQuery: {query.get('query')}\nDescription: {query.get('description')}\nCorrelation: {query.get('correlation')}\n---")
-                                    print(f"Update resulted in:\nQuery {currentQuery.id}: {currentQuery.query}\nDescription: {currentQuery.description}\nCorrelation: {currentQuery.mapcorrelation}\n---")
+                                    print(f"---\nUsed the following data for update:\nQuery: {query.get('query')}\nDescription: {query.get('description')}\nCorrelation: {query.get('correlation')}\n")
+                                    queryInDatabase = MappingEclPart.objects.get(id = query.get('id'))
+                                    print(f"Update resulted in:\nQuery {queryInDatabase.id}: {queryInDatabase.query}\nDescription: {queryInDatabase.description}\nCorrelation: {queryInDatabase.mapcorrelation}\n---")
                                     print("---")
-                                    print(f"Handled {str(currentQuery)}")
+                                    print(f"Handled {str(queryInDatabase)}")
                                 else:
                                     print("Empty query?")
 
