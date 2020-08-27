@@ -340,7 +340,6 @@ class MappingTargets(viewsets.ViewSet):
                                 elif query.get('id') != 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
                                     print(f"Editing existing query {query.get('id')}")
                                     currentQuery = MappingEclPart.objects.get(id = query.get('id'))
-                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
                                     currentQuery.description = query.get('description')
                                     currentQuery.query = query.get('query')
                                     currentQuery.mapcorrelation = query.get('correlation')
@@ -350,6 +349,7 @@ class MappingTargets(viewsets.ViewSet):
                                     print(f"Update resulted in:\nQuery {queryInDatabase.id}: {queryInDatabase.query}\nDescription: {queryInDatabase.description}\nCorrelation: {queryInDatabase.mapcorrelation}\n---")
                                     print("---")
                                     print(f"Handled {str(queryInDatabase)}")
+                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
                                 else:
                                     print("Empty query?")
 
