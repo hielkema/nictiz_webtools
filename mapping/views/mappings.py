@@ -346,7 +346,7 @@ class MappingTargets(viewsets.ViewSet):
                                     currentQuery.mapcorrelation = query.get('correlation')
                                     currentQuery.save()
                                     print(f"---\nUsed the following data for update:\nQuery: {query.get('query')}\nDescription: {query.get('description')}\nCorrelation: {query.get('correlation')}\n---")
-                                    print(f"Update resulted in:\nQuery {currentQuery.id}: {currentQuery.query}\nDescription: {currentQuery.description}\nCorrelation: {currentQuery.correlation}\n---")
+                                    print(f"Update resulted in:\nQuery {currentQuery.id}: {currentQuery.query}\nDescription: {currentQuery.description}\nCorrelation: {currentQuery.mapcorrelation}\n---")
                                     print("---")
                                     print(f"Handled {str(currentQuery)}")
                                 else:
