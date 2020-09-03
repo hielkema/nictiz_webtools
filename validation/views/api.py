@@ -74,7 +74,6 @@ class export_answers(viewsets.ViewSet):
             'Clarity'           : 'Clarity',
             'IsAcceptable'      : 'IsAcceptable',
             'NotAcceptableNotes': 'NotAcceptableNotes',
-            'Suggestion'        : 'Suggestion',
             })
 
 
@@ -102,7 +101,6 @@ class export_answers(viewsets.ViewSet):
                 'Clarity'           : answer.data.get('clarity',None),
                 'IsAcceptable'      : answer.data.get('acceptable',None),
                 'NotAcceptableNotes': answer.data.get('feedback_notes',None),
-                'Suggestion'        : answer.data.get('feedback_suggestion',None),
             })
 
         context = output
