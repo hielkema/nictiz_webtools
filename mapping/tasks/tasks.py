@@ -1328,8 +1328,12 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 property_value = 'http://snomed.info/id/'
                                 if target.get('id') in MappingCodesystemComponent.objects.get(component_id = '123038009').descendants:
                                     property_value += '276731003' # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
+                                elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '182353008').descendants:
+                                    property_value += '272741003' # 272741003 = SNOMED: lateraliteit (attribuut)
+                                elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '252569009').descendants: # Descendants of 252569009 Test for allergens (procedure)
+                                    property_value += '408730004' # 408730004 = context van verrichting (attribuut)
                                 else:
-                                    property_value += 'TODO'
+                                    property_value += '263491009' # 263491009 = Context (attribute) - <<UNAPPROVED ATTRIBUTE
                                 products.append({
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
