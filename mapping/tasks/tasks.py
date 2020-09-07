@@ -1325,15 +1325,15 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 # WARNING - hardcoded decision making
                                 # ?? 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
                                 # LOGIC: if descendant of A/B/C, add property value X/Y/Z
-                                property_value = 'http://snomed.info/id/'
+                                fhir_url_prefix = MappingCodesystem.objects.get(id = 1).component_fhir_uri
                                 if target.get('id') in MappingCodesystemComponent.objects.get(component_id = '123038009').descendants:
-                                    property_value += '276731003' # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '276731003') # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
                                 elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '182353008').descendants:
-                                    property_value += '272741003' # 272741003 = SNOMED: lateraliteit (attribuut)
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '272741003') # 272741003 = SNOMED: lateraliteit (attribuut)
                                 elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '252569009').descendants: # Descendants of 252569009 Test for allergens (procedure)
-                                    property_value += '408730004' # 408730004 = context van verrichting (attribuut)
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '408730004') # 408730004 = context van verrichting (attribuut)
                                 else:
-                                    property_value += '263491009' # 263491009 = Context (attribute) - <<UNAPPROVED ATTRIBUTE
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '263491009') # 263491009 = Context (attribute) - <<UNAPPROVED ATTRIBUTE
                                 products.append({
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
