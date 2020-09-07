@@ -27,6 +27,8 @@ router_1_0.register(r'audits_per_project', views.MappingAuditsPerProject, basena
 router_1_0.register(r'audit_whitelist', views.MappingAuditWhitelist, basename="Audits whitelist")
 router_1_0.register(r'audit_remove_whitelist', views.MappingAuditRemoveWhitelist, basename="Audits remove whitelist")
 router_1_0.register(r'audit_remove', views.MappingAuditRemove, basename="Audits remove")
+router_1_0.register(r'audit_trigger', views.MappingTriggerAudit, basename="Audits trigger")
+
 
 router_1_0.register(r'codesystems', views.Codesystems, basename="Mapping Codesystems")
 router_1_0.register(r'projects', views.Projects, basename="Mapping Projects")

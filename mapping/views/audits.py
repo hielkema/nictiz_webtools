@@ -49,6 +49,17 @@ class Permission_MappingProject_Whitelist(permissions.BasePermission):
         if 'mapping | audit whitelist' in request.user.groups.values_list('name', flat=True):
             return True
 
+class MappingTriggerAudit(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        try:
+            task = MappingTask.objects.get(id=pk)
+            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            return Response(True)
+        except Exception as e:
+            return Response(e)    
+
 class MappingAudits(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
