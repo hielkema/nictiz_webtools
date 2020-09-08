@@ -952,7 +952,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
                 # If Target component contains active/deprecated designation ->
                 extra_dict = rule.target_component.component_extra_dict
-                if extra_dict.get('Actief',False):
+                if extra_dict.get('Actief',{}):
                     # If source code is deprecated ->
                     if extra_dict.get('Actief') == "False":
                         obj, created = MappingTaskAudit.objects.get_or_create(

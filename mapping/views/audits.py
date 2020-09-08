@@ -60,6 +60,17 @@ class MappingTriggerAudit(viewsets.ViewSet):
         except Exception as e:
             return Response(e)    
 
+class MappingTriggerProjectAudit(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        try:
+            project = MappingProject.objects.get(id=pk)
+            audit_async.delay('multiple_mapping', project.id, None)
+            return Response(True)
+        except Exception as e:
+            return Response(e)  
+
 class MappingAudits(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
