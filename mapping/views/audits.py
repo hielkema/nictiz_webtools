@@ -140,3 +140,31 @@ class MappingAuditsPerProject(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+
+class MappingAuditStatus(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Whitelist]
+
+    def retrieve(self, request, pk=None):
+        i = inspect()
+        active = i.active()
+        info = []
+        if not active:
+            pk = 'error - celery down?'
+        else:
+            for worker, tasks in list(active.items()):
+                if tasks:
+                    taskstr = '; '.join("%s(*%s, **%s)" % (t['name'], t['args'], t['kwargs'])
+                            for t in tasks)
+                else:
+                    taskstr = 'None'
+                info.append((worker + ' active', taskstr))
+            for worker, tasks in list(i.scheduled().items()):
+                info.append((worker + ' scheduled', len(tasks)))
+
+            
+
+        # Should return:
+        # - audit running for project true/false
+        # - audit running for current task true/false
+
+        return Response(f'{pk} checked {info}')
