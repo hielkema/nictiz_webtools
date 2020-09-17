@@ -405,9 +405,9 @@ def import_apache_async():
 
         obj.component_title     = row['APACHE IV TERM']
 
-        legacy map = ''
+        legacy_map = ''
         for item in df[df['ID'] == row['ID']].values:
-            legacy map+= f"{item[2]} |{item[3]}|\n"
+            legacy_map += f"{item[2]} |{item[3]}|\n"
 
         extra = {
             'Legacy map' : legacy_map,
