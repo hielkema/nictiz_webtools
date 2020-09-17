@@ -276,6 +276,10 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
                     error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
                     print(error)
 
+            print('Apache', json.loads(request.POST.get('codesystem[apache]')))
+            if json.loads(request.POST.get('codesystem[apache]')):
+                import_apache_async.delay()
+
             print('G-Standaard Diagnoses', json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')))
             if json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')):
                 import_gstandaardDiagnoses_task.delay()
@@ -326,7 +330,9 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             # Return JSON
             return JsonResponse(context,safe=False)
         except Exception as e:
-            print(type(e), e, kwargs)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+            print(type(e), e, kwargs, error)
     def get(self, request, **kwargs):        
         return render(request, 'mapping/v2/import_codesystems.html', {
             'page_title': 'Mapping project',

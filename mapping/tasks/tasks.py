@@ -154,7 +154,7 @@ def update_snomedConcept_async(payload=None):
     obj.component_title = str(concept['fsn']['term'])
     extra = {
         'Preferred term' : str(concept['pt']['term']),
-        'Actief'         : concept['active'],
+        'Actief'         : str(concept['active']),
         'Effective time' : str(concept['effectiveTime']),
         'Definition status'  : str(concept['definitionStatus']),
     }
@@ -246,7 +246,6 @@ def import_labcodeset_async():
 
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
-            #### TODO add sticky audit hit if concept was already in database and title changed
 
             #### Add sticky audit hit if concept was already in database and title changed
             if (obj.component_title != None) and (obj.component_title != term_en):
@@ -263,6 +262,13 @@ def import_labcodeset_async():
             else:
                 print(f"{obj.component_title} in database == {term_en} - geen hits")
 
+            component_active = 'True'
+            try:
+                if component['@status'] != "active": component_active = 'False'
+            except:
+                print("Fout bij bepalen of lab_concept actief is - import als actief")
+
+
             obj.component_title     = term_en
             obj.component_extra_dict   = {
                 'Nederlands'            : term_nl,
@@ -274,6 +280,7 @@ def import_labcodeset_async():
                 'Klasse'                : loinc_class,
                 'Aanvraag/Resultaat'    : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
+                'Actief'                : component_active,
             }
             obj.save()
 
@@ -369,6 +376,44 @@ def import_nhgverrichtingen_task():
         obj.save()
 
 @shared_task
+def import_apache_async():
+    df = read_excel('/webserver/mapping/resources/apache/20171120_apache-snomed_eerstetab_Basislijst.xlsx')
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='10') #10 = apache
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=row['ID'],
+        )
+        # Add data not used for matching
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row['APACHE IV TERM']):
+            print(f"{obj.component_title} in database != {row['APACHE IV TERM']} - sticky audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row['APACHE IV TERM']} - geen hits")
+
+        obj.component_title     = row['APACHE IV TERM']
+
+        extra = {
+            'Legacy map' : f"{row['SCT_ID']} - {row['SNOMED CT Descriptions']}",
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
+        }
+        obj.component_extra_dict = extra
+        # Save
+        obj.save()
+
+@shared_task
 def import_omaha_task():
     df = read_excel('/webserver/mapping/resources/omaha/omaha.xlsx')
     # Vervang lege cellen door False
@@ -399,7 +444,10 @@ def import_omaha_task():
 
         obj.component_title     = row[1]
 
-        obj.component_extra_dict = {}
+        extra = {
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
+        }
+        obj.component_extra_dict = extra
         # Save
         obj.save()
 
@@ -812,6 +860,7 @@ def import_gstandaardDiagnoses_task():
 
         extra = {
             'Opmerking' : row['opmerking'],
+            'Actief' : actief_concept,
         }
         # print(extra)
         obj.component_extra_dict = extra

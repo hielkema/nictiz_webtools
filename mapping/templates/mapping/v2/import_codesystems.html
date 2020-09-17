@@ -60,6 +60,12 @@
                 </td>
             </tr>
             <tr>
+                <th width="130">APACHE</th>
+                <td>
+                    <input type="checkbox" v-model="codesystem.apache">
+                </td>
+            </tr>
+            <tr>
                 <th width="130">Laden</th>
                 <td>
                     <input name="Labcode" value="Start" type="submit">
@@ -79,11 +85,14 @@ var vuePosts = new Vue({
         codesystem: {
             'labcode' : false,
             'diagnosethesaurus' : false,
+            'gstandaardDiagnoses' : false,
+            'apache' : false,
             'snomed' : false,
             'nhgverr' : false,
             'nhgbep' : false,
             'icpc' : false,
             'palga' : false,
+            'omaha' : false,
         },
         csrftoken: Cookies.get('csrftoken'),
     },
