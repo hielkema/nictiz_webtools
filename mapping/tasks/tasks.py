@@ -405,8 +405,12 @@ def import_apache_async():
 
         obj.component_title     = row['APACHE IV TERM']
 
+        legacy map = ''
+        for item in df[df['ID'] == row['ID']].values:
+            legacy map+= f"{item[2]} |{item[3]}|\n"
+
         extra = {
-            'Legacy map' : f"{row['SCT_ID']} - {row['SNOMED CT Descriptions']}",
+            'Legacy map' : legacy_map,
             'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
         }
         obj.component_extra_dict = extra
