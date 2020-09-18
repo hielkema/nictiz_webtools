@@ -45,6 +45,36 @@ def createRulesFromEcl(taskid):
             query.export_finished = False
             query.save()
         
+        # Find component ID's that should be excluded
+        exclude_componentIDs = []
+        excluded_componentIDs = []
+        try:
+            obj = MappingEclPartExclusion.objects.get(task = task)
+            components = MappingCodesystemComponent.objects.filter(
+                    codesystem_id = obj.task.source_component.codesystem_id,
+                    component_id__in=list(obj.components)
+                )
+            print(f"Will exclude ECL results from {str(components)}")
+            # Loop components
+            for component in components:
+                print(f"Handling exclusion of {str(component)}")
+                # For each, retrieve their tasks, in this same project
+                exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
+                print(f"Found tasks: {str(exclude_tasks)}")
+                for exclude_task in exclude_tasks:
+                    print(f"Handling exclude_task {str(exclude_task)}")
+                    exclusion_queries = MappingEclPart.objects.filter(task=exclude_task)
+                    for exclusion_query in exclusion_queries:
+                        print(f"Found query result for {exclude_task.source_component.component_title}: [{str(exclusion_query.result)}] \n{list(exclusion_query.result.get('concepts'))}")
+                        for key, value in exclusion_query.result.get('concepts').items():
+                            exclude_componentIDs.append(key)
+                
+                print(f"Next component - list is now: {exclude_componentIDs}\n\n")
+            print(f"Full exclude list: {exclude_componentIDs}")
+        except Exception as e:
+            print("No exclusion rules? Error:",e)
+
+
         # Loop through queries to find individual rules, put in list
         for query in queries:  
             print("Found query",query.id)
@@ -55,23 +85,27 @@ def createRulesFromEcl(taskid):
                 # Add all results to a list for easy viewing
                 try:
                     for key, result in query.result.get('concepts').items():
-                        # print(result)   
-                        _query = result
-                        _query.update({
-                            # 'queryId' : query.id,
-                            'query' : query.query,
-                            # 'description' : query.description,
-                            'correlation' : query.mapcorrelation,
-                        })
-                        # Append to all_results for creation
-                        all_results.append(_query)
-                        
-                        # Append to valid_rules for validation after
-                        valid_rules.update({
-                            result.get('id') : {
+                        if key not in exclude_componentIDs:
+                            # print(result)   
+                            _query = result
+                            _query.update({
+                                # 'queryId' : query.id,
+                                'query' : query.query,
+                                # 'description' : query.description,
                                 'correlation' : query.mapcorrelation,
-                            }
-                        })
+                            })
+                            # Append to all_results for creation
+                            all_results.append(_query)
+                            
+                            # Append to valid_rules for validation after
+                            valid_rules.update({
+                                result.get('id') : {
+                                    'correlation' : query.mapcorrelation,
+                                }
+                            })
+                            print(f"{key} mag aangemaakt worden!")
+                        else:
+                            print(f"{key} mag NIET aangemaakt worden!")
                 except:
                     print("Retrieve mappings: No results")
 

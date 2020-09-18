@@ -196,6 +196,15 @@ class MappingEclPart(models.Model):
     ]
     mapcorrelation  = models.CharField(max_length=50, choices=correlation_options, default=None, blank=True, null=True)
 
+class MappingEclPartExclusion(models.Model):
+    ##
+    ##  For use with the vue mapping tooling
+    ##  Used to exclude the result of the ECL mapping of another component.
+    ##  Ie. putting A80 in the list in MappingEclPartExclusion.components will exclude the results of all ECL queries linked to A80 for the linked task.
+    ##
+    task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
+    components          = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
+    
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
     action_options = [
