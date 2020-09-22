@@ -48,7 +48,9 @@ class MappingUsers(viewsets.ViewSet):
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
         users = User.objects.all().order_by('username')
-        tasks = MappingTask.objects.all()
+        tasks = MappingTask.objects.all().select_related(
+            'user'
+        )
         output = []
         # For each user
         for user in users:
