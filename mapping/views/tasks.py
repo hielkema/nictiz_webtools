@@ -205,6 +205,7 @@ class Tasklist(viewsets.ViewSet):
                     'id' : task.status.id,
                     'title' : task.status.status_title
                 },
+                'category' : task.category,
             })
         task_list = natsort.natsorted(task_list, key=lambda k: k['component']['id'])
 

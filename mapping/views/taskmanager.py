@@ -61,6 +61,10 @@ class ChangeMappingTasks(viewsets.ViewSet):
                 tasks.update(project_id = new_project)
                 print('Project wijzigen voor ',tasks.count(),'naar',str(new_project))
 
+            if payload.get('action').get('changeCategory') and payload.get('value').get('changeCategory'):
+                new_category = str(payload.get('value').get('changeCategory'))
+                tasks.update(category = new_category)
+                print('Categorie wijzigen voor',tasks.count(),'naar', new_category)
 
             output = payload
         else:
@@ -122,7 +126,9 @@ class MappingTasks(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         # Get data
         project = MappingProject.objects.get(id=pk)
-        data = MappingTask.objects.filter(project_id=project).order_by('id')
+        data = MappingTask.objects.filter(project_id=project).order_by('id').select_related(
+            'user', 'source_component', 'status', 'project_id', 'source_component__codesystem_id',
+        )
     
         tasks = []
         for task in data:
@@ -148,10 +154,12 @@ class MappingTasks(viewsets.ViewSet):
                     },
                     'extra' : task.source_component.component_extra_dict,
                 },
+                'component_extra' : task.source_component.component_extra_dict,
                 'status'  :   {
                     'id' : task.status.id,
                     'title' : task.status.status_title
                 },
+                'category' : task.category,
                 # Exports used in filtering in task manager - can't be nested
                 'username' : user_name,
                 'project' : task.project_id.title,

@@ -13,6 +13,7 @@ from ..models import *
 import urllib.request
 from pandas import read_excel, read_csv
 import environ
+import sys, os
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -80,6 +81,24 @@ def UpdateECL1Task(record_id, query):
             'error' : str(e),
         }
 
+@shared_task
+def check_snomed_active(concept = None):
+    snowstorm = Snowstorm(
+        baseUrl="https://snowstorm.test-nictiz.nl",
+        debug=False,
+        preferredLanguage="nl",
+        defaultBranchPath="MAIN/SNOMEDCT-NL",
+    )
+    result = snowstorm.getConceptById(id=concept)
+    obj = MappingCodesystemComponent.objects.get(component_id = concept)
+    extra_dict = obj.component_extra_dict
+    extra_dict.update({'Actief':result.get('active')})
+    obj.component_extra_dict = extra_dict
+    obj.save()
+    print(extra_dict)
+    print(obj.component_extra_dict)
+    
+
 
 @shared_task
 def import_snomed_async(focus=None):
@@ -92,21 +111,15 @@ def import_snomed_async(focus=None):
     result = snowstorm.findConcepts(ecl="<<"+focus)
     print('Found {} concepts'.format(len(result)))
 
-    # Set all snomed concepts in the database as inactive, in case they are not retrieved through ECL?
-    # Should probably be changed to all applying only to concepts not in the above ECL query results!
-    # Voorbeeld:
+    # Set snomed concepts in the database as inactive, if they are not retrieved through ECL (this means they are not active and will not be updated)
+    ##### ALERT - can't be done this way! Not all concepts are descendants of this focus concept. Should be a separately scheduled task that checks the entire library.
     # snomed = MappingCodesystem.objects.get(id='1')
     # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+    # concepts = concepts.exclude(component_id__in = list(result.keys()))
     # concepts.update(component_extra_dict = {
-    #     'Actief':False,
+    #     'Actief':'False',
     # })
-    # Nieuw TODO:
-    # snomed = MappingCodesystem.objects.get(id='1')
-    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
-    # concepts = concepts.exclude(component_id__in = result.keys()) ??????
-    # concepts.update(component_extra_dict = {
-    #     'Actief':False,
-    # })
+    # print(f"Set {concepts.count()} as inactive - were not in ECL query from focus concept {focus}.")
 
     # Spawn task for each concept
     for conceptid, concept in result.items():
@@ -137,19 +150,38 @@ def update_snomedConcept_async(payload=None):
     print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
     # Add data not used for matching
     #### Add sticky audit hit if concept was already in database and title changed
-    if (obj.component_title != None) and (obj.component_title != concept['fsn']['term']):
-        print(f"{obj.component_title} in database != {concept['fsn']['term']} - audit hit maken")
-        # Find tasks using this component
-        tasks = MappingTask.objects.filter(source_component = obj)
-        for task in tasks:
-            audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                    task=task,
-                    audit_type="IMPORT",
-                    sticky=True,
-                    hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                )
+    term_en = concept['fsn']['term']
+    if (obj.component_title != None) and (obj.component_title != term_en):
+        print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+
+        # Find rules using this component (both from and to)
+        hit_rules = MappingRule.objects.filter(source_component = obj)
+        for hit_rule in hit_rules: 
+            # Find tasks using any of the involved components
+            ## From
+            tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+            print(f"Audit-tagging [from] {tasks.count()} tasks.")
+            for task in tasks:
+                    print(f"Audit hit maken voor taak {str(task)}")
+                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                            task=task,
+                            audit_type="IMPORT",
+                            sticky=True,
+                            hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+                        )
+            ## To
+            tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+            print(f"Audit-tagging [to] {tasks.count()} tasks.")
+            for task in tasks:
+                    print(f"Audit hit maken voor taak {str(task)}")
+                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                            task=task,
+                            audit_type="IMPORT",
+                            sticky=True,
+                            hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+                        )
     else:
-        print(f"{obj.component_title} in database == {concept['fsn']['term']} - geen hits")
+        print(f"{obj.component_title} in database == {term_en} - geen hits")
 
     obj.component_title = str(concept['fsn']['term'])
     extra = {
@@ -173,6 +205,38 @@ def update_snomedConcept_async(payload=None):
 
 @shared_task
 def import_labcodeset_async():
+    # Import pre-existent mappings as a comment
+    try:
+        df = read_excel('/webserver/mapping/resources/labcodeset/init_mapping_NHG45-LOINC.xlsx')
+        # Vervang lege cellen door False
+        df=df.fillna(value=False)
+        codesystem = MappingCodesystem.objects.get(id='4') # NHG tabel 45
+        user = User.objects.get(username='hielkema')
+        for index, row in df.iterrows():
+            bepalingnr = row['bepalingsnr']
+            notitie = row['Notitie']
+            loinc_id = row['LOINC-id']
+            loinc_name = row['LOINC-naam']
+            component = MappingCodesystemComponent.objects.get(codesystem_id=codesystem, component_id=bepalingnr)
+            try:
+                if loinc_id != 'UNMAPPED':
+                    task = MappingTask.objects.get(source_component=component)
+                    comment = "Voorstel import: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
+                    MappingComment.objects.get_or_create(
+                        comment_title = 'NHG-LOINC mapping (Hielkema)',
+                        comment_task = task,
+                        comment_body = comment,
+                        comment_user = user,
+                    )
+            except:
+                print('Geen taak voor dit concept')
+                print(bepalingnr, notitie, loinc_id, loinc_name)
+    except:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+        print(error)
+
+    # Import codesystem
     with open('/webserver/mapping/resources/labcodeset/labconcepts-20200529-093650784.xml') as fd:
         doc = xmltodict.parse(fd.read())
 
@@ -250,15 +314,33 @@ def import_labcodeset_async():
             #### Add sticky audit hit if concept was already in database and title changed
             if (obj.component_title != None) and (obj.component_title != term_en):
                 print(f"{obj.component_title} in database != {term_en} - audit hit maken")
-                # Find tasks using this component
-                tasks = MappingTask.objects.filter(source_component = obj)
-                for task in tasks:
-                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type="IMPORT",
-                            sticky=True,
-                            hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                        )
+
+                # Find rules using this component (both from and to)
+                hit_rules = MappingRule.objects.filter(source_component = obj)
+                for hit_rule in hit_rules: 
+                    # Find tasks using any of the involved components
+                    ## From
+                    tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+                    print(f"Audit-tagging [from] {tasks.count()} tasks.")
+                    for task in tasks:
+                            print(f"Audit hit maken voor taak {str(task)}")
+                            audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type="IMPORT",
+                                    sticky=True,
+                                    hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+                                )
+                    ## To
+                    tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+                    print(f"Audit-tagging [to] {tasks.count()} tasks.")
+                    for task in tasks:
+                            print(f"Audit hit maken voor taak {str(task)}")
+                            audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                                    task=task,
+                                    audit_type="IMPORT",
+                                    sticky=True,
+                                    hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+                                )
             else:
                 print(f"{obj.component_title} in database == {term_en} - geen hits")
 

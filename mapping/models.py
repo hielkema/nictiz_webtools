@@ -94,6 +94,7 @@ class MappingCodesystemComponent(models.Model):
 
 class MappingTask(models.Model):
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
+    category   = models.CharField(max_length=500)
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID in codesystem = MappingCodesystemComponent:id
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_task', default=None, null=True, blank=True) # Uniek ID van codesystem waar vandaan in deze taak gemapt moet worden
     target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'target_codesystem_task', default=None, null=True, blank=True) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
