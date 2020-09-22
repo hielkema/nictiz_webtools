@@ -320,8 +320,10 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
             return Response('error')
         else:
             codesystem  = MappingCodesystem.objects.get(id=pk)
-            components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem)
-            projects    = MappingProject.objects.all()
+            components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem).select_related(
+                'codesystem_id'
+            )
+            # projects    = MappingProject.objects.all()
 
             print('Received request for codesystem',codesystem.codesystem_title)
             if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
@@ -329,7 +331,10 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                 return Response('error')
             else:
                 for component in components:
-                    tasks = MappingTask.objects.filter(source_component = component)
+                    tasks = MappingTask.objects.filter(source_component = component).select_related(
+                        'project_id',
+                        'status'
+                    )
                     extra = component.component_extra_dict
                     aub = extra.get('Aanvraag/Uitslag/Beide')
                     if aub == 'A': aub="Aanvraag"
@@ -346,7 +351,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                             output.append({
                                 'id' : component.component_id,
                                 'codesystem' : component.codesystem_id.codesystem_title,
-                                # 'extra' : extra,
+                                'extra' : extra,
                                 'group' : extra.get('Groep'),
                                 'AUB' : aub,
                                 'actief' : extra.get('Actief'),
@@ -355,13 +360,14 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'aantal taken' : tasks.count(),
                                 'project' : task.project_id.title,
                                 'source or target' : task_type,
+                                'category' : task.category,
                                 'status' : task.status.status_title,
                             })
                     else:
                         output.append({
                                 'id' : component.component_id,
                                 'codesystem' : component.codesystem_id.codesystem_title,
-                                # 'extra' : extra,
+                                'extra' : extra,
                                 'group' : extra.get('Groep'),
                                 'AUB' : aub,
                                 'actief' : extra.get('Actief'),
@@ -370,6 +376,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'aantal taken' : tasks.count(),
                                 'project' : None,
                                 'source or target' : None,
+                                'category' : None,
                                 'status' : None,
                             })
 
