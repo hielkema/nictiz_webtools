@@ -140,6 +140,7 @@ class MappingTasks(viewsets.ViewSet):
                 user_name = 'Niet toegewezen'
             tasks.append({
                 'id'    :   task.id,
+                'component_id'  :   task.source_component.component_id,
                 'user' : {
                     'id' : user_id,
                     'name' : user_name,
