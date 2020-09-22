@@ -775,21 +775,6 @@ def import_nhgbepalingen_task():
             component_id=row[0],
         )
 
-        #### Add sticky audit hit if concept was already in database and title changed
-        if (obj.component_title != None) and (obj.component_title != row[4]):
-            print(f"{obj.component_title} in database != {row[4]} - audit hit maken")
-            # Find tasks using this component
-            tasks = MappingTask.objects.filter(source_component = obj)
-            for task in tasks:
-                audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                        task=task,
-                        audit_type="IMPORT",
-                        sticky=True,
-                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                    )
-        else:
-            print(f"{obj.component_title} in database == {row[4]} - geen hits")
-
         obj.component_title = row[4]
         
         # Check status van NHG term
@@ -809,7 +794,7 @@ def import_nhgbepalingen_task():
             soort = str(row[13])
 
         # Check groep van NHG term
-        if str(row[9]) == "AA": groep = "Anamnese"
+        if   str(row[9]) == "AA": groep = "Anamnese"
         elif str(row[9]) == "AL": groep = "Allergologie"
         elif str(row[9]) == "AU": groep = "Auscultatie"
         elif str(row[9]) == "AL": groep = "Allergologie"
@@ -849,6 +834,7 @@ def import_nhgbepalingen_task():
             'Aanvraag/Uitslag/Beide' : row[6],
             'Soort' : soort,
             'Groep' : groep,
+            'Selectie' : row[10],
             'Materiaal NHG' : row[2],
             'Materiaal voorstel Snomed' : voorstel_materiaal,
             'Vraagtype' : row[14],
