@@ -362,6 +362,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'source or target' : task_type,
                                 'category' : task.category,
                                 'status' : task.status.status_title,
+                                'user' : task.user.username,
                             })
                     else:
                         output.append({
@@ -378,6 +379,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'source or target' : None,
                                 'category' : None,
                                 'status' : None,
+                                'user' : None,
                             })
 
                 # Return Json response
