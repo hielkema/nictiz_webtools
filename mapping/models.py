@@ -263,6 +263,7 @@ class MappingReleaseCandidate(models.Model):
     access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
     
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
+    export_all = models.BooleanField(default=False) # If True: export ALL rules, regardless of fiat/veto
     finished = models.BooleanField(default=False)
     # Perhaps status should be coming from the status DB table - text for now
     status_options = [
