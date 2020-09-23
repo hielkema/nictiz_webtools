@@ -333,7 +333,8 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                 for component in components:
                     tasks = MappingTask.objects.filter(source_component = component).select_related(
                         'project_id',
-                        'status'
+                        'status',
+                        'user',
                     )
                     extra = component.component_extra_dict
                     aub = extra.get('Aanvraag/Uitslag/Beide')
