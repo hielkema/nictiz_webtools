@@ -348,6 +348,11 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                             if task.project_id.project_type == "3": task_type = '?'
                             if task.project_id.project_type == "4": task_type = 'Target'
 
+                            try:
+                                user = task.user.username
+                            except:
+                                user = None
+
                             output.append({
                                 'id' : component.component_id,
                                 'codesystem' : component.codesystem_id.codesystem_title,
@@ -362,7 +367,7 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'source or target' : task_type,
                                 'category' : task.category,
                                 'status' : task.status.status_title,
-                                'user' : task.user.username,
+                                'user' : user,
                             })
                     else:
                         output.append({
