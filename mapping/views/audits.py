@@ -88,6 +88,18 @@ class MappingAudits(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+    def create(self, request):
+        payload = request.data
+        taskid = str(payload.get('task_id'))
+        task = MappingTask.objects.get(id=taskid)
+
+        audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="AUDIT_VETO",
+                        sticky=True,
+                        hit_reason=f"Deze taak heeft in de audit view een veto ontvangen. Zie commentaar voor meer informatie.",
+                    )
+        return Response(True)
 
 class MappingAuditWhitelist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
