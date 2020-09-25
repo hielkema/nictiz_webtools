@@ -68,8 +68,15 @@ class MappingTargetSearch(viewsets.ViewSet):
             'codesystem_id',
         )
         for result in snomedComponents:
+            try:
+                if (result.component_extra_dict.get('Actief',False) == "True") or (result.component_extra_dict.get('Actief',False) == True) :
+                    active = 'Ja'
+                else:
+                    active = 'Nee'
+            except:
+                active = 'Onbekend'
             output.append({
-                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [{result.component_extra_dict.get('Actief',False)}]",
+                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [Actief: {active}]",
                 'value': result.component_id,
                 'component': {'id':result.id, 'title':result.component_title},
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
