@@ -119,7 +119,7 @@ def ecl_vs_rules(taskid):
                             )
             else:
                 # ConceptID should not be there at all
-                logger.info(f"[ECL vs RULES] Task {task.id} / Rule for {conceptid} not present - HIT")
+                logger.info(f"[ECL vs RULES] Task {task.id} / Rule not present - HIT")
                 obj, created = MappingTaskAudit.objects.get_or_create(
                         task=task,
                         audit_type="Mismatch ECL vs rules",
