@@ -183,18 +183,19 @@ class cached_results(viewsets.ViewSet):
         return Response(output)
 
     def retrieve(self, request, pk=None):
-        obj = cachedResults.objects.get(id=pk)
-        
-        data = {
-            'id' : obj.id,
-            'time' : obj.time,
-            'title' : obj.title,
-            'user' : obj.user,
-            'finished' : obj.finished,
-            'data' : obj.data,
-        }
-
-        return Response(data)
+        try:
+            obj = cachedResults.objects.get(id=pk)
+            
+            data = {
+                'id' : obj.id,
+                'time' : obj.time,
+                'title' : obj.title,
+                'finished' : obj.finished,
+                'data' : obj.data,
+            }
+            return Response(data)
+        except Exception as e:
+            return Response(e)
     def create(self, request):
         return Response({
             'error' : 'Not allowed'
