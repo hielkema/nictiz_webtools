@@ -179,7 +179,10 @@ class snomedAncestors(viewsets.ViewSet):
 
         output = []
         for component in components:
-            ancestor_list = json.loads(component.ancestors)
+            try:
+                ancestor_list = json.loads(component.ancestors)
+            except:
+                ancestor_list = []
             output.append({
                 'id' : component.component_id,
                 'title' : component.component_title,
