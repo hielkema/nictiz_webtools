@@ -169,35 +169,32 @@ class componentApi(viewsets.ViewSet):
         # MethodNotAllowed(method, detail=None, code=None)
 
 # SNOMED Ancestor list
-class snomedAncestors(viewsets.ViewSet):
+class cached_results(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def list(self, request):
-        print("Request for codesystem list")
-        start = time.time()
-        components = MappingCodesystemComponent.objects.filter(codesystem_id__id = 1)
-
+        cached = cachedResults.objects.all()
         output = []
-        for component in components:
-            try:
-                ancestor_list = json.loads(component.ancestors)
-            except:
-                ancestor_list = []
+        for cache in cached:
             output.append({
-                'id' : component.component_id,
-                'title' : component.component_title,
-                'ancestors' : ancestor_list,
+                'id' : cache.id,
+                'title' : cache.title,
+                'finished' : cache.finished,
             })
-        return Response({
-            'time' : round(time.time()-start,3),
-            'concept_count' : len(output),
-            # 'concepts' : output,
-        })
+        return Response(output)
 
     def retrieve(self, request, pk=None):
-        snomed = MappingCodesystem.objects.get(id=1)
-        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed, component_id=pk)
-        results = MappingComponentSerializer(query, many=True).data
-        return Response(results)
+        obj = cachedResults.objects.get(id=pk)
+        
+        data = {
+            'id' : obj.id,
+            'time' : obj.time,
+            'title' : obj.title,
+            'user' : obj.user,
+            'finished' : obj.finished,
+            'data' : obj.data,
+        }
+
+        return Response(data)
     def create(self, request):
         return Response({
             'error' : 'Not allowed'

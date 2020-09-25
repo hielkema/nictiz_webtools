@@ -64,10 +64,12 @@ class MappingTargetSearch(viewsets.ViewSet):
         snomedComponents = MappingCodesystemComponent.objects.filter(
             Q(component_id__icontains=query) |
             Q(component_title__icontains=query)
+        ).select_related(
+            'codesystem_id',
         )
         for result in snomedComponents:
             output.append({
-                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title}",
+                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [{result.component_extra_dict.get('Actief',False)}]",
                 'value': result.component_id,
                 'component': {'id':result.id, 'title':result.component_title},
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
@@ -561,7 +563,7 @@ class MappingTargets(viewsets.ViewSet):
                         # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
                     print(f"Full exclude list: {exclude_componentIDs}")
                 except Exception as e:
-                    print("No exclusion rules? Error:",e)
+                    True
 
                 # Get all ECL Queries - including cached snowstorm response
                 all_results = list()

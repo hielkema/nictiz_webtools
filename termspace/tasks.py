@@ -1,6 +1,7 @@
 # Create your tasks here
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
+import time
 from .models import *
 from mapping.models import *
 import time, json
@@ -439,6 +440,34 @@ def dump_termspace_progress():
             count = total,
         )
         output.append(str(obj))
+
+    return output
+
+@shared_task
+def dump_termspace_ascendants():
+    output = []
+    start = time.time()
+    components = MappingCodesystemComponent.objects.filter(codesystem_id__id = 1)
+    for component in components:
+        try:
+            ancestor_list = json.loads(component.ancestors)
+        except:
+            ancestor_list = []
+        output.append({
+            'id' : component.component_id,
+            'title' : component.component_title,
+            'ancestors' : ancestor_list,
+        })
+
+    cachedResults.objects.create(
+        title = "SNOMED ascendants",
+        finished = True,
+        data = {
+            'time' : round(time.time()-start,3),
+            'concept_count' : len(output),
+            'concepts' : output,
+        }
+    )
 
     return output
 

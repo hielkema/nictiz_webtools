@@ -12,7 +12,7 @@ router = SimpleRouter()
 router.register(r'search_comments', searchTermspaceComments, basename="termspace_comments")
 router.register(r'component_api', componentApi, basename="component_api")
 router.register(r'ecl_api', eclQueryApi, basename="ecl_query_api")
-router.register(r'snomed_ancestors', snomedAncestors, basename="snomed_ancestors")
+router.register(r'cached_results', cached_results, basename="cached_results")
 
 router.register(r'snomed_json_tree', SnomedJSONTree, basename="snomed_json_tree")
 
