@@ -168,6 +168,38 @@ class componentApi(viewsets.ViewSet):
         })
         # MethodNotAllowed(method, detail=None, code=None)
 
+# SNOMED Ancestor list
+class snomedAncestors(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+    def list(self, request):
+        print("Request for codesystem list")
+        snomed = MappingCodesystem.objects.get(id=1)
+        components = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+
+        output = []
+        for component in components:
+            ancestor_list = json.loads(component.ancestors)
+            output.append({
+                'id' : component.component_id,
+                'ancestors' : ancestor_list,
+                'ancestor_count' : len(ancestor_list),  
+            })
+        return Response({
+            'concept_count' : components.count(),
+            'concepts' : output,
+        })
+
+    def retrieve(self, request, pk=None):
+        snomed = MappingCodesystem.objects.get(id=1)
+        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed, component_id=pk)
+        results = MappingComponentSerializer(query, many=True).data
+        return Response(results)
+    def create(self, request):
+        return Response({
+            'error' : 'Not allowed'
+        })
+        # MethodNotAllowed(method, detail=None, code=None)
+
 # ECL query results
 class eclQueryApi(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
