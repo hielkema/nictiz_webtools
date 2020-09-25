@@ -12,4 +12,4 @@ WORKDIR /webserver
 EXPOSE 8000
 
 
-CMD ["gunicorn", "app.wsgi", "-b 0.0.0.0:8000"]
+CMD ["gunicorn", "app.wsgi", "-t 60", "-b 0.0.0.0:8000"]
