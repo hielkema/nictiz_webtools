@@ -154,7 +154,7 @@ class componentApi(viewsets.ViewSet):
         # query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed, component_id__in=clinicalFinding_list)
 
         snomed = MappingCodesystem.objects.get(id=1)
-        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)[:10]
+        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
         results = MappingComponentSerializer(query, many=True).data
         return Response(results)
     def retrieve(self, request, pk=None):
