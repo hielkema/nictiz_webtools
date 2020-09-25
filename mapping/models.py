@@ -86,7 +86,11 @@ class MappingCodesystemComponent(models.Model):
     component_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
-
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['codesystem_id']),
+        ]
 
     def __str__(self):
         return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_title

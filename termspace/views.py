@@ -174,8 +174,7 @@ class snomedAncestors(viewsets.ViewSet):
     def list(self, request):
         print("Request for codesystem list")
         start = time.time()
-        snomed = MappingCodesystem.objects.get(id=1)
-        components = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+        components = MappingCodesystemComponent.objects.filter(codesystem_id__id = 1)
 
         output = []
         for component in components:
