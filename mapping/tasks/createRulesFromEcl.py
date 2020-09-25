@@ -72,7 +72,7 @@ def createRulesFromEcl(taskid):
                 print(f"Next component - list is now: {exclude_componentIDs}\n\n")
             print(f"Full exclude list: {exclude_componentIDs}")
         except Exception as e:
-            print("No exclusion rules? Error:",e)
+            True
 
 
         # Loop through queries to find individual rules, put in list
