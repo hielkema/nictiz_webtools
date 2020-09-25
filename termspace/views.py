@@ -154,7 +154,7 @@ class componentApi(viewsets.ViewSet):
         # query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed, component_id__in=clinicalFinding_list)
 
         snomed = MappingCodesystem.objects.get(id=1)
-        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+        query = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)[:10]
         results = MappingComponentSerializer(query, many=True).data
         return Response(results)
     def retrieve(self, request, pk=None):
@@ -173,6 +173,7 @@ class snomedAncestors(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def list(self, request):
         print("Request for codesystem list")
+        start = time.time()
         snomed = MappingCodesystem.objects.get(id=1)
         components = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
 
@@ -181,12 +182,13 @@ class snomedAncestors(viewsets.ViewSet):
             ancestor_list = json.loads(component.ancestors)
             output.append({
                 'id' : component.component_id,
+                'title' : component.component_title,
                 'ancestors' : ancestor_list,
-                'ancestor_count' : len(ancestor_list),  
             })
         return Response({
-            'concept_count' : components.count(),
-            'concepts' : output,
+            'time' : round(time.time()-start,3),
+            'concept_count' : len(output),
+            # 'concepts' : output,
         })
 
     def retrieve(self, request, pk=None):

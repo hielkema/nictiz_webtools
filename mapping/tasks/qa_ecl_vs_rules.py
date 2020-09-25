@@ -57,7 +57,7 @@ def ecl_vs_rules(taskid):
                 print(f"Next component - list is now: {exclude_componentIDs}\n\n")
             print(f"Full exclude list: {exclude_componentIDs}")
         except Exception as e:
-            print("No exclusion rules? Error:",e)
+            True
 
 
         queries = MappingEclPart.objects.filter(task=task)
