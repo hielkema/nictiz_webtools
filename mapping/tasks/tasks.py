@@ -1314,10 +1314,10 @@ def exportCodesystemToRCRules(rc_id, user_id):
                         # task_user = task.user.username
                         source_component = rule.source_component,
                         static_source_component_ident = rule.source_component.component_id,
-                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                        # static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                         target_component = rule.target_component,
                         static_target_component_ident = rule.target_component.component_id,
-                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                        # static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                         mapgroup = rule.mapgroup,
                         mappriority = rule.mappriority,
                         mapcorrelation = rule.mapcorrelation,
