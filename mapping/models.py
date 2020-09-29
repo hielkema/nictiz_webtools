@@ -41,7 +41,7 @@ class MappingCodesystem(models.Model):
     codesystem_title    = models.CharField(max_length=50)
     codesystem_version  = models.CharField(max_length=50)
     codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
-    component_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
+    component_fhir_uri  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
 
     # extra fields are legacy, older scripts will break by removing
@@ -52,6 +52,11 @@ class MappingCodesystem(models.Model):
     codesystem_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+                models.UniqueConstraint(fields= ['id'], name = 'Unique ID'),
+            ]
 
     def __str__(self):
         return str(self.id) + " " + self.codesystem_title + " " + self.codesystem_version
@@ -266,9 +271,17 @@ class MappingReleaseCandidate(models.Model):
 
     access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
     
-    codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
-    export_all = models.BooleanField(default=False) # If True: export ALL rules, regardless of fiat/veto
+    # Source codesystem
+    codesystem          = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'rc_source_codesystem', default=None, blank=True, null=True)
+    # [Optional] Target codesystem - to allow filtering
+    target_codesystem   = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'rc_target_codesystem', default=None, blank=True, null=True)
+    
+    # If True: export ALL rules, regardless of fiat/veto
+    export_all = models.BooleanField(default=False) 
+    
+    # Status of exporet
     finished = models.BooleanField(default=False)
+    
     # Perhaps status should be coming from the status DB table - text for now
     status_options = [
         # (code, readable)
@@ -288,6 +301,7 @@ class MappingReleaseCandidateFHIRConceptMap(models.Model):
 
     rc = models.ForeignKey('MappingReleaseCandidate', on_delete=models.PROTECT, default=None, blank=True, null=True)
     
+    # Source codesystem
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_for_rc', default=None, blank=True, null=True)
     created = models.DateTimeField(default=timezone.now)
 

@@ -1216,35 +1216,81 @@ def exportCodesystemToRCRules(rc_id, user_id):
         }
         return output
 
-    # Selecte RC
+    # Select RC
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     if rc.status != 3: # 3=production
         rc.finished = False
         rc.save()
         # Get all tasks in requested codesystem - based on the codesystem of the source component
+        # if rc.target_codesystem != None:
+        #     print("Target filter applied")
+        #     tasks = MappingTask.objects.filter(
+        #             source_component__codesystem_id__id = rc.codesystem.id,
+        #             target_codesystem = rc.target_codesystem,
+        #         ).order_by('source_component__component_id')
+        #     tasks = tasks | MappingTask.objects.filter(
+        #             source_component__codesystem_id__id = rc.codesystem.id,
+        #             target_codesystem = rc.target_codesystem,
+        #         ).order_by('source_component__component_id')
+        # else:
+            # print("Target filter NOT applied")
         tasks = MappingTask.objects.filter(
-                source_component__codesystem_id__id = rc.codesystem.id
+                source_component__codesystem_id__id = rc.codesystem.id,
             ).order_by('source_component__component_id')
+
+        try:
+            tasks = tasks | MappingTask.objects.filter(
+                        source_component__codesystem_id__id = rc.target_codesystem.id,
+                    ).order_by('source_component__component_id')
+        except:
+            tasks = tasks
+
         print('Found',tasks.count(),'tasks.')
         
         debug_list = []
+        valid_rules = []
         # Loop through tasks
         for task in tasks:
             if task.status != task.project_id.status_complete:
                 print(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 debug_list.append(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 # Remove all rules in the RC database originating from this task, since it is rejected.
-                rc_rules = MappingReleaseCandidateRules.objects.filter(
-                        static_source_component_ident = task.source_component.component_id,
-                        export_task = task,
-                        export_rc = rc,
-                )
+                if task.project_id.project_type == '1':
+                    # In type 1 - source_component is used as SOURCE for all related rules
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                            static_source_component_ident = task.source_component.component_id,
+                            export_task = task,
+                            export_rc = rc,
+                    )
+                elif task.project_id.project_type == '4':
+                    # In type 4 - source_component is used as a TARGET for all related rules
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                            static_target_component_ident = task.source_component.component_id,
+                            export_task = task,
+                            export_rc = rc,
+                    )
                 
                 rc_rules.delete()
 
             else:
                 print(f"Handle task {task.id}")
-                rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+                if task.project_id.project_type == '1':
+                    # In type 1 - source_component is used as SOURCE for all related rules
+                    rules = MappingRule.objects.filter(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                        )
+                elif task.project_id.project_type == '4':
+                    # In type 4 - source_component is used as a TARGET for all related rules
+                    rules = MappingRule.objects.filter(
+                            project_id = task.project_id,
+                            target_component = task.source_component,
+                        )
+                # Filter on target codesystem if enabled
+                if rc.target_codesystem != None:
+                    rules = rules.filter(
+                        target_component__codesystem_id = rc.target_codesystem
+                    )
                 
                 ## First: check if any of the rules for this task have changes
                 ## if so: delete all existing rules in RC and replace them all
@@ -1363,6 +1409,18 @@ def exportCodesystemToRCRules(rc_id, user_id):
                             mapspecifies = mapspecifies,
                         )
                         # rc_rule.save()
+                for rule in rules:
+                    valid_rules.append(rule)
+
+        # Clean up - leave no rules behind that should not be there
+        invalid_rules = MappingReleaseCandidateRules.objects.filter(
+            export_rc = rc,
+        ).exclude(
+            export_rule__in = valid_rules,
+        )
+        print(f"Found {invalid_rules.count()} invalid rules - deleting")
+        invalid_rules.delete()
+
         rc.finished = True
         logger.info('Finished')
         for item in debug_list:
@@ -1433,8 +1491,6 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                     for single_rule in rules_for_task:
                         target_component = single_rule.static_target_component
 
-                        
-
                         # Skip if identifier in the list of used products
                         if (target_component.get('identifier') not in product_list):
                             # Put all the products in a list
@@ -1471,9 +1527,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             output = {
                                 'code' : target_component.get('identifier'),
                                 'equivalence' : equivalence,
-                                'comment' : single_rule.mapadvice,
                                 'display' : target_component.get('title'), ## TODO - remove for production
                             }
+                            if single_rule.mapadvice != None:
+                                output.update({'comment' : single_rule.mapadvice,})
                             # Add products to output if they exist
                             if len(products) > 0:
                                 output['product'] = products
