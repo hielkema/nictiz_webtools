@@ -1409,7 +1409,6 @@ def exportCodesystemToRCRules(rc_id, user_id):
                             mapspecifies = mapspecifies,
                         )
                         # rc_rule.save()
-                for rule in rules:
                     valid_rules.append(rule)
 
         # Clean up - leave no rules behind that should not be there
@@ -1515,7 +1514,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'code' : target.get('id'),
-                                    'display' : target.get('title'), ## TODO - remove for production
+                                    # 'display' : target.get('title'), ## TODO - remove for production
                                 })
 
                             # Translate the map correlation
@@ -1527,7 +1526,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             output = {
                                 'code' : target_component.get('identifier'),
                                 'equivalence' : equivalence,
-                                'display' : target_component.get('title'), ## TODO - remove for production
+                                # 'display' : target_component.get('title'), ## TODO - remove for production
                             }
                             if single_rule.mapadvice != None:
                                 output.update({'comment' : single_rule.mapadvice,})
@@ -1550,7 +1549,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 # 'DEBUG_numrules' : rules_for_task.count(),
                                 # 'DEBUG_productlist' : product_list,
                                 'code' : source_component.get('identifier'),
-                                'display' : source_component.get('title'),
+                                # 'display' : source_component.get('title'), ## TODO - remove for production
                                 'target' : targets,
                             }
                             elements.append(output)
@@ -1561,7 +1560,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             # 'DEBUG_numrules' : rules_for_task.count(),
                             # 'DEBUG_productlist' : product_list,
                             'code' : source_component.get('identifier'),
-                            'display' : source_component.get('title'), ## TODO - remove for production
+                            # 'display' : source_component.get('title'), ## TODO - remove for production
                             'target' : targets,
                         }
                         elements.append(output)
