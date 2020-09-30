@@ -150,38 +150,38 @@ def update_snomedConcept_async(payload=None):
     print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
     # Add data not used for matching
     #### Add sticky audit hit if concept was already in database and title changed
-    term_en = concept['fsn']['term']
-    if (obj.component_title != None) and (obj.component_title != term_en):
-        print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+    # term_en = concept['fsn']['term']
+    # if (obj.component_title != None) and (obj.component_title != term_en):
+    #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
 
-        # Find rules using this component (both from and to)
-        hit_rules = MappingRule.objects.filter(source_component = obj)
-        for hit_rule in hit_rules: 
-            # Find tasks using any of the involved components
-            ## From
-            tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
-            print(f"Audit-tagging [from] {tasks.count()} tasks.")
-            for task in tasks:
-                    print(f"Audit hit maken voor taak {str(task)}")
-                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type="IMPORT",
-                            sticky=True,
-                            hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-                        )
-            ## To
-            tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
-            print(f"Audit-tagging [to] {tasks.count()} tasks.")
-            for task in tasks:
-                    print(f"Audit hit maken voor taak {str(task)}")
-                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type="IMPORT",
-                            sticky=True,
-                            hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-                        )
-    else:
-        print(f"{obj.component_title} in database == {term_en} - geen hits")
+    #     # Find rules using this component (both from and to)
+    #     hit_rules = MappingRule.objects.filter(source_component = obj)
+    #     for hit_rule in hit_rules: 
+    #         # Find tasks using any of the involved components
+    #         ## From
+    #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+    #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
+    #         for task in tasks:
+    #                 print(f"Audit hit maken voor taak {str(task)}")
+    #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+    #                         task=task,
+    #                         audit_type="IMPORT",
+    #                         sticky=True,
+    #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+    #                     )
+    #         ## To
+    #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+    #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
+    #         for task in tasks:
+    #                 print(f"Audit hit maken voor taak {str(task)}")
+    #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+    #                         task=task,
+    #                         audit_type="IMPORT",
+    #                         sticky=True,
+    #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+    #                     )
+    # else:
+    #     print(f"{obj.component_title} in database == {term_en} - geen hits")
 
     obj.component_title = str(concept['fsn']['term'])
     extra = {

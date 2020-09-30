@@ -114,28 +114,32 @@ def createRulesFromEcl(taskid):
 
         ## Create new rules
         for concept in all_results:
-            print(f"Handling rule for concept {concept.get('id')}")
-            print("Correlation",concept.get('correlation'))
-            component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-            existing = MappingRule.objects.filter(
-                project_id = task.project_id,
-                source_component = component,
-                target_component = task.source_component,
-                mapcorrelation = concept.get('correlation'),
-            )
-            if existing.count() == 0:
-                print("Start get_or_create")
-                rule, created = MappingRule.objects.get_or_create(
+            try:
+                print(f"Handling rule for concept {concept.get('id')}")
+                print("Concept",concept.get('id'))
+                print("Correlation",concept.get('correlation'))
+                component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                existing = MappingRule.objects.filter(
                     project_id = task.project_id,
                     source_component = component,
                     target_component = task.source_component,
                     mapcorrelation = concept.get('correlation'),
                 )
-                print("Regel in DB", rule)
-                print("Created?", created)
-                print("\n\n\n")
-            else:
-                print(f"Already {existing.count()} rules in database - skip creating another")
+                if existing.count() == 0:
+                    print("Start get_or_create")
+                    rule, created = MappingRule.objects.get_or_create(
+                        project_id = task.project_id,
+                        source_component = component,
+                        target_component = task.source_component,
+                        mapcorrelation = concept.get('correlation'),
+                    )
+                    print("Regel in DB", rule)
+                    print("Created?", created)
+                    print("\n\n\n")
+                else:
+                    print(f"Already {existing.count()} rules in database - skip creating another")
+            except Exception as e:
+                print(str(e))
 
         # Cleanup - Remove rules that should not be there
         print(f"Valid rules:\n {valid_rules}")
