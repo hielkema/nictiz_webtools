@@ -119,7 +119,23 @@ def createRulesFromEcl(taskid):
                 # print(f"Handling rule for concept {concept.get('id')}")
                 # print("Concept",concept.get('id'))
                 # print("Correlation",concept.get('correlation'))
-                component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+
+                # If concepts from the ECL query are not present, import them and try again.
+                try:
+                    component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                except:
+                    print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
+                    task = import_snomed_async(str(concept.get('id')))
+                    while task.result != 'SUCCESS':
+                        print("Waiting for data to be retrieved.....")
+                        time.sleep(1)
+                    try:
+                        print("Trying again")
+                        component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                    except Exception as e:
+                        print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
+                        print(f"Giving up. Error [{str(e)}]")
+
                 existing = MappingRule.objects.filter(
                     project_id = task.project_id,
                     source_component = component,
