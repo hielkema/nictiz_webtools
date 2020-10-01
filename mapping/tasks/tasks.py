@@ -182,26 +182,32 @@ def update_snomedConcept_async(payload=None):
     #                     )
     # else:
     #     print(f"{obj.component_title} in database == {term_en} - geen hits")
+    try:
+        obj.component_title = str(concept['fsn']['term'])
+        extra = {
+            'Preferred term' : str(concept['pt']['term']),
+            'Actief'         : str(concept['active']),
+            'Effective time' : str(concept['effectiveTime']),
+            'Definition status'  : str(concept['definitionStatus']),
+        }
 
-    obj.component_title = str(concept['fsn']['term'])
-    extra = {
-        'Preferred term' : str(concept['pt']['term']),
-        'Actief'         : str(concept['active']),
-        'Effective time' : str(concept['effectiveTime']),
-        'Definition status'  : str(concept['definitionStatus']),
-    }
+        obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
 
-    obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+        obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+        obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+        obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+        obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
 
-    obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
-    obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
-    obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
-    obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+        obj.component_extra_dict = extra
+        # Save
+        obj.save()
 
-    obj.component_extra_dict = extra
-    # Save
-    obj.save()
-    return str(obj)
+        return str(obj)
+    except Exception as e:
+        print(f"[Error in shared task update_snomedConcept_async]: {str(e)}")
+        return(e)
+
+
 
 @shared_task
 def import_labcodeset_async():

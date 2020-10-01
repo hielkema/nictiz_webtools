@@ -31,6 +31,7 @@ router_1_0.register(r'audit_trigger', views.MappingTriggerAudit, basename="Audit
 router_1_0.register(r'audit_project_trigger', views.MappingTriggerProjectAudit, basename="Audits trigger")
 router_1_0.register(r'audit_status', views.MappingAuditStatus, basename="Audits status")
 
+router_1_0.register(r'snomed_failback_import', views.SnomedFailbackImport, basename="Import SNOMED - backup system")
 
 router_1_0.register(r'codesystems', views.Codesystems, basename="Mapping Codesystems")
 router_1_0.register(r'projects', views.Projects, basename="Mapping Projects")
