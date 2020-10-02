@@ -290,7 +290,7 @@ def add_hierarchy_snomed():
     )
     for component in components:
         conceptid = component.component_id
-        component.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+        # component.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
         component.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
         component.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
         component.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
