@@ -256,27 +256,28 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
 
             print('Snomed', json.loads(request.POST.get('codesystem[snomed]')))
             if json.loads(request.POST.get('codesystem[snomed]')): # codesystem 1 = snomed
-                import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
-                import_snomed_async.delay('260787004') # fysiek object (fysiek object)
-                import_snomed_async.delay('78621006') # fysieke kracht (fysieke kracht)
-                import_snomed_async.delay('272379006') # gebeurtenis (gebeurtenis)
-                import_snomed_async.delay('419891008') # gegevensobject (gegevensobject)
-                import_snomed_async.delay('404684003') # klinische bevinding (bevinding)
-                import_snomed_async.delay('362981000') # kwalificatiewaarde (kwalificatiewaarde)
-                import_snomed_async.delay('123037004') # lichaamsstructuur (lichaamsstructuur)
-                import_snomed_async.delay('123038009') # monster (monster)
-                import_snomed_async.delay('410607006') # organisme (organisme)
-                import_snomed_async.delay('243796009') # situatie met expliciete context (situatie)
-                import_snomed_async.delay('48176007') # sociale context (sociaal concept)
-                import_snomed_async.delay('105590001') # substantie (substantie)
-                import_snomed_async.delay('71388002') #  verrichting (verrichting)
-                import_snomed_async.delay('363787002') # waarneembare entiteit (waarneembare entiteit)
+                # import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
+                # import_snomed_async.delay('260787004') # fysiek object (fysiek object)
+                # import_snomed_async.delay('78621006') # fysieke kracht (fysieke kracht)
+                # import_snomed_async.delay('272379006') # gebeurtenis (gebeurtenis)
+                # import_snomed_async.delay('419891008') # gegevensobject (gegevensobject)
+                # import_snomed_async.delay('404684003') # klinische bevinding (bevinding)
+                # import_snomed_async.delay('362981000') # kwalificatiewaarde (kwalificatiewaarde)
+                # import_snomed_async.delay('123037004') # lichaamsstructuur (lichaamsstructuur)
+                # import_snomed_async.delay('123038009') # monster (monster)
+                # import_snomed_async.delay('410607006') # organisme (organisme)
+                # import_snomed_async.delay('243796009') # situatie met expliciete context (situatie)
+                # import_snomed_async.delay('48176007') # sociale context (sociaal concept)
+                # import_snomed_async.delay('105590001') # substantie (substantie)
+                # import_snomed_async.delay('71388002') #  verrichting (verrichting)
+                # import_snomed_async.delay('363787002') # waarneembare entiteit (waarneembare entiteit)
 
-                # Now check all SNOMED concepts in the database for status active/inactive.
-                concepts = MappingCodesystemComponent.objects.filter(codesystem_id__id = '1').values_list('component_id', flat = True)
-                for concept in list(concepts):
-                    check_snomed_active.delay(concept=concept)
-
+                # # Now check all SNOMED concepts in the database for status active/inactive.
+                # concepts = MappingCodesystemComponent.objects.filter(codesystem_id__id = '1').values_list('component_id', flat = True)
+                # for concept in list(concepts):
+                #     check_snomed_active.delay(concept=concept)
+                
+                import_snomed_snowstorm.delay()
 
             print('nhgVerr', json.loads(request.POST.get('codesystem[nhgverr]')))
             if json.loads(request.POST.get('codesystem[nhgverr]')):

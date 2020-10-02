@@ -81,133 +81,223 @@ def UpdateECL1Task(record_id, query):
             'error' : str(e),
         }
 
-@shared_task
-def check_snomed_active(concept = None):
-    snowstorm = Snowstorm(
-        baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=False,
-        preferredLanguage="nl",
-        defaultBranchPath="MAIN/SNOMEDCT-NL",
-    )
-    result = snowstorm.getConceptById(id=concept)
-    obj = MappingCodesystemComponent.objects.get(component_id = concept)
-    extra_dict = obj.component_extra_dict
-    extra_dict.update({'Actief':result.get('active')})
-    obj.component_extra_dict = extra_dict
-    obj.save()
-    print(extra_dict)
-    print(obj.component_extra_dict)
+# @shared_task
+# def check_snomed_active(concept = None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+#     result = snowstorm.getConceptById(id=concept)
+#     obj = MappingCodesystemComponent.objects.get(component_id = concept)
+#     extra_dict = obj.component_extra_dict
+#     extra_dict.update({'Actief':result.get('active')})
+#     obj.component_extra_dict = extra_dict
+#     obj.save()
+#     print(extra_dict)
+#     print(obj.component_extra_dict)
     
+# @shared_task
+# def import_snomed_async(focus=None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+#     result = snowstorm.findConcepts(ecl="<<"+focus)
+#     print('Found {} concepts'.format(len(result)))
 
+#     # Set snomed concepts in the database as inactive, if they are not retrieved through ECL (this means they are not active and will not be updated)
+#     ##### ALERT - can't be done this way! Not all concepts are descendants of this focus concept. Should be a separately scheduled task that checks the entire library.
+#     # snomed = MappingCodesystem.objects.get(id='1')
+#     # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+#     # concepts = concepts.exclude(component_id__in = list(result.keys()))
+#     # concepts.update(component_extra_dict = {
+#     #     'Actief':'False',
+#     # })
+#     # print(f"Set {concepts.count()} as inactive - were not in ECL query from focus concept {focus}.")
+
+#     # Spawn task for each concept
+#     for conceptid, concept in result.items():
+#         payload = {
+#             'conceptid' : conceptid,
+#             'concept'   : concept,
+#         }
+#         update_snomedConcept_async.delay(payload)
+
+# @shared_task
+# def update_snomedConcept_async(payload=None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+    
+#     concept = payload.get('concept')
+#     conceptid = payload.get('conceptid')
+
+#     # Get or create based on 2 criteria (fsn & codesystem)
+#     codesystem_obj = MappingCodesystem.objects.get(id='1')
+#     obj, created = MappingCodesystemComponent.objects.get_or_create(
+#         codesystem_id_id=codesystem_obj.id,
+#         component_id=conceptid,
+#     )
+#     print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
+#     # Add data not used for matching
+#     #### Add sticky audit hit if concept was already in database and title changed
+#     # term_en = concept['fsn']['term']
+#     # if (obj.component_title != None) and (obj.component_title != term_en):
+#     #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+
+#     #     # Find rules using this component (both from and to)
+#     #     hit_rules = MappingRule.objects.filter(source_component = obj)
+#     #     for hit_rule in hit_rules: 
+#     #         # Find tasks using any of the involved components
+#     #         ## From
+#     #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+#     #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
+#     #         for task in tasks:
+#     #                 print(f"Audit hit maken voor taak {str(task)}")
+#     #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+#     #                         task=task,
+#     #                         audit_type="IMPORT",
+#     #                         sticky=True,
+#     #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+#     #                     )
+#     #         ## To
+#     #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+#     #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
+#     #         for task in tasks:
+#     #                 print(f"Audit hit maken voor taak {str(task)}")
+#     #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+#     #                         task=task,
+#     #                         audit_type="IMPORT",
+#     #                         sticky=True,
+#     #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+#     #                     )
+#     # else:
+#     #     print(f"{obj.component_title} in database == {term_en} - geen hits")
+#     try:
+#         obj.component_title = str(concept['fsn']['term'])
+#         extra = {
+#             'Preferred term' : str(concept['pt']['term']),
+#             'Actief'         : str(concept['active']),
+#             'Effective time' : str(concept['effectiveTime']),
+#             'Definition status'  : str(concept['definitionStatus']),
+#         }
+
+#         obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+
+#         obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+#         obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+#         obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+#         obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+
+#         obj.component_extra_dict = extra
+#         # Save
+#         obj.save()
+
+#         return str(obj)
+#     except Exception as e:
+#         print(f"[Error in shared task update_snomedConcept_async]: {str(e)}")
+#         return(e)
 
 @shared_task
-def import_snomed_async(focus=None):
-    snowstorm = Snowstorm(
-        baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=False,
-        preferredLanguage="nl",
-        defaultBranchPath="MAIN/SNOMEDCT-NL",
-    )
-    result = snowstorm.findConcepts(ecl="<<"+focus)
-    print('Found {} concepts'.format(len(result)))
-
-    # Set snomed concepts in the database as inactive, if they are not retrieved through ECL (this means they are not active and will not be updated)
-    ##### ALERT - can't be done this way! Not all concepts are descendants of this focus concept. Should be a separately scheduled task that checks the entire library.
-    # snomed = MappingCodesystem.objects.get(id='1')
-    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
-    # concepts = concepts.exclude(component_id__in = list(result.keys()))
-    # concepts.update(component_extra_dict = {
-    #     'Actief':'False',
-    # })
-    # print(f"Set {concepts.count()} as inactive - were not in ECL query from focus concept {focus}.")
-
-    # Spawn task for each concept
-    for conceptid, concept in result.items():
-        payload = {
-            'conceptid' : conceptid,
-            'concept'   : concept,
+def import_snomed_snowstorm(payload=None):
+    def concept_data(concept):
+        return {
+            'id' : str(concept['conceptId']),
+            'fsn' : str(concept['fsn']['term']),
+            'pt'  : str(concept['pt']['term']),
+            'active' : str(concept['active']),
+            'effectiveTime' : str(concept['effectiveTime']),
+            'definitionStatus' : str(concept['definitionStatus']),
         }
-        update_snomedConcept_async.delay(payload)
 
-@shared_task
-def update_snomedConcept_async(payload=None):
-    snowstorm = Snowstorm(
-        baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=False,
-        preferredLanguage="nl",
-        defaultBranchPath="MAIN/SNOMEDCT-NL",
-    )
-    
-    concept = payload.get('concept')
-    conceptid = payload.get('conceptid')
+    def retrieve_concepts():
+        search_after = ''
+        output = []
+        while True:
+            url = f"https://snowstorm.test-nictiz.nl/browser/MAIN%2FSNOMEDCT-NL/concepts?searchAfter={search_after}&number=0&size=10000"
+            req = urllib.request.Request(url)
+            req.add_header('Accept-Language', 'nl')
+            response = urllib.request.urlopen(req).read()
+            result = json.loads(response.decode('utf-8'))
 
-    # Get or create based on 2 criteria (fsn & codesystem)
+            search_after = result['searchAfter']
+            total = result['total']
+            # total = 5
+            
+            concept_list = [concept_data(concept) for concept in result['items']]
+            
+            output.extend(concept_list)
+            print(f"Retrieved {len(result['items'])} - {len(output)}/{total} - {round((len(output)/total*100),0)}%")
+            if len(output) >= total: break
+        return output
+
+    print(f"Starting [@shared_task: import_snomed_snowstorm]")
+
+    concepts = retrieve_concepts()
+
+    print(f"[@shared_task: import_snomed_snowstorm] Finished retrieving concepts. Moving on to database update.")
+
+    updated_concepts = 0
+    created_concepts = 0
     codesystem_obj = MappingCodesystem.objects.get(id='1')
-    obj, created = MappingCodesystemComponent.objects.get_or_create(
-        codesystem_id_id=codesystem_obj.id,
-        component_id=conceptid,
+    for concept in concepts:
+        try:
+            # Get or create based on 2 criteria (fsn & codesystem)
+            obj, created = MappingCodesystemComponent.objects.get_or_create(
+                codesystem_id_id=codesystem_obj.id,
+                component_id=concept['id'],
+            )
+            obj.component_title = str(concept['fsn'])
+            extra = {
+                'Preferred term'    : str(concept['pt']),
+                'Actief'            : str(concept['active']),
+                'Effective time'    : str(concept['effectiveTime']),
+                'Definition status' : str(concept['definitionStatus']),
+            }
+            obj.component_extra_dict = extra
+            if created:
+                created_concepts += 1
+            else:
+                updated_concepts += 1
+            obj.save()
+        except Exception as e:
+            print(f"Error in [@shared_task: import_snomed_snowstorm]: {e}")
+
+    print(f"[@shared_task: import_snomed_snowstorm] Finished updating database for FSN/metadata. Now firing task to update hierarchical info (parents/ancestors/children/descendants)")
+    add_hierarchy_snomed.delay()
+    return {
+        'updated' : updated_concepts,
+        'created' : created_concepts,
+    }
+
+@shared_task
+def add_hierarchy_snomed():
+    snowstorm = Snowstorm(
+        baseUrl="https://snowstorm.test-nictiz.nl",
+        debug=False,
+        preferredLanguage="nl",
+        defaultBranchPath="MAIN/SNOMEDCT-NL",
     )
-    print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
-    # Add data not used for matching
-    #### Add sticky audit hit if concept was already in database and title changed
-    # term_en = concept['fsn']['term']
-    # if (obj.component_title != None) and (obj.component_title != term_en):
-    #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
-
-    #     # Find rules using this component (both from and to)
-    #     hit_rules = MappingRule.objects.filter(source_component = obj)
-    #     for hit_rule in hit_rules: 
-    #         # Find tasks using any of the involved components
-    #         ## From
-    #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
-    #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
-    #         for task in tasks:
-    #                 print(f"Audit hit maken voor taak {str(task)}")
-    #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
-    #                         task=task,
-    #                         audit_type="IMPORT",
-    #                         sticky=True,
-    #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-    #                     )
-    #         ## To
-    #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
-    #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
-    #         for task in tasks:
-    #                 print(f"Audit hit maken voor taak {str(task)}")
-    #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
-    #                         task=task,
-    #                         audit_type="IMPORT",
-    #                         sticky=True,
-    #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-    #                     )
-    # else:
-    #     print(f"{obj.component_title} in database == {term_en} - geen hits")
-    try:
-        obj.component_title = str(concept['fsn']['term'])
-        extra = {
-            'Preferred term' : str(concept['pt']['term']),
-            'Actief'         : str(concept['active']),
-            'Effective time' : str(concept['effectiveTime']),
-            'Definition status'  : str(concept['definitionStatus']),
-        }
-
-        obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
-
-        obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
-        obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
-        obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
-        obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
-
-        obj.component_extra_dict = extra
-        # Save
-        obj.save()
-
-        return str(obj)
-    except Exception as e:
-        print(f"[Error in shared task update_snomedConcept_async]: {str(e)}")
-        return(e)
-
-
+    components = MappingCodesystemComponent.objects.filter(
+        codesystem_id_id = '1'
+    )
+    for component in components:
+        conceptid = component.component_id
+        component.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+        component.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+        component.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+        component.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+        component.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+        component.save()
+    print(f"[@shared_task: add_hierarchy_snomed] Finished updating SNOMED hierarchical data.")
+    
 
 @shared_task
 def import_labcodeset_async():
