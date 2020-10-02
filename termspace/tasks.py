@@ -401,7 +401,7 @@ def dump_termspace_progress():
         'timmer',
         'e.degroot',
         'krul',
-        'dijkstra',
+        # 'dijkstra',
         'h.groot',
     ]
     output = []
