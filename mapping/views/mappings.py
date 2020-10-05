@@ -60,13 +60,22 @@ class MappingTargetSearch(viewsets.ViewSet):
 
         output =[]
 
-        # Start with the best matches: single word postgres match
+        ##### Single word search disabled
+        # # Start with the best matches: single word postgres match
+        # snomedComponents = MappingCodesystemComponent.objects.filter(
+        #     Q(component_id__icontains=query) |
+        #     Q(component_title__icontains=query)
+        # ).select_related(
+        #     'codesystem_id',
+        # )
+
+        ##### Search exact component_id
         snomedComponents = MappingCodesystemComponent.objects.filter(
-            Q(component_id__icontains=query) |
-            Q(component_title__icontains=query)
+            component_id=query
         ).select_related(
             'codesystem_id',
         )
+
         for result in snomedComponents:
             try:
                 if (result.component_extra_dict.get('Actief',False) == "True") or (result.component_extra_dict.get('Actief',False) == True) :
@@ -82,19 +91,20 @@ class MappingTargetSearch(viewsets.ViewSet):
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
                 'extra': result.component_extra_dict,
             })
-        # In addition, full text search if needed
-        if len(output) == 0:
-            snomedComponents = MappingCodesystemComponent.objects.annotate(search=SearchVector('component_title','component_id',),).filter(search=query)        
-            for result in snomedComponents:
-                output.append({
-                    'text' : result.component_title,
-                    'value': result.component_id,
-                    'component': {'id':result.id, 'title':result.component_title},
-                    'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
-                    'extra': result.component_extra_dict,
-                })
-        output = sorted(output, key=lambda item: len(item.get("text")), reverse=False)
-        return Response(output[:20])
+        ###### Full text search disabled
+        # # In addition, full text search if needed
+        # if len(output) == 0:
+        #     snomedComponents = MappingCodesystemComponent.objects.annotate(search=SearchVector('component_title','component_id',),).filter(search=query)        
+        #     for result in snomedComponents:
+        #         output.append({
+        #             'text' : result.component_title,
+        #             'value': result.component_id,
+        #             'component': {'id':result.id, 'title':result.component_title},
+        #             'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
+        #             'extra': result.component_extra_dict,
+        #         })
+        # output = sorted(output, key=lambda item: len(item.get("text")), reverse=False)
+        return Response(output)
 
 class RuleSearchByComponent(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
