@@ -578,7 +578,7 @@ class MappingTargets(viewsets.ViewSet):
                                     exclude_componentIDs.append(key)
                         
                         # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
-                    print(f"Full exclude list: {exclude_componentIDs}")
+                    # print(f"Full exclude list: {exclude_componentIDs}")
                 except Exception as e:
                     True
 
