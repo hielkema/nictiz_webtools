@@ -75,7 +75,7 @@ def check_duplicate_rules(taskid):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                         task=task_with_error,
                         audit_type="ECL - duplicate mapping rule",
-                        hit_reason=f"SNOMED code dubbel gebruikt [{rule.source_component.component_id}] [taak {task_ids}]. Zie: {rule_list_flat}",
+                        hit_reason=f"SNOMED code dubbel gebruikt [{rule.source_component.component_id}]. Zie: {rule_list_flat}",
                     )
 
 
