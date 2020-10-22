@@ -307,7 +307,7 @@ def import_labcodeset_async():
         # Vervang lege cellen door False
         df=df.fillna(value=False)
         codesystem = MappingCodesystem.objects.get(id='4') # NHG tabel 45
-        user = User.objects.get(username='hielkema')
+        user = User.objects.get(username='mertens')
         for index, row in df.iterrows():
             bepalingnr = row['bepalingsnr']
             notitie = row['Notitie']
@@ -317,7 +317,7 @@ def import_labcodeset_async():
             try:
                 if loinc_id != 'UNMAPPED':
                     task = MappingTask.objects.get(source_component=component)
-                    comment = "Voorstel import: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
+                    comment = "Automatisch geïmporteerde legacy mapping: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
                     MappingComment.objects.get_or_create(
                         comment_title = 'NHG-LOINC mapping (Hielkema)',
                         comment_task = task,
