@@ -66,7 +66,7 @@ def check_duplicate_rules(taskid):
                     # QA hit
                     logger.info(f"[ECL check_duplicate_rules] Duplicate found.")
                     task_ids    = list(_tasks.values_list('id', flat=True))
-                    rule_list   = list(related_rules.exclude(task=task_with_error).values_list('target_component__component_id', 'target_component__component_title'))
+                    rule_list   = list(related_rules.values_list('target_component__component_id', 'target_component__component_title'))
                     rule_list_items = [f"{item[0]} {item[1]}" for item in rule_list]
                     # rule_list   = list(related_rules.values_list('target_component__component_id'))
                     # rule_list_items = [f"{item[0]}" for item in rule_list]
