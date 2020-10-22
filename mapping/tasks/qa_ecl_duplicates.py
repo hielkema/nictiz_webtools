@@ -66,7 +66,7 @@ def check_duplicate_rules(taskid):
                     # QA hit
                     logger.info(f"[ECL check_duplicate_rules] Duplicate found.")
                     task_ids    = list(_tasks.values_list('id', flat=True))
-                    rule_list   = list(related_rules.values_list('target_component__component_id', 'target_component__component_title'))
+                    rule_list   = list(related_rules.exclude(id=task_with_error.id).values_list('target_component__component_id', 'target_component__component_title'))
                     rule_list_items = [f"{item[0]} {item[1]}" for item in rule_list]
                     # rule_list   = list(related_rules.values_list('target_component__component_id'))
                     # rule_list_items = [f"{item[0]}" for item in rule_list]
@@ -75,7 +75,7 @@ def check_duplicate_rules(taskid):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                         task=task_with_error,
                         audit_type="ECL - duplicate mapping rule",
-                        hit_reason=f"SNOMED code dubbel gebruikt [{rule.source_component.component_id}]. Zie: {rule_list_flat}",
+                        hit_reason=f"SNOMED code dubbel gebruikt [{rule.source_component.component_id} |{rule.source_component.component_title}|]. Zie: {rule_list_flat}",
                     )
 
 
