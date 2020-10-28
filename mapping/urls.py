@@ -41,6 +41,8 @@ router_1_0.register(r'events_and_comments', views.EventsAndComments, basename="M
 router_1_0.register(r'mappings', views.MappingTargets, basename="Mappings")
 router_1_0.register(r'mappings_ecl_to_rules', views.MappingEclToRules, basename="Mapping ECL To Rules")
 router_1_0.register(r'mapping_exclusions', views.MappingExclusions, basename="Mapping exclusions")
+router_1_0.register(r'mapping_reverse_exclusions', views.ReverseMappingExclusions, basename="Mapping reverse exclusions")
+
 
 router_1_0.register(r'reverse', views.MappingReverse, basename="Reverse mappings")
 router_1_0.register(r'mapping_dialog', views.MappingDialog, basename="Mappings")
