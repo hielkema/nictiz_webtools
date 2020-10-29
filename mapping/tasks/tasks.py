@@ -1758,7 +1758,7 @@ def mappingProgressDump():
                     'user' : user.username,
                     'num_tasks' : num_tasks,
                     })
-            for status in status_list:            
+            for status in status_list:
                 num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).exclude(status=current_project.status_rejected).count()
                 tasks_per_status_labels.append(status.status_title)
                 tasks_per_status_values.append(num_tasks)
