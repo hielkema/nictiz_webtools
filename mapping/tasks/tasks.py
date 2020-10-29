@@ -319,7 +319,7 @@ def import_labcodeset_async():
                     task = MappingTask.objects.get(source_component=component)
                     comment = "Automatisch geïmporteerde legacy mapping: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
                     MappingComment.objects.get_or_create(
-                        comment_title = 'NHG-LOINC mapping (Hielkema)',
+                        comment_title = 'NHG-LOINC mapping (Legacy import)',
                         comment_task = task,
                         comment_body = comment,
                         comment_user = user,
@@ -333,7 +333,7 @@ def import_labcodeset_async():
         print(error)
 
     # Import codesystem
-    with open('/webserver/mapping/resources/labcodeset/labconcepts-20200529-093650784.xml') as fd:
+    with open('/webserver/mapping/resources/labcodeset/labconcepts-20201022-165920601.xml') as fd:
         doc = xmltodict.parse(fd.read())
 
         # Lijst voor alle materialen maken
@@ -408,37 +408,37 @@ def import_labcodeset_async():
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
 
             #### Add sticky audit hit if concept was already in database and title changed
-            if (obj.component_title != None) and (obj.component_title != term_en):
-                print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+            # if (obj.component_title != None) and (obj.component_title != term_en):
+            #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
 
-                # Find rules using this component (both from and to)
-                hit_rules = MappingRule.objects.filter(source_component = obj)
-                for hit_rule in hit_rules: 
-                    # Find tasks using any of the involved components
-                    ## From
-                    tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
-                    print(f"Audit-tagging [from] {tasks.count()} tasks.")
-                    for task in tasks:
-                            print(f"Audit hit maken voor taak {str(task)}")
-                            audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                                    task=task,
-                                    audit_type="IMPORT",
-                                    sticky=True,
-                                    hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-                                )
-                    ## To
-                    tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
-                    print(f"Audit-tagging [to] {tasks.count()} tasks.")
-                    for task in tasks:
-                            print(f"Audit hit maken voor taak {str(task)}")
-                            audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                                    task=task,
-                                    audit_type="IMPORT",
-                                    sticky=True,
-                                    hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
-                                )
-            else:
-                print(f"{obj.component_title} in database == {term_en} - geen hits")
+            #     # Find rules using this component (both from and to)
+            #     hit_rules = MappingRule.objects.filter(source_component = obj)
+            #     for hit_rule in hit_rules: 
+            #         # Find tasks using any of the involved components
+            #         ## From
+            #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+            #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
+            #         for task in tasks:
+            #                 print(f"Audit hit maken voor taak {str(task)}")
+            #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+            #                         task=task,
+            #                         audit_type="IMPORT",
+            #                         sticky=True,
+            #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+            #                     )
+            #         ## To
+            #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+            #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
+            #         for task in tasks:
+            #                 print(f"Audit hit maken voor taak {str(task)}")
+            #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+            #                         task=task,
+            #                         audit_type="IMPORT",
+            #                         sticky=True,
+            #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+            #                     )
+            # else:
+            #     print(f"{obj.component_title} in database == {term_en} - geen hits")
 
             component_active = 'True'
             try:
