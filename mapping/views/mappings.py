@@ -695,26 +695,29 @@ class MappingReverse(viewsets.ViewSet):
         ).get(id = pk)
         component = MappingCodesystemComponent.objects.get(id = task.source_component.id)
         if task.project_id.project_type == "1":
-            reverse_mappings = MappingRule.objects.filter(target_component = component)
+            reverse_mappings = MappingRule.objects.filter(target_component = component).select_related(
+                'source_component'
+            )
 
             reverse = []
             for mapping in reverse_mappings:
-                # reverse.append(f"{mapping.target_component.codesystem_id.codesystem_title} #{mapping.target_component.component_id} - {mapping.target_component.component_title}")
                 reverse.append({
-                    'id' : mapping.target_component.component_id,
-                    'title' : mapping.target_component.component_title,
+                    'id' : mapping.source_component.component_id,
+                    'title' : mapping.source_component.component_title,
                     'codesystem' : {
-                        'title': mapping.target_component.codesystem_id.codesystem_title,
+                        'title': mapping.source_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
                 })
 
         elif task.project_id.project_type == "4":
-            reverse_mappings = MappingRule.objects.filter(source_component = component)
+            reverse_mappings = MappingRule.objects.filter(source_component = component).select_related(
+                'target_component',
+                'target_component__codesystem_id'
+            )
 
             reverse = []
             for mapping in reverse_mappings:
-                # reverse.append(f"{mapping.target_component.codesystem_id.codesystem_title} #{mapping.target_component.component_id} - {mapping.target_component.component_title}")
                 reverse.append({
                     'id' : mapping.target_component.component_id,
                     'title' : mapping.target_component.component_title,
