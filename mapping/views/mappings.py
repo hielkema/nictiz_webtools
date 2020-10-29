@@ -256,7 +256,8 @@ class MappingExclusions(viewsets.ViewSet):
                 print(f"[MappingExclusions/create] @ {request.user.username} => Go")
                 task = MappingTask.objects.get(id=request.data.get('payload').get('id'))
                 obj, created = MappingEclPartExclusion.objects.get_or_create(task = task)
-                obj.components = list(request.data.get('payload').get('exclusions',{}).get('string').split('\n'))
+                exclusion_list = list(request.data.get('payload').get('exclusions',{}).get('string').split('\n'))
+                obj.components = sorted(exclusion_list)
                 obj.save()
                 print(obj, created)
             else:

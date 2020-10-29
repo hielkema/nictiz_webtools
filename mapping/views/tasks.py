@@ -258,7 +258,7 @@ class TaskDetails(viewsets.ViewSet):
                     component_list = MappingCodesystemComponent.objects.filter(codesystem_id = obj.task.source_component.codesystem_id, component_id__in=obj.components)
 
                     component_list_output = []
-                    for component in component_list:
+                    for component in component_list.order_by('component_id'):
                         component_list_output.append(f"{component.codesystem_id.codesystem_title} {component.component_id} - {component.component_title}")
 
                     output.update({
