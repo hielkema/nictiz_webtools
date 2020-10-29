@@ -1666,15 +1666,16 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                         }
                         elements.append(output)
 
-                # Add the group to the group list
-                groups.append({
-                    # 'DEBUG_projecttitle' : project.title,
-                    'source' : project.source_codesystem.codesystem_fhir_uri,
-                    'sourceVersion' : project.source_codesystem.codesystem_version,
-                    'target' : project.target_codesystem.codesystem_fhir_uri,
-                    'targetVersion': project.target_codesystem.codesystem_version,
-                    'element' : elements,
-                })
+                # Add the group to the group list, if there are elements in it
+                if len(elements) > 0:
+                    groups.append({
+                        # 'DEBUG_projecttitle' : project.title,
+                        'source' : project.source_codesystem.codesystem_fhir_uri,
+                        'sourceVersion' : project.source_codesystem.codesystem_version,
+                        'target' : project.target_codesystem.codesystem_fhir_uri,
+                        'targetVersion': project.target_codesystem.codesystem_version,
+                        'element' : elements,
+                    })
 
         status_options = [
                 # (code, readable)
