@@ -53,6 +53,8 @@ router_1_0.register(r'users', views.MappingUsers, basename="Mapping users for se
 router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping comments for selected task")
 
 router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
+router_1_0.register(r'rules_by_codesystem', views.MappingRulesInvolvingCodesystem, basename="Retrieve components used in rules by codesystem")
+
 
 urlpatterns = [
     # DRF router

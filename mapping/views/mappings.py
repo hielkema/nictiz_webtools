@@ -727,6 +727,39 @@ class MappingReverse(viewsets.ViewSet):
         # output = " /".join(reverse)
         return Response(reverse)
         
+class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
+    """
+    Exporteert een lijst van alle componenten uit 1 codesysteem die gebruikt worden in een mapping rule.
+    Er wordt hierbij geen rekening gehouden met de status van de betreffende taak; het kan ook een afgewezen taak zijn met een foutieve mapping.
+    Bedoeld om een overzicht te krijgen van alle gebruikte codes uit een stelsel.
+    """
+    permission_classes = [Permission_MappingProject_Access]
+    def retrieve(self, request, pk=None):
+
+        codesystem = MappingCodesystem.objects.get(id = pk)
+
+
+        # Regels ván codesysteem af
+        output_from = []
+        rules = MappingRule.objects.filter(source_component__codesystem_id = codesystem).select_related(
+            'source_component'
+        ).order_by("id")
+        for rule in rules:
+            output_from.append(str(rule.source_component.component_id))
+        # Regels náár codesysteem toe
+        output_to = []
+        rules = MappingRule.objects.filter(target_component__codesystem_id = codesystem).select_related(
+            'target_component'
+        ).order_by("id")
+        for rule in rules:
+            output_to.append(str(rule.target_component.component_id))
+        
+
+        return Response({
+            'source' : output_from,
+            'target' : output_to,
+        })
+
 
 class MappingListLookup(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
