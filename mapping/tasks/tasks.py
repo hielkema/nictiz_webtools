@@ -1040,7 +1040,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
     if task_id == None:
         tasks = MappingTask.objects.filter(project_id=project)
     else:
-        tasks = MappingTask.objects.filter(project_id=project, id=task_id)
+        tasks = MappingTask.objects.filter(project_id=project, id=task_id).order_by('id')
 
     # Delete existing audit hits for tasks (unless whitelisted)
     for task in tasks:
@@ -1206,7 +1206,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Look for rules with the same target component
             for target in mapping_targets:
-                other_rules = MappingRule.objects.filter(target_component=target)
+                other_rules = MappingRule.objects.filter(target_component=target).order_by('id')
                 if other_rules.count() > 0:
                     other_tasks_same_target = []
                     for other_rule in other_rules:
