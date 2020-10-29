@@ -1217,11 +1217,14 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     for other_rule in other_rules:
                         # Separate rule for project 3 (NHG Diagn-LOINC/SNOMED)    
                         if (rule.project_id.id == 3) and (other_rule.target_component.component_id in specimen_exclusion_list):
-                            logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
+                            # logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
+                            True
                         elif (rule.project_id.id == 4) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='182353008').descendants)):
-                            logger.info('Project 7 -> negeer <<zijde voor dubbele mappings')
+                            # logger.info('Project 7 -> negeer <<zijde voor dubbele mappings')
+                            True
                         elif (rule.project_id.id == 7) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='118718002').descendants)):
-                            logger.info('Project 7 -> negeer <<procedure op huid voor dubbele mappings')
+                            # logger.info('Project 7 -> negeer <<procedure op huid voor dubbele mappings')
+                            True
                         else:
                             if (other_rule.source_component != task.source_component) and (task.source_component.codesystem_id == other_rule.source_component.codesystem_id):
                                 obj, created = MappingTaskAudit.objects.get_or_create(
