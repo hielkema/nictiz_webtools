@@ -285,10 +285,10 @@ class MappingReleaseCandidate(models.Model):
     # Perhaps status should be coming from the status DB table - text for now
     status_options = [
         # (code, readable)
-        ('0', 'Testing'),
-        ('1', 'Experimental'),
-        ('2', 'Acceptance'),
-        ('3', 'Production'),
+        ('0', 'draft'),
+        ('1', 'active'),
+        ('2', 'retired'),
+        ('3', 'unknown'),
     ]
     status = models.CharField(default=None, max_length=50, blank=True, null=True, choices=status_options)
     created = models.DateTimeField(default=timezone.now)
