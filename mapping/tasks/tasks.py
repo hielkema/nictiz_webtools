@@ -1678,10 +1678,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
 
         status_options = [
                 # (code, readable)
-                ('0', 'Testing'),
-                ('1', 'Experimental'),
-                ('2', 'Acceptance'),
-                ('3', 'Production'),
+                ('0', 'draft'),
+                ('1', 'active'),
+                ('2', 'retired'),
+                ('3', 'unknown'),
             ]
         status = rc.status
         for code, readable in status_options:
