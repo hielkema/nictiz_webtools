@@ -365,7 +365,7 @@ def import_labcodeset_async():
                         material_list.append(material['@ref'])
                 except:
                     material_list.append('Materiaal error')
-            logger.info(material_list)
+            # logger.info(material_list)
             # Materiaal -> snomed
             material_list_snomed = []
             for material in material_list:
@@ -1045,11 +1045,11 @@ def audit_async(audit_type=None, project=None, task_id=None):
     # Delete existing audit hits for tasks (unless whitelisted)
     for task in tasks:
             # Print task identification, sanity check
-            logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
+            # logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
 
             # Delete all old audit hits for this task if not whitelisted
             delete = MappingTaskAudit.objects.filter(task=task, ignore=False, sticky=False).delete()
-            logger.info(delete)
+            # logger.info(delete)
 
     ###### Slowly moving to separate audit QA scripts.
     logger.info('Spawning QA processes')
@@ -1057,17 +1057,17 @@ def audit_async(audit_type=None, project=None, task_id=None):
     
     # Spawn QA for labcodeset<->NHG tasks
     for task in tasks:
-        logger.info('Checking task: {0}'.format(task.id))
+        # logger.info('Checking task: {0}'.format(task.id))
         
-        logger.info('Spawning QA scripts for NHG<->LOINC')
+        # logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
         
         if task.project_id.project_type == '4':
-            logger.info('Spawning QA scripts for ECL-1 queries')
+            # logger.info('Spawning QA scripts for ECL-1 queries')
             send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
             send_task('mapping.tasks.qa_ecl_duplicates.check_duplicate_rules', [], {'taskid':task.id})
         
-        logger.info('Spawning general QA scripts for SNOMED')
+        # logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
         if tasks.count() == 1:
             send_task('mapping.tasks.qa_snomed.snomed_daily_build_active', [], {'taskid':task.id})
@@ -1099,7 +1099,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
         # Loop through all tasks
         for task in tasks:
             # Print task identification, sanity check
-            logger.info('Checking task for: {0}'.format(task.source_component.component_title))
+            # logger.info('Checking task for: {0}'.format(task.source_component.component_title))
 
             # Checks for the entire task
             # If source component contains active/deprecated designation ->
@@ -1116,7 +1116,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Get all mapping rules for the current task
             rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
-            logger.info('Number of rules: {0}'.format(rules.count()))
+            # logger.info('Number of rules: {0}'.format(rules.count()))
             # Create list for holding all used map priorities
             mapping_priorities = []
             mapping_groups = []
@@ -1142,7 +1142,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 else:
                     mapping_prio_per_group[rule.mapgroup].append(rule.mappriority)
 
-                logger.info('Rule: {0}'.format(rule))
+                # logger.info('Rule: {0}'.format(rule))
 
 
 
@@ -1235,7 +1235,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             
             # Specific rules for single or multiple mappings
             if rules.count() == 1:
-                logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
+                # logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
                 if rules[0].mappriority != 1 and rules[0].project_id.use_mappriority:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
@@ -1250,10 +1250,10 @@ def audit_async(audit_type=None, project=None, task_id=None):
                         )
             elif rules.count() > 1:
                 # Check for order in groups
-                logger.info('Mapping groups: {0}'.format(mapping_groups))
+                # logger.info('Mapping groups: {0}'.format(mapping_groups))
                 groups_ex_duplicates = list(dict.fromkeys(mapping_groups))
-                logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
-                logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
+                # logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
+                # logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
                 if not checkConsecutive(groups_ex_duplicates):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
@@ -1265,9 +1265,9 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
                 # Rest in loop door prio's uitvoeren?
                 for key in mapping_prio_per_group.items():
-                    logger.info('Checking group {}'.format(str(key[0])))
+                    # logger.info('Checking group {}'.format(str(key[0])))
                     priority_list = key[1]
-                    logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
+                    # logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
                     if not checkConsecutive(priority_list):
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
