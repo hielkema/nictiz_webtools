@@ -688,6 +688,27 @@ class MappingEclToRules(viewsets.ViewSet):
         )
         return Response(str(celery))
 
+class MappingRemoveRules(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def retrieve(self, request, pk=None):
+        task = MappingTask.objects.get(id=str(pk))
+        current_user = User.objects.get(id=request.user.id)
+        if (MappingProject.objects.get(id=task.project_id.id, access__username=current_user)) and \
+            (task.user == current_user):
+            print(request.user,"Removing mapping rules associated with task",str(pk))
+            
+            rules = MappingRule.objects.filter(
+                project_id = task.project_id,
+                target_component = task.source_component,
+            )
+            count = rules.count()
+            rules.delete()
+
+            return Response(count)
+        else:
+            return Response('Nope - mag jij helemaal niet.')
+
 class MappingReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):

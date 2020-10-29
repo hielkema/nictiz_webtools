@@ -42,6 +42,7 @@ router_1_0.register(r'mappings', views.MappingTargets, basename="Mappings")
 router_1_0.register(r'mappings_ecl_to_rules', views.MappingEclToRules, basename="Mapping ECL To Rules")
 router_1_0.register(r'mapping_exclusions', views.MappingExclusions, basename="Mapping exclusions")
 router_1_0.register(r'mapping_reverse_exclusions', views.ReverseMappingExclusions, basename="Mapping reverse exclusions")
+router_1_0.register(r'remove_rules', views.MappingRemoveRules, basename="Remove rules for task")
 
 
 router_1_0.register(r'reverse', views.MappingReverse, basename="Reverse mappings")
