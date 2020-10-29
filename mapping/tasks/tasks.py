@@ -1261,7 +1261,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             hit_reason='Taak heeft meerdere mapping groups: geen opeenvolgende prioriteit'
                         )
 
-                print("PRIO PER GROUP",mapping_prio_per_group)
+                # print("PRIO PER GROUP",mapping_prio_per_group)
 
                 # Rest in loop door prio's uitvoeren?
                 for key in mapping_prio_per_group.items():
@@ -1294,7 +1294,8 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     #             hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
                     #         )
             else:
-                logger.info('No rules for current task')
+                # logger.info('No rules for current task')
+                True
 
 
 # Create RC shadow copy of codesystem
