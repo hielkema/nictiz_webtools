@@ -122,7 +122,7 @@ def html_tree(concept):
     wb = Workbook()
     timestamp = str(round(ts))
     dest_filename = '{} - {}.xlsx'.format(str(concept), timestamp)
-    dest_filename.replace(" ", "_")
+    dest_filename = dest_filename.replace(" ", "_")
     ws1 = wb.active
     ws1.title = "Flat Snomed overview"
 
