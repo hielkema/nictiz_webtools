@@ -20,6 +20,7 @@ router.register(r'user_stats', user_stats, basename="Stats for all users")
 
 
 router.register(r'export_answers', export_answers, basename="Provide all answer data for export")
+router.register(r'export_tasks', export_tasks, basename="Provide all task data for export")
 
 
 urlpatterns = [ 

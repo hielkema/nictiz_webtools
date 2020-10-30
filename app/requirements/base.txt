@@ -17,3 +17,5 @@ djangorestframework
 djangorestframework_simplejwt
 django-cors-headers
 natsort
+bs4
+pymsteams

@@ -12,6 +12,7 @@ router = SimpleRouter()
 router.register(r'search_comments', searchTermspaceComments, basename="termspace_comments")
 router.register(r'component_api', componentApi, basename="component_api")
 router.register(r'ecl_api', eclQueryApi, basename="ecl_query_api")
+router.register(r'cached_results', cached_results, basename="cached_results")
 
 router.register(r'snomed_json_tree', SnomedJSONTree, basename="snomed_json_tree")
 
@@ -25,19 +26,6 @@ router.register(r'fetch_termspace_tasksupply', fetch_termspace_tasksupply, basen
 router.register(r'fetch_termspace_tasksupply_v2', fetch_termspace_tasksupply_v2, basename="fetch_termspace_tasksupply_v2")
 router.register(r'fetch_termspace_user_tasksupply', fetch_termspace_user_tasksupply, basename="fetch_termspace_user_tasksupply")
 
-
-# router.register(r'test_post_endpoint', ShareView, basename="testpoint_post")
-
-# urlpatterns = router.urls
-
-# urlpatterns = [
-#     #url(r'medicatie/', views.get_name, name='medicatie'),
-#     url('', include(router.urls)),
-#     url(r'api/search_comments/(?P<term>.+?)/', views.api_SearchcommentsPageView.as_view(), name='search_api'),
-#     url(r'search_comments/', views.SearchcommentsPageView.as_view(), name='search'),
-# ]
-
 urlpatterns = [ 
-    # path('search_comments/(?P<term>.+?)/', SearchComments.as_view(), name="test"),
     path('', include(router.urls)),
 ]

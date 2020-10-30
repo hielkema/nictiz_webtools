@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.8
 MAINTAINER mertens@localhost
 
 COPY ./app/requirements/ /opt/requirements/
@@ -12,4 +12,4 @@ WORKDIR /webserver
 EXPOSE 8000
 
 
-CMD ["gunicorn", "app.wsgi", "-b 0.0.0.0:8000"]
+CMD ["gunicorn", "app.wsgi", "-t 60", "-b 0.0.0.0:8000"]

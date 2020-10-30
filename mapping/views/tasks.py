@@ -205,6 +205,7 @@ class Tasklist(viewsets.ViewSet):
                     'id' : task.status.id,
                     'title' : task.status.status_title
                 },
+                'category' : task.category,
             })
         task_list = natsort.natsorted(task_list, key=lambda k: k['component']['id'])
 
@@ -214,9 +215,7 @@ class TaskDetails(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        # List all projects
-        # TODO filter on which projects the user has access to
-         # Get data
+        # Get data
         task = MappingTask.objects.select_related('project_id','user','source_component','source_component__codesystem_id','status').get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
@@ -245,13 +244,38 @@ class TaskDetails(viewsets.ViewSet):
                         'title' : task.source_component.codesystem_id.codesystem_title,
                     },
                     'extra' : task.source_component.component_extra_dict,
-                },
-                'status'  :   {
-                    'id' : task.status.id,
-                    'title' : task.status.status_title,
-                    'description' : task.status.status_description,
-                },
-            }
+                    },
+                    'status'  :   {
+                        'id' : task.status.id,
+                        'title' : task.status.status_title,
+                        'description' : task.status.status_description,
+                    },
+                }
+
+            if task.project_id.project_type == '4':
+                try:
+                    obj = MappingEclPartExclusion.objects.get(task = task)
+                    component_list = MappingCodesystemComponent.objects.filter(codesystem_id = obj.task.source_component.codesystem_id, component_id__in=obj.components)
+
+                    component_list_output = []
+                    for component in component_list.order_by('component_id'):
+                        component_list_output.append(f"{component.codesystem_id.codesystem_title} {component.component_id} - {component.component_title}")
+
+                    output.update({
+                        'exclusions' : {
+                            'string' : "\n".join(obj.components),
+                            'recognized' : '\n'.join(component_list_output),
+                        }
+                    })
+                except:
+                    output.update({
+                        'exclusions' : {
+                            'string' : ''
+                        }
+                    })
+
+                
+
             return Response(output)
 
 class EventsAndComments(viewsets.ViewSet):

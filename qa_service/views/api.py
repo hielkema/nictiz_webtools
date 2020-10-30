@@ -1,8 +1,5 @@
 from django.shortcuts import render
 
-# Create your views here.
-
-# howdy/views.py
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 from django.conf import settings
@@ -32,7 +29,13 @@ from rest_framework import viewsets
 from ..serializers import *
 from rest_framework import views
 from rest_framework.response import Response
-from rest_framework import permissions 
+from rest_framework import permissions
+
+from bs4 import BeautifulSoup
+import pymsteams
+
+from celery import shared_task
+from celery.execute import send_task
 
 from snowstorm_client import Snowstorm
 
@@ -50,43 +53,17 @@ class Permission_Validation_access(permissions.BasePermission):
             return True
 
 # Search termspace comments
-class receive_form(viewsets.ViewSet):
-    permission_classes = [permissions.IsAuthenticated]
-    def create(self, request):
-  
-        data = request.data.get('payload')
-        print(f"Received form from {str(request.user)} => {data}")
+class test_api(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+    def list(self, request):
+        start = time.time()
+        result = send_task('qa_service.tasks.test_suite.run_testsuite')
 
-        current_user = User.objects.get(id = request.user.id)
-        print(f"Task ID = {request.data.get('payload').get('taskId')}")
-        task = Task.objects.get(id = request.data.get('payload').get('taskId'))
+        while result.status != 'SUCCESS':
+            time.sleep(1)
 
-        # Some logic
-        if data.get('errors') == 0:
-            data['what_errors'] = ''
-        if data.get('cannot_validate') == 0:
-            data['why_no_validate'] = ''
-        elif data.get('cannot_validate') == 1:
-            data['errors'] = None
-            data['what_errors'] = None
-            data['clarity'] = None
-            data['relevance'] = None
-            data['acceptable'] = None
-            data['complete'] = None
-            data['feedback_notes'] = None
-            data['feedback_suggestion'] = None
-
-        obj = Answer.objects.create(
-            task = task,
-            user = current_user,
-            data = data,
-        )
-
-        task.access.remove(current_user)
-
-        context = {
-            'received' : request.data.get('payload'),
-            'obj' : str(obj),
-        }
-
-        return Response(context)
+        return Response({
+            'message' : 'QA wordt uitgevoerd. Resultaat in console log, of uiteindelijk de webhook.',
+            'tests' : result.result,
+            'Runtime (seconden)' : int(time.time()-start),
+        })

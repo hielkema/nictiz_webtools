@@ -73,7 +73,7 @@ services:
     expose:
       - "80"
     ports:
-      - 9125:80
+      - 9125:8888
     networks:
       - webtools
       - proxy

@@ -41,7 +41,7 @@ class MappingCodesystem(models.Model):
     codesystem_title    = models.CharField(max_length=50)
     codesystem_version  = models.CharField(max_length=50)
     codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
-    component_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
+    component_fhir_uri  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
 
     # extra fields are legacy, older scripts will break by removing
@@ -52,6 +52,11 @@ class MappingCodesystem(models.Model):
     codesystem_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     codesystem_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
+
+    class Meta:
+        constraints = [
+                models.UniqueConstraint(fields= ['id'], name = 'Unique ID'),
+            ]
 
     def __str__(self):
         return str(self.id) + " " + self.codesystem_title + " " + self.codesystem_version
@@ -86,7 +91,11 @@ class MappingCodesystemComponent(models.Model):
     component_extra_5  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_6  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_extra_7  = models.CharField(max_length=500, default=None, null=True, blank=True)
-
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['codesystem_id']),
+        ]
 
     def __str__(self):
         return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_title
@@ -94,6 +103,7 @@ class MappingCodesystemComponent(models.Model):
 
 class MappingTask(models.Model):
     project_id = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
+    category   = models.CharField(max_length=500)
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID in codesystem = MappingCodesystemComponent:id
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_task', default=None, null=True, blank=True) # Uniek ID van codesystem waar vandaan in deze taak gemapt moet worden
     target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'target_codesystem_task', default=None, null=True, blank=True) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
@@ -196,6 +206,15 @@ class MappingEclPart(models.Model):
     ]
     mapcorrelation  = models.CharField(max_length=50, choices=correlation_options, default=None, blank=True, null=True)
 
+class MappingEclPartExclusion(models.Model):
+    ##
+    ##  For use with the vue mapping tooling
+    ##  Used to exclude the result of the ECL mapping of another component.
+    ##  Ie. putting A80 in the list in MappingEclPartExclusion.components will exclude the results of all ECL queries linked to A80 for the linked task.
+    ##
+    task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
+    components          = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
+    
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
     action_options = [
@@ -252,15 +271,24 @@ class MappingReleaseCandidate(models.Model):
 
     access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
     
-    codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem', default=None, blank=True, null=True)
+    # Source codesystem
+    codesystem          = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'rc_source_codesystem', default=None, blank=True, null=True)
+    # [Optional] Target codesystem - to allow filtering
+    target_codesystem   = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'rc_target_codesystem', default=None, blank=True, null=True)
+    
+    # If True: export ALL rules, regardless of fiat/veto
+    export_all = models.BooleanField(default=False) 
+    
+    # Status of exporet
     finished = models.BooleanField(default=False)
+    
     # Perhaps status should be coming from the status DB table - text for now
     status_options = [
         # (code, readable)
-        ('0', 'Testing'),
-        ('1', 'Experimental'),
-        ('2', 'Acceptance'),
-        ('3', 'Production'),
+        ('0', 'draft'),
+        ('1', 'active'),
+        ('2', 'retired'),
+        ('3', 'unknown'),
     ]
     status = models.CharField(default=None, max_length=50, blank=True, null=True, choices=status_options)
     created = models.DateTimeField(default=timezone.now)
@@ -273,6 +301,7 @@ class MappingReleaseCandidateFHIRConceptMap(models.Model):
 
     rc = models.ForeignKey('MappingReleaseCandidate', on_delete=models.PROTECT, default=None, blank=True, null=True)
     
+    # Source codesystem
     codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'source_codesystem_for_rc', default=None, blank=True, null=True)
     created = models.DateTimeField(default=timezone.now)
 

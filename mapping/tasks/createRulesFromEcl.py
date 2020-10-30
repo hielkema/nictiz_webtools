@@ -45,6 +45,36 @@ def createRulesFromEcl(taskid):
             query.export_finished = False
             query.save()
         
+        # Find component ID's that should be excluded
+        exclude_componentIDs = []
+        excluded_componentIDs = []
+        try:
+            obj = MappingEclPartExclusion.objects.get(task = task)
+            components = MappingCodesystemComponent.objects.filter(
+                    codesystem_id = obj.task.source_component.codesystem_id,
+                    component_id__in=list(obj.components)
+                )
+            # print(f"Will exclude ECL results from {str(components)}")
+            # Loop components
+            for component in components:
+                # print(f"Handling exclusion of {str(component)}")
+                # For each, retrieve their tasks, in this same project
+                exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
+                # print(f"Found tasks: {str(exclude_tasks)}")
+                for exclude_task in exclude_tasks:
+                    # print(f"Handling exclude_task {str(exclude_task)}")
+                    exclusion_queries = MappingEclPart.objects.filter(task=exclude_task)
+                    for exclusion_query in exclusion_queries:
+                        # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(exclusion_query.result)}] \n{list(exclusion_query.result.get('concepts'))}")
+                        for key, value in exclusion_query.result.get('concepts').items():
+                            exclude_componentIDs.append(key)
+                
+                # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
+            # print(f"Full exclude list: {exclude_componentIDs}")
+        except Exception as e:
+            True
+
+
         # Loop through queries to find individual rules, put in list
         for query in queries:  
             print("Found query",query.id)
@@ -55,63 +85,89 @@ def createRulesFromEcl(taskid):
                 # Add all results to a list for easy viewing
                 try:
                     for key, result in query.result.get('concepts').items():
-                        # print(result)   
-                        _query = result
-                        _query.update({
-                            # 'queryId' : query.id,
-                            'query' : query.query,
-                            # 'description' : query.description,
-                            'correlation' : query.mapcorrelation,
-                        })
-                        # Append to all_results for creation
-                        all_results.append(_query)
-                        
-                        # Append to valid_rules for validation after
-                        valid_rules.update({
-                            result.get('id') : {
+                        if key not in exclude_componentIDs:
+                            # print(result)   
+                            _query = result
+                            _query.update({
+                                # 'queryId' : query.id,
+                                'query' : query.query,
+                                # 'description' : query.description,
                                 'correlation' : query.mapcorrelation,
-                            }
-                        })
+                            })
+                            # Append to all_results for creation
+                            all_results.append(_query)
+                            
+                            # Append to valid_rules for validation after
+                            valid_rules.update({
+                                result.get('id') : {
+                                    'correlation' : query.mapcorrelation,
+                                }
+                            })
+                            # print(f"{key} mag aangemaakt worden!")
+                        else:
+                            # print(f"{key} mag NIET aangemaakt worden!")
+                            True
                 except:
-                    print("Retrieve mappings: No results")
+                    print(f"Retrieve mappings: No results in query {query.id}")
 
 
 
 
         ## Create new rules
         for concept in all_results:
-            print(f"Handling rule for concept {concept.get('id')}")
-            print("Correlation",concept.get('correlation'))
-            component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-            existing = MappingRule.objects.filter(
-                project_id = task.project_id,
-                source_component = component,
-                target_component = task.source_component,
-                mapcorrelation = concept.get('correlation'),
-            )
-            if existing.count() == 0:
-                print("Start get_or_create")
-                rule, created = MappingRule.objects.get_or_create(
+            try:
+                # print(f"Handling rule for concept {concept.get('id')}")
+                # print("Concept",concept.get('id'))
+                # print("Correlation",concept.get('correlation'))
+
+                # If concepts from the ECL query are not present, import them and try again.
+                try:
+                    component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                except:
+                    print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
+                    task = import_snomed_async(str(concept.get('id')))
+                    while task.result != 'SUCCESS':
+                        print("Waiting for data to be retrieved.....")
+                        time.sleep(1)
+                    try:
+                        print("Trying again")
+                        component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                    except Exception as e:
+                        print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
+                        print(f"Giving up. Error [{str(e)}]")
+
+                existing = MappingRule.objects.filter(
                     project_id = task.project_id,
                     source_component = component,
                     target_component = task.source_component,
                     mapcorrelation = concept.get('correlation'),
                 )
-                print("Regel in DB", rule)
-                print("Created?", created)
-                print("\n\n\n")
-            else:
-                print(f"Already {existing.count()} rules in database - skip creating another")
+                if existing.count() == 0:
+                    # print("Start get_or_create")
+                    rule, created = MappingRule.objects.get_or_create(
+                        project_id = task.project_id,
+                        source_component = component,
+                        target_component = task.source_component,
+                        mapcorrelation = concept.get('correlation'),
+                    )
+                    # print("Regel in DB", rule)
+                    # print("Created?", created)
+                    print("\n\n\n")
+                else:
+                    # print(f"Already {existing.count()} rules in database - skip creating another")
+                    True
+            except Exception as e:
+                print(f"[Exception in shared task createRulesFromEcl] - intended to handle {concept.get('id')} - Error: [{str(e)}]")
 
         # Cleanup - Remove rules that should not be there
-        print(f"Valid rules:\n {valid_rules}")
+        # print(f"Valid rules:\n {valid_rules}")
         ## Get all rules for this task
         rules = MappingRule.objects.filter(
             project_id = task.project_id,
             target_component = task.source_component,
         )
         for rule in rules:
-            print(f"Checking {str(rule)}")
+            # print(f"Checking {str(rule)}")
             if valid_rules.get(rule.source_component.component_id):
                 if rule.mapcorrelation == valid_rules.get(rule.source_component.component_id).get('correlation'):
                     # Correct ID and correlation; can stay

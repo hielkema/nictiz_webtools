@@ -49,6 +49,28 @@ class Permission_MappingProject_Whitelist(permissions.BasePermission):
         if 'mapping | audit whitelist' in request.user.groups.values_list('name', flat=True):
             return True
 
+class MappingTriggerAudit(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        try:
+            task = MappingTask.objects.get(id=pk)
+            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            return Response(True)
+        except Exception as e:
+            return Response(e)    
+
+class MappingTriggerProjectAudit(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        try:
+            project = MappingProject.objects.get(id=pk)
+            audit_async.delay('multiple_mapping', project.id, None)
+            return Response(True)
+        except Exception as e:
+            return Response(e)  
+
 class MappingAudits(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
@@ -66,6 +88,18 @@ class MappingAudits(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+    def create(self, request):
+        payload = request.data
+        taskid = str(payload.get('task_id'))
+        task = MappingTask.objects.get(id=taskid)
+
+        audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="AUDIT_VETO",
+                        sticky=True,
+                        hit_reason=f"Deze taak heeft in de audit view een veto ontvangen. Zie commentaar voor meer informatie.",
+                    )
+        return Response(True)
 
 class MappingAuditWhitelist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
@@ -118,3 +152,31 @@ class MappingAuditsPerProject(viewsets.ViewSet):
                 'timestamp':audit.first_hit_time,
             })
         return Response(audits)
+
+class MappingAuditStatus(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Whitelist]
+
+    def retrieve(self, request, pk=None):
+        i = inspect()
+        active = i.active()
+        info = []
+        if not active:
+            pk = 'error - celery down?'
+        else:
+            for worker, tasks in list(active.items()):
+                if tasks:
+                    taskstr = '; '.join("%s(*%s, **%s)" % (t['name'], t['args'], t['kwargs'])
+                            for t in tasks)
+                else:
+                    taskstr = 'None'
+                info.append((worker + ' active', taskstr))
+            for worker, tasks in list(i.scheduled().items()):
+                info.append((worker + ' scheduled', len(tasks)))
+
+            
+
+        # Should return:
+        # - audit running for project true/false
+        # - audit running for current task true/false
+
+        return Response(f'{pk} checked {info}')

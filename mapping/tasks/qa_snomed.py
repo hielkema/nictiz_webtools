@@ -59,6 +59,6 @@ def snomed_daily_build_active(taskid):
             obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type="snomed_daily_build_active",
-                            hit_reason='Een van de gebruikte SNOMED concepten is inactief in de daily build van SNOMED International',
+                            hit_reason='Een van de gebruikte SNOMED concepten ['+str(mapping.target_component.component_id)+'] is inactief in de daily build van SNOMED International',
                         )
             logger.info(str(obj))

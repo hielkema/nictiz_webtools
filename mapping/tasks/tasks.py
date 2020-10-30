@@ -13,6 +13,7 @@ from ..models import *
 import urllib.request
 from pandas import read_excel, read_csv
 import environ
+import sys, os
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -80,100 +81,259 @@ def UpdateECL1Task(record_id, query):
             'error' : str(e),
         }
 
-
-@shared_task
-def import_snomed_async(focus=None):
-    snowstorm = Snowstorm(
-        baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=False,
-        preferredLanguage="nl",
-        defaultBranchPath="MAIN/SNOMEDCT-NL",
-    )
-    result = snowstorm.findConcepts(ecl="<<"+focus)
-    print('Found {} concepts'.format(len(result)))
-
-    # Set all snomed concepts in the database as inactive, in case they are not retrieved through ECL?
-    # Should probably be changed to all applying only to concepts not in the above ECL query results!
-    # Voorbeeld:
-    # snomed = MappingCodesystem.objects.get(id='1')
-    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
-    # concepts.update(component_extra_dict = {
-    #     'Actief':False,
-    # })
-    # Nieuw TODO:
-    # snomed = MappingCodesystem.objects.get(id='1')
-    # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
-    # concepts = concepts.exclude(component_id__in = result.keys()) ??????
-    # concepts.update(component_extra_dict = {
-    #     'Actief':False,
-    # })
-
-    # Spawn task for each concept
-    for conceptid, concept in result.items():
-        payload = {
-            'conceptid' : conceptid,
-            'concept'   : concept,
-        }
-        update_snomedConcept_async.delay(payload)
-
-@shared_task
-def update_snomedConcept_async(payload=None):
-    snowstorm = Snowstorm(
-        baseUrl="https://snowstorm.test-nictiz.nl",
-        debug=False,
-        preferredLanguage="nl",
-        defaultBranchPath="MAIN/SNOMEDCT-NL",
-    )
+# @shared_task
+# def check_snomed_active(concept = None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+#     result = snowstorm.getConceptById(id=concept)
+#     obj = MappingCodesystemComponent.objects.get(component_id = concept)
+#     extra_dict = obj.component_extra_dict
+#     extra_dict.update({'Actief':result.get('active')})
+#     obj.component_extra_dict = extra_dict
+#     obj.save()
+#     print(extra_dict)
+#     print(obj.component_extra_dict)
     
-    concept = payload.get('concept')
-    conceptid = payload.get('conceptid')
+# @shared_task
+# def import_snomed_async(focus=None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+#     result = snowstorm.findConcepts(ecl="<<"+focus)
+#     print('Found {} concepts'.format(len(result)))
 
-    # Get or create based on 2 criteria (fsn & codesystem)
+#     # Set snomed concepts in the database as inactive, if they are not retrieved through ECL (this means they are not active and will not be updated)
+#     ##### ALERT - can't be done this way! Not all concepts are descendants of this focus concept. Should be a separately scheduled task that checks the entire library.
+#     # snomed = MappingCodesystem.objects.get(id='1')
+#     # concepts = MappingCodesystemComponent.objects.filter(codesystem_id=snomed)
+#     # concepts = concepts.exclude(component_id__in = list(result.keys()))
+#     # concepts.update(component_extra_dict = {
+#     #     'Actief':'False',
+#     # })
+#     # print(f"Set {concepts.count()} as inactive - were not in ECL query from focus concept {focus}.")
+
+#     # Spawn task for each concept
+#     for conceptid, concept in result.items():
+#         payload = {
+#             'conceptid' : conceptid,
+#             'concept'   : concept,
+#         }
+#         update_snomedConcept_async.delay(payload)
+
+# @shared_task
+# def update_snomedConcept_async(payload=None):
+#     snowstorm = Snowstorm(
+#         baseUrl="https://snowstorm.test-nictiz.nl",
+#         debug=False,
+#         preferredLanguage="nl",
+#         defaultBranchPath="MAIN/SNOMEDCT-NL",
+#     )
+    
+#     concept = payload.get('concept')
+#     conceptid = payload.get('conceptid')
+
+#     # Get or create based on 2 criteria (fsn & codesystem)
+#     codesystem_obj = MappingCodesystem.objects.get(id='1')
+#     obj, created = MappingCodesystemComponent.objects.get_or_create(
+#         codesystem_id_id=codesystem_obj.id,
+#         component_id=conceptid,
+#     )
+#     print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
+#     # Add data not used for matching
+#     #### Add sticky audit hit if concept was already in database and title changed
+#     # term_en = concept['fsn']['term']
+#     # if (obj.component_title != None) and (obj.component_title != term_en):
+#     #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+
+#     #     # Find rules using this component (both from and to)
+#     #     hit_rules = MappingRule.objects.filter(source_component = obj)
+#     #     for hit_rule in hit_rules: 
+#     #         # Find tasks using any of the involved components
+#     #         ## From
+#     #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+#     #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
+#     #         for task in tasks:
+#     #                 print(f"Audit hit maken voor taak {str(task)}")
+#     #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+#     #                         task=task,
+#     #                         audit_type="IMPORT",
+#     #                         sticky=True,
+#     #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+#     #                     )
+#     #         ## To
+#     #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+#     #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
+#     #         for task in tasks:
+#     #                 print(f"Audit hit maken voor taak {str(task)}")
+#     #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+#     #                         task=task,
+#     #                         audit_type="IMPORT",
+#     #                         sticky=True,
+#     #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+#     #                     )
+#     # else:
+#     #     print(f"{obj.component_title} in database == {term_en} - geen hits")
+#     try:
+#         obj.component_title = str(concept['fsn']['term'])
+#         extra = {
+#             'Preferred term' : str(concept['pt']['term']),
+#             'Actief'         : str(concept['active']),
+#             'Effective time' : str(concept['effectiveTime']),
+#             'Definition status'  : str(concept['definitionStatus']),
+#         }
+
+#         obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+
+#         obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+#         obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+#         obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+#         obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+
+#         obj.component_extra_dict = extra
+#         # Save
+#         obj.save()
+
+#         return str(obj)
+#     except Exception as e:
+#         print(f"[Error in shared task update_snomedConcept_async]: {str(e)}")
+#         return(e)
+
+@shared_task
+def import_snomed_snowstorm(payload=None):
+    def concept_data(concept):
+        return {
+            'id' : str(concept['conceptId']),
+            'fsn' : str(concept['fsn']['term']),
+            'pt'  : str(concept['pt']['term']),
+            'active' : str(concept['active']),
+            'effectiveTime' : str(concept['effectiveTime']),
+            'definitionStatus' : str(concept['definitionStatus']),
+        }
+
+    def retrieve_concepts():
+        search_after = ''
+        output = []
+        while True:
+            url = f"https://snowstorm.test-nictiz.nl/browser/MAIN%2FSNOMEDCT-NL/concepts?searchAfter={search_after}&number=0&size=10000"
+            req = urllib.request.Request(url)
+            req.add_header('Accept-Language', 'nl')
+            response = urllib.request.urlopen(req).read()
+            result = json.loads(response.decode('utf-8'))
+
+            search_after = result['searchAfter']
+            total = result['total']
+            # total = 5
+            
+            concept_list = [concept_data(concept) for concept in result['items']]
+            
+            output.extend(concept_list)
+            print(f"Retrieved {len(result['items'])} - {len(output)}/{total} - {round((len(output)/total*100),0)}%")
+            if len(output) >= total: break
+        return output
+
+    print(f"Starting [@shared_task: import_snomed_snowstorm]")
+
+    concepts = retrieve_concepts()
+
+    print(f"[@shared_task: import_snomed_snowstorm] Finished retrieving concepts. Moving on to database update.")
+
+    updated_concepts = 0
+    created_concepts = 0
     codesystem_obj = MappingCodesystem.objects.get(id='1')
-    obj, created = MappingCodesystemComponent.objects.get_or_create(
-        codesystem_id_id=codesystem_obj.id,
-        component_id=conceptid,
-    )
-    print("HANDLED **** Codesystem [{}] / Concept {}".format(codesystem_obj, conceptid))
-    # Add data not used for matching
-    #### Add sticky audit hit if concept was already in database and title changed
-    if (obj.component_title != None) and (obj.component_title != concept['fsn']['term']):
-        print(f"{obj.component_title} in database != {concept['fsn']['term']} - audit hit maken")
-        # Find tasks using this component
-        tasks = MappingTask.objects.filter(source_component = obj)
-        for task in tasks:
-            audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                    task=task,
-                    audit_type="IMPORT",
-                    sticky=True,
-                    hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                )
-    else:
-        print(f"{obj.component_title} in database == {concept['fsn']['term']} - geen hits")
+    for concept in concepts:
+        try:
+            # Get or create based on 2 criteria (fsn & codesystem)
+            obj, created = MappingCodesystemComponent.objects.get_or_create(
+                codesystem_id_id=codesystem_obj.id,
+                component_id=concept['id'],
+            )
+            obj.component_title = str(concept['fsn'])
+            extra = {
+                'Preferred term'    : str(concept['pt']),
+                'Actief'            : str(concept['active']),
+                'Effective time'    : str(concept['effectiveTime']),
+                'Definition status' : str(concept['definitionStatus']),
+            }
+            obj.component_extra_dict = extra
+            if created:
+                created_concepts += 1
+            else:
+                updated_concepts += 1
+            obj.save()
+        except Exception as e:
+            print(f"Error in [@shared_task: import_snomed_snowstorm]: {e}")
 
-    obj.component_title = str(concept['fsn']['term'])
-    extra = {
-        'Preferred term' : str(concept['pt']['term']),
-        'Actief'         : concept['active'],
-        'Effective time' : str(concept['effectiveTime']),
-        'Definition status'  : str(concept['definitionStatus']),
+    print(f"[@shared_task: import_snomed_snowstorm] Finished updating database for FSN/metadata. Now firing task to update hierarchical info (parents/ancestors/children/descendants)")
+    add_hierarchy_snomed.delay()
+    return {
+        'updated' : updated_concepts,
+        'created' : created_concepts,
     }
 
-    obj.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
-
-    obj.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
-    obj.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
-    obj.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
-    obj.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
-
-    obj.component_extra_dict = extra
-    # Save
-    obj.save()
-    return str(obj)
+@shared_task
+def add_hierarchy_snomed():
+    snowstorm = Snowstorm(
+        baseUrl="https://snowstorm.test-nictiz.nl",
+        debug=False,
+        preferredLanguage="nl",
+        defaultBranchPath="MAIN/SNOMEDCT-NL",
+    )
+    components = MappingCodesystemComponent.objects.filter(
+        codesystem_id_id = '1'
+    )
+    for component in components:
+        conceptid = component.component_id
+        # component.descriptions = snowstorm.getDescriptions(id=str(conceptid)).get('categorized',{})
+        component.parents     = json.dumps(list(snowstorm.getParents(id=conceptid)))
+        component.children    = json.dumps(list(snowstorm.getChildren(id=conceptid)))
+        component.descendants = json.dumps(list(snowstorm.findConcepts(ecl='<<'+conceptid)))
+        component.ancestors   = json.dumps(list(snowstorm.findConcepts(ecl='>>'+conceptid)))
+        component.save()
+    print(f"[@shared_task: add_hierarchy_snomed] Finished updating SNOMED hierarchical data.")
+    
 
 @shared_task
 def import_labcodeset_async():
-    with open('/webserver/mapping/resources/labcodeset/labconcepts-20200529-093650784.xml') as fd:
+    # Import pre-existent mappings as a comment
+    try:
+        df = read_excel('/webserver/mapping/resources/labcodeset/init_mapping_NHG45-LOINC.xlsx')
+        # Vervang lege cellen door False
+        df=df.fillna(value=False)
+        codesystem = MappingCodesystem.objects.get(id='4') # NHG tabel 45
+        user = User.objects.get(username='mertens')
+        for index, row in df.iterrows():
+            bepalingnr = row['bepalingsnr']
+            notitie = row['Notitie']
+            loinc_id = row['LOINC-id']
+            loinc_name = row['LOINC-naam']
+            component = MappingCodesystemComponent.objects.get(codesystem_id=codesystem, component_id=bepalingnr)
+            try:
+                if loinc_id != 'UNMAPPED':
+                    task = MappingTask.objects.get(source_component=component)
+                    comment = "Automatisch geïmporteerde legacy mapping: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
+                    MappingComment.objects.get_or_create(
+                        comment_title = 'NHG-LOINC mapping (Legacy import)',
+                        comment_task = task,
+                        comment_body = comment,
+                        comment_user = user,
+                    )
+            except:
+                print('Geen taak voor dit concept')
+                print(bepalingnr, notitie, loinc_id, loinc_name)
+    except:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+        print(error)
+
+    # Import codesystem
+    with open('/webserver/mapping/resources/labcodeset/labconcepts-20201022-165920601.xml') as fd:
         doc = xmltodict.parse(fd.read())
 
         # Lijst voor alle materialen maken
@@ -205,7 +365,7 @@ def import_labcodeset_async():
                         material_list.append(material['@ref'])
                 except:
                     material_list.append('Materiaal error')
-            logger.info(material_list)
+            # logger.info(material_list)
             # Materiaal -> snomed
             material_list_snomed = []
             for material in material_list:
@@ -246,22 +406,46 @@ def import_labcodeset_async():
 
             term_en = component['loincConcept']['longName']
             term_nl = component['loincConcept'].get('translation',{}).get('longName','Geen vertaling')
-            #### TODO add sticky audit hit if concept was already in database and title changed
 
             #### Add sticky audit hit if concept was already in database and title changed
-            if (obj.component_title != None) and (obj.component_title != term_en):
-                print(f"{obj.component_title} in database != {term_en} - audit hit maken")
-                # Find tasks using this component
-                tasks = MappingTask.objects.filter(source_component = obj)
-                for task in tasks:
-                    audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                            task=task,
-                            audit_type="IMPORT",
-                            sticky=True,
-                            hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                        )
-            else:
-                print(f"{obj.component_title} in database == {term_en} - geen hits")
+            # if (obj.component_title != None) and (obj.component_title != term_en):
+            #     print(f"{obj.component_title} in database != {term_en} - audit hit maken")
+
+            #     # Find rules using this component (both from and to)
+            #     hit_rules = MappingRule.objects.filter(source_component = obj)
+            #     for hit_rule in hit_rules: 
+            #         # Find tasks using any of the involved components
+            #         ## From
+            #         tasks = MappingTask.objects.filter(source_component = hit_rule.source_component, project_id__project_type = '1')
+            #         print(f"Audit-tagging [from] {tasks.count()} tasks.")
+            #         for task in tasks:
+            #                 print(f"Audit hit maken voor taak {str(task)}")
+            #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+            #                         task=task,
+            #                         audit_type="IMPORT",
+            #                         sticky=True,
+            #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+            #                     )
+            #         ## To
+            #         tasks = MappingTask.objects.filter(source_component = hit_rule.target_component, project_id__project_type = '4')
+            #         print(f"Audit-tagging [to] {tasks.count()} tasks.")
+            #         for task in tasks:
+            #                 print(f"Audit hit maken voor taak {str(task)}")
+            #                 audit, created_audit = MappingTaskAudit.objects.get_or_create(
+            #                         task=task,
+            #                         audit_type="IMPORT",
+            #                         sticky=True,
+            #                         hit_reason=f"Let op: een FSN is gewijzigd bij een update van het codestelsel. Betreft component {obj.codesystem_id.codesystem_title} {obj.component_id} - {term_en} [was {obj.component_title}]",
+            #                     )
+            # else:
+            #     print(f"{obj.component_title} in database == {term_en} - geen hits")
+
+            component_active = 'True'
+            try:
+                if component['@status'] != "active": component_active = 'False'
+            except:
+                print("Fout bij bepalen of lab_concept actief is - import als actief")
+
 
             obj.component_title     = term_en
             obj.component_extra_dict   = {
@@ -274,6 +458,7 @@ def import_labcodeset_async():
                 'Klasse'                : loinc_class,
                 'Aanvraag/Resultaat'    : loinc_orderObs,
                 'Materialen'            : material_list_snomed,
+                'Actief'                : component_active,
             }
             obj.save()
 
@@ -369,6 +554,48 @@ def import_nhgverrichtingen_task():
         obj.save()
 
 @shared_task
+def import_apache_async():
+    df = read_excel('/webserver/mapping/resources/apache/20171120_apache-snomed_eerstetab_Basislijst.xlsx')
+    # Vervang lege cellen door False
+    df=df.fillna(value=False)
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='10') #10 = apache
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=row['ID'],
+        )
+        # Add data not used for matching
+
+        #### Add sticky audit hit if concept was already in database and title changed
+        if (obj.component_title != None) and (obj.component_title != row['APACHE IV TERM']):
+            print(f"{obj.component_title} in database != {row['APACHE IV TERM']} - sticky audit hit maken")
+            # Find tasks using this component
+            tasks = MappingTask.objects.filter(source_component = obj)
+            for task in tasks:
+                audit, created_audit = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="IMPORT",
+                        sticky=True,
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                    )
+        else:
+            print(f"{obj.component_title} in database == {row['APACHE IV TERM']} - geen hits")
+
+        obj.component_title     = row['APACHE IV TERM']
+
+        legacy_map = ''
+        for item in df[df['ID'] == row['ID']].values:
+            legacy_map += f"{item[2]} |{item[3]}|\n"
+
+        extra = {
+            'Legacy map' : legacy_map,
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
+        }
+        obj.component_extra_dict = extra
+        # Save
+        obj.save()
+
+@shared_task
 def import_omaha_task():
     df = read_excel('/webserver/mapping/resources/omaha/omaha.xlsx')
     # Vervang lege cellen door False
@@ -399,7 +626,10 @@ def import_omaha_task():
 
         obj.component_title     = row[1]
 
-        obj.component_extra_dict = {}
+        extra = {
+            'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
+        }
+        obj.component_extra_dict = extra
         # Save
         obj.save()
 
@@ -641,21 +871,6 @@ def import_nhgbepalingen_task():
             component_id=row[0],
         )
 
-        #### Add sticky audit hit if concept was already in database and title changed
-        if (obj.component_title != None) and (obj.component_title != row[4]):
-            print(f"{obj.component_title} in database != {row[4]} - audit hit maken")
-            # Find tasks using this component
-            tasks = MappingTask.objects.filter(source_component = obj)
-            for task in tasks:
-                audit, created_audit = MappingTaskAudit.objects.get_or_create(
-                        task=task,
-                        audit_type="IMPORT",
-                        sticky=True,
-                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
-                    )
-        else:
-            print(f"{obj.component_title} in database == {row[4]} - geen hits")
-
         obj.component_title = row[4]
         
         # Check status van NHG term
@@ -675,7 +890,7 @@ def import_nhgbepalingen_task():
             soort = str(row[13])
 
         # Check groep van NHG term
-        if str(row[9]) == "AA": groep = "Anamnese"
+        if   str(row[9]) == "AA": groep = "Anamnese"
         elif str(row[9]) == "AL": groep = "Allergologie"
         elif str(row[9]) == "AU": groep = "Auscultatie"
         elif str(row[9]) == "AL": groep = "Allergologie"
@@ -715,6 +930,7 @@ def import_nhgbepalingen_task():
             'Aanvraag/Uitslag/Beide' : row[6],
             'Soort' : soort,
             'Groep' : groep,
+            'Selectie' : row[10],
             'Materiaal NHG' : row[2],
             'Materiaal voorstel Snomed' : voorstel_materiaal,
             'Vraagtype' : row[14],
@@ -775,21 +991,65 @@ def import_icpc_task():
         obj.save()
 
 @shared_task
+def import_gstandaardDiagnoses_task():
+    df = read_excel(
+        '/webserver/mapping/resources/gstandaard/diagnosenLijst_20200824.xlsx',
+        )
+    i=0
+    # Vervang lege cellen door lege string
+    df=df.fillna(value='')
+
+    # Verwerk dataset -> database
+    for index, row in df.iterrows():
+        codesystem = MappingCodesystem.objects.get(id='9')
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=str(row['Parameternummer']),
+        )
+        
+        # #### Sticky audit hit if concept was already in database and title changed
+        # if (obj.component_title != None) and (obj.component_title != row['ICPC Titel']):
+        #     print(f"{obj.component_title} in database != {row['ICPC Titel']} - audit hit maken")
+        #     # Find tasks using this component
+        #     tasks = MappingTask.objects.filter(source_component = obj)
+        #     for task in tasks:
+        #         audit, created_audit = MappingTaskAudit.objects.get_or_create(
+        #                 task=task,
+        #                 audit_type="IMPORT",
+        #                 sticky=True,
+        #                 hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+        #             )
+        # else:
+        #     print(f"{obj.component_title} in database == {row['ICPC Titel']} - geen hits")
+
+        obj.component_title = row['diagnose']
+
+        actief_concept = 'True'
+
+        extra = {
+            'Opmerking' : row['opmerking'],
+            'Actief' : actief_concept,
+        }
+        # print(extra)
+        obj.component_extra_dict = extra
+        obj.save()
+
+@shared_task
 def audit_async(audit_type=None, project=None, task_id=None):
     project = MappingProject.objects.get(id=project)
     if task_id == None:
         tasks = MappingTask.objects.filter(project_id=project)
     else:
-        tasks = MappingTask.objects.filter(project_id=project, id=task_id)
+        tasks = MappingTask.objects.filter(project_id=project, id=task_id).order_by('id')
 
     # Delete existing audit hits for tasks (unless whitelisted)
     for task in tasks:
             # Print task identification, sanity check
-            logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
+            # logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
 
             # Delete all old audit hits for this task if not whitelisted
             delete = MappingTaskAudit.objects.filter(task=task, ignore=False, sticky=False).delete()
-            logger.info(delete)
+            # logger.info(delete)
 
     ###### Slowly moving to separate audit QA scripts.
     logger.info('Spawning QA processes')
@@ -797,15 +1057,17 @@ def audit_async(audit_type=None, project=None, task_id=None):
     
     # Spawn QA for labcodeset<->NHG tasks
     for task in tasks:
-        logger.info('Checking task: {0}'.format(task.id))
+        # logger.info('Checking task: {0}'.format(task.id))
         
-        logger.info('Spawning QA scripts for NHG<->LOINC')
+        # logger.info('Spawning QA scripts for NHG<->LOINC')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
         
-        logger.info('Spawning QA scripts for ECL-1 queries')
-        send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+        if task.project_id.project_type == '4':
+            # logger.info('Spawning QA scripts for ECL-1 queries')
+            send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+            send_task('mapping.tasks.qa_ecl_duplicates.check_duplicate_rules', [], {'taskid':task.id})
         
-        logger.info('Spawning general QA scripts for SNOMED')
+        # logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
         if tasks.count() == 1:
             send_task('mapping.tasks.qa_snomed.snomed_daily_build_active', [], {'taskid':task.id})
@@ -837,7 +1099,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
         # Loop through all tasks
         for task in tasks:
             # Print task identification, sanity check
-            logger.info('Checking task for: {0}'.format(task.source_component.component_title))
+            # logger.info('Checking task for: {0}'.format(task.source_component.component_title))
 
             # Checks for the entire task
             # If source component contains active/deprecated designation ->
@@ -854,7 +1116,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Get all mapping rules for the current task
             rules = MappingRule.objects.filter(project_id=project, source_component=task.source_component).order_by('mappriority')
-            logger.info('Number of rules: {0}'.format(rules.count()))
+            # logger.info('Number of rules: {0}'.format(rules.count()))
             # Create list for holding all used map priorities
             mapping_priorities = []
             mapping_groups = []
@@ -880,7 +1142,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                 else:
                     mapping_prio_per_group[rule.mapgroup].append(rule.mappriority)
 
-                logger.info('Rule: {0}'.format(rule))
+                # logger.info('Rule: {0}'.format(rule))
 
 
 
@@ -908,7 +1170,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
                 # If Target component contains active/deprecated designation ->
                 extra_dict = rule.target_component.component_extra_dict
-                if extra_dict.get('Actief',False):
+                if extra_dict.get('Actief',{}):
                     # If source code is deprecated ->
                     if extra_dict.get('Actief') == "False":
                         obj, created = MappingTaskAudit.objects.get_or_create(
@@ -944,7 +1206,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
 
             # Look for rules with the same target component
             for target in mapping_targets:
-                other_rules = MappingRule.objects.filter(target_component=target)
+                other_rules = MappingRule.objects.filter(target_component=target).order_by('id')
                 if other_rules.count() > 0:
                     other_tasks_same_target = []
                     for other_rule in other_rules:
@@ -955,7 +1217,14 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     for other_rule in other_rules:
                         # Separate rule for project 3 (NHG Diagn-LOINC/SNOMED)    
                         if (rule.project_id.id == 3) and (other_rule.target_component.component_id in specimen_exclusion_list):
-                            logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
+                            # logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
+                            True
+                        elif (rule.project_id.id == 4) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='182353008').descendants)):
+                            # logger.info('Project 7 -> negeer <<zijde voor dubbele mappings')
+                            True
+                        elif (rule.project_id.id == 7) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='118718002').descendants)):
+                            # logger.info('Project 7 -> negeer <<procedure op huid voor dubbele mappings')
+                            True
                         else:
                             if (other_rule.source_component != task.source_component) and (task.source_component.codesystem_id == other_rule.source_component.codesystem_id):
                                 obj, created = MappingTaskAudit.objects.get_or_create(
@@ -966,7 +1235,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             
             # Specific rules for single or multiple mappings
             if rules.count() == 1:
-                logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
+                # logger.info('Mappriority 1?: {0}'.format(rules[0].mappriority))
                 if rules[0].mappriority != 1 and rules[0].project_id.use_mappriority:
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
@@ -981,10 +1250,10 @@ def audit_async(audit_type=None, project=None, task_id=None):
                         )
             elif rules.count() > 1:
                 # Check for order in groups
-                logger.info('Mapping groups: {0}'.format(mapping_groups))
+                # logger.info('Mapping groups: {0}'.format(mapping_groups))
                 groups_ex_duplicates = list(dict.fromkeys(mapping_groups))
-                logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
-                logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
+                # logger.info('Mapping groups no duplicates: {0}'.format(groups_ex_duplicates))
+                # logger.info('Consecutive groups?: {0} -> {1}'.format(groups_ex_duplicates, checkConsecutive(groups_ex_duplicates)))
                 if not checkConsecutive(groups_ex_duplicates):
                     obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
@@ -992,13 +1261,13 @@ def audit_async(audit_type=None, project=None, task_id=None):
                             hit_reason='Taak heeft meerdere mapping groups: geen opeenvolgende prioriteit'
                         )
 
-                print("PRIO PER GROUP",mapping_prio_per_group)
+                # print("PRIO PER GROUP",mapping_prio_per_group)
 
                 # Rest in loop door prio's uitvoeren?
                 for key in mapping_prio_per_group.items():
-                    logger.info('Checking group {}'.format(str(key[0])))
+                    # logger.info('Checking group {}'.format(str(key[0])))
                     priority_list = key[1]
-                    logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
+                    # logger.info('Consecutive priorities?: {0} -> {1}'.format(priority_list, checkConsecutive(priority_list)))
                     if not checkConsecutive(priority_list):
                         obj, created = MappingTaskAudit.objects.get_or_create(
                                 task=task,
@@ -1025,7 +1294,8 @@ def audit_async(audit_type=None, project=None, task_id=None):
                     #             hit_reason='Taak heeft meerdere mapping rules: laatste prioriteit is niet gelijk aan Anders'
                     #         )
             else:
-                logger.info('No rules for current task')
+                # logger.info('No rules for current task')
+                True
 
 
 # Create RC shadow copy of codesystem
@@ -1047,35 +1317,81 @@ def exportCodesystemToRCRules(rc_id, user_id):
         }
         return output
 
-    # Selecte RC
+    # Select RC
     rc = MappingReleaseCandidate.objects.get(id = rc_id)
     if rc.status != 3: # 3=production
         rc.finished = False
         rc.save()
         # Get all tasks in requested codesystem - based on the codesystem of the source component
+        # if rc.target_codesystem != None:
+        #     print("Target filter applied")
+        #     tasks = MappingTask.objects.filter(
+        #             source_component__codesystem_id__id = rc.codesystem.id,
+        #             target_codesystem = rc.target_codesystem,
+        #         ).order_by('source_component__component_id')
+        #     tasks = tasks | MappingTask.objects.filter(
+        #             source_component__codesystem_id__id = rc.codesystem.id,
+        #             target_codesystem = rc.target_codesystem,
+        #         ).order_by('source_component__component_id')
+        # else:
+            # print("Target filter NOT applied")
         tasks = MappingTask.objects.filter(
-                source_component__codesystem_id__id = rc.codesystem.id
+                source_component__codesystem_id__id = rc.codesystem.id,
             ).order_by('source_component__component_id')
+
+        try:
+            tasks = tasks | MappingTask.objects.filter(
+                        source_component__codesystem_id__id = rc.target_codesystem.id,
+                    ).order_by('source_component__component_id')
+        except:
+            tasks = tasks
+
         print('Found',tasks.count(),'tasks.')
         
         debug_list = []
+        valid_rules = []
         # Loop through tasks
         for task in tasks:
             if task.status != task.project_id.status_complete:
                 print(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 debug_list.append(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 # Remove all rules in the RC database originating from this task, since it is rejected.
-                rc_rules = MappingReleaseCandidateRules.objects.filter(
-                        static_source_component_ident = task.source_component.component_id,
-                        export_task = task,
-                        export_rc = rc,
-                )
+                if task.project_id.project_type == '1':
+                    # In type 1 - source_component is used as SOURCE for all related rules
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                            static_source_component_ident = task.source_component.component_id,
+                            export_task = task,
+                            export_rc = rc,
+                    )
+                elif task.project_id.project_type == '4':
+                    # In type 4 - source_component is used as a TARGET for all related rules
+                    rc_rules = MappingReleaseCandidateRules.objects.filter(
+                            static_target_component_ident = task.source_component.component_id,
+                            export_task = task,
+                            export_rc = rc,
+                    )
                 
                 rc_rules.delete()
 
             else:
                 print(f"Handle task {task.id}")
-                rules = MappingRule.objects.filter(project_id = task.project_id).filter(source_component = task.source_component)
+                if task.project_id.project_type == '1':
+                    # In type 1 - source_component is used as SOURCE for all related rules
+                    rules = MappingRule.objects.filter(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                        )
+                elif task.project_id.project_type == '4':
+                    # In type 4 - source_component is used as a TARGET for all related rules
+                    rules = MappingRule.objects.filter(
+                            project_id = task.project_id,
+                            target_component = task.source_component,
+                        )
+                # Filter on target codesystem if enabled
+                if rc.target_codesystem != None:
+                    rules = rules.filter(
+                        target_component__codesystem_id = rc.target_codesystem
+                    )
                 
                 ## First: check if any of the rules for this task have changes
                 ## if so: delete all existing rules in RC and replace them all
@@ -1099,10 +1415,10 @@ def exportCodesystemToRCRules(rc_id, user_id):
                         # task_user = task.user.username
                         source_component = rule.source_component,
                         static_source_component_ident = rule.source_component.component_id,
-                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                        # static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                         target_component = rule.target_component,
                         static_target_component_ident = rule.target_component.component_id,
-                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                        # static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                         mapgroup = rule.mapgroup,
                         mappriority = rule.mappriority,
                         mapcorrelation = rule.mapcorrelation,
@@ -1147,10 +1463,10 @@ def exportCodesystemToRCRules(rc_id, user_id):
                         # task_user = task.user.username
                         source_component = rule.source_component,
                         static_source_component_ident = rule.source_component.component_id,
-                        static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
+                        # static_source_component = component_dump(codesystem = rule.source_component.codesystem_id.id, component_id = rule.source_component.component_id),
                         target_component = rule.target_component,
                         static_target_component_ident = rule.target_component.component_id,
-                        static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
+                        # static_target_component = component_dump(codesystem = rule.target_component.codesystem_id.id, component_id = rule.target_component.component_id),
                         mapgroup = rule.mapgroup,
                         mappriority = rule.mappriority,
                         mapcorrelation = rule.mapcorrelation,
@@ -1194,6 +1510,17 @@ def exportCodesystemToRCRules(rc_id, user_id):
                             mapspecifies = mapspecifies,
                         )
                         # rc_rule.save()
+                    valid_rules.append(rule)
+
+        # Clean up - leave no rules behind that should not be there
+        invalid_rules = MappingReleaseCandidateRules.objects.filter(
+            export_rc = rc,
+        ).exclude(
+            export_rule__in = valid_rules,
+        )
+        print(f"Found {invalid_rules.count()} invalid rules - deleting")
+        invalid_rules.delete()
+
         rc.finished = True
         logger.info('Finished')
         for item in debug_list:
@@ -1264,8 +1591,6 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                     for single_rule in rules_for_task:
                         target_component = single_rule.static_target_component
 
-                        
-
                         # Skip if identifier in the list of used products
                         if (target_component.get('identifier') not in product_list):
                             # Put all the products in a list
@@ -1277,16 +1602,20 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 # WARNING - hardcoded decision making
                                 # ?? 'property' : target_data.codesystem_id.component_fhir_uri.replace('[[component_id]]', target.get('id')),
                                 # LOGIC: if descendant of A/B/C, add property value X/Y/Z
-                                property_value = 'http://snomed.info/id/'
+                                fhir_url_prefix = MappingCodesystem.objects.get(id = 1).component_fhir_uri
                                 if target.get('id') in MappingCodesystemComponent.objects.get(component_id = '123038009').descendants:
-                                    property_value += '276731003' # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '276731003') # 276731003 = SNOMED: Material (attribute) - <<UNAPPROVED ATTRIBUTE
+                                elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '182353008').descendants:
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '272741003') # 272741003 = SNOMED: lateraliteit (attribuut)
+                                elif target.get('id') in MappingCodesystemComponent.objects.get(component_id = '252569009').descendants: # Descendants of 252569009 Test for allergens (procedure)
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '408730004') # 408730004 = context van verrichting (attribuut)
                                 else:
-                                    property_value += 'TODO'
+                                    property_value = fhir_url_prefix.replace('[[component_id]]', '263491009') # 263491009 = Context (attribute) - <<UNAPPROVED ATTRIBUTE
                                 products.append({
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'code' : target.get('id'),
-                                    'display' : target.get('title'), ## TODO - remove for production
+                                    # 'display' : target.get('title'), ## TODO - remove for production
                                 })
 
                             # Translate the map correlation
@@ -1298,9 +1627,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             output = {
                                 'code' : target_component.get('identifier'),
                                 'equivalence' : equivalence,
-                                'comment' : single_rule.mapadvice,
-                                'display' : target_component.get('title'), ## TODO - remove for production
+                                # 'display' : target_component.get('title'), ## TODO - remove for production
                             }
+                            if single_rule.mapadvice != None:
+                                output.update({'comment' : single_rule.mapadvice,})
                             # Add products to output if they exist
                             if len(products) > 0:
                                 output['product'] = products
@@ -1309,47 +1639,50 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             targets.append(output)
 
                     # Add this source component with all targets and products to the element list
-                    # # Only if it has approves and no rejects
-                    # accepted_count = single_rule.accepted.count()
-                    # rejected_count = single_rule.rejected.count()
-                    # if (accepted_count > 0) and (rejected_count == 0):
-                    #     source_component = single_rule.static_source_component
-                    #     output = {
-                    #         # 'DEBUG_numrules' : rules_for_task.count(),
-                    #         # 'DEBUG_productlist' : product_list,
-                    #         'code' : source_component.get('identifier'),
-                    #         # 'display' : source_component.get('title'),
-                    #         'target' : targets,
-                    #     }
-                    #     elements.append(output)
-                    
-                    # Alternative: export all rules, regardless of veto / approve. Responsibility for checking veto lies with exporter.
-                    source_component = single_rule.static_source_component
-                    output = {
-                        # 'DEBUG_numrules' : rules_for_task.count(),
-                        # 'DEBUG_productlist' : product_list,
-                        'code' : source_component.get('identifier'),
-                        'display' : source_component.get('title'), ## TODO - remove for production
-                        'target' : targets,
-                    }
-                    elements.append(output)
+                    ## WARNING - export_all=True will disregard veto/fiat!
+                    if rc.export_all == False:
+                        # # Only if it has approves and no rejects
+                        accepted_count = single_rule.accepted.count()
+                        rejected_count = single_rule.rejected.count()
+                        if (accepted_count > 0) and (rejected_count == 0):
+                            source_component = single_rule.static_source_component
+                            output = {
+                                # 'DEBUG_numrules' : rules_for_task.count(),
+                                # 'DEBUG_productlist' : product_list,
+                                'code' : source_component.get('identifier'),
+                                # 'display' : source_component.get('title'), ## TODO - remove for production
+                                'target' : targets,
+                            }
+                            elements.append(output)
+                    else:
+                        # Alternative: export all rules, regardless of veto / approve. Responsibility for checking veto lies with exporter.
+                        source_component = single_rule.static_source_component
+                        output = {
+                            # 'DEBUG_numrules' : rules_for_task.count(),
+                            # 'DEBUG_productlist' : product_list,
+                            'code' : source_component.get('identifier'),
+                            # 'display' : source_component.get('title'), ## TODO - remove for production
+                            'target' : targets,
+                        }
+                        elements.append(output)
 
-                # Add the group to the group list
-                groups.append({
-                    # 'DEBUG_projecttitle' : project.title,
-                    'source' : project.source_codesystem.codesystem_fhir_uri,
-                    'sourceVersion' : project.source_codesystem.codesystem_version,
-                    'target' : project.target_codesystem.codesystem_fhir_uri,
-                    'targetVersion': project.target_codesystem.codesystem_version,
-                    'element' : elements,
-                })
+                # Add the group to the group list, if there are elements in it
+                if len(elements) > 0:
+                    groups.append({
+                        # 'DEBUG_projecttitle' : project.title,
+                        'source' : project.source_codesystem.codesystem_fhir_uri,
+                        'sourceVersion' : project.source_codesystem.codesystem_version,
+                        'target' : project.target_codesystem.codesystem_fhir_uri,
+                        'targetVersion': project.target_codesystem.codesystem_version,
+                        'element' : elements,
+                    })
 
         status_options = [
                 # (code, readable)
-                ('0', 'Testing'),
-                ('1', 'Experimental'),
-                ('2', 'Acceptance'),
-                ('3', 'Production'),
+                ('0', 'draft'),
+                ('1', 'active'),
+                ('2', 'retired'),
+                ('3', 'unknown'),
             ]
         status = rc.status
         for code, readable in status_options:
@@ -1371,6 +1704,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             'description' : rc.metadata_description,
             'version' : rc.metadata_version,
             'status' : status,
+            'DEBUG_export_all' : rc.export_all,
             'experimental' : rc.metadata_experimental,
             'date' : rc.metadata_date,
             'publisher' : rc.metadata_publisher,
@@ -1425,7 +1759,7 @@ def mappingProgressDump():
                     'user' : user.username,
                     'num_tasks' : num_tasks,
                     })
-            for status in status_list:            
+            for status in status_list:
                 num_tasks = MappingTask.objects.filter(project_id_id=current_project.id, status_id=status).exclude(status=current_project.status_rejected).count()
                 tasks_per_status_labels.append(status.status_title)
                 tasks_per_status_values.append(num_tasks)

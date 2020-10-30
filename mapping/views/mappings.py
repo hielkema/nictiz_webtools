@@ -60,32 +60,51 @@ class MappingTargetSearch(viewsets.ViewSet):
 
         output =[]
 
-        # Start with the best matches: single word postgres match
+        ##### Single word search disabled
+        # # Start with the best matches: single word postgres match
+        # snomedComponents = MappingCodesystemComponent.objects.filter(
+        #     Q(component_id__icontains=query) |
+        #     Q(component_title__icontains=query)
+        # ).select_related(
+        #     'codesystem_id',
+        # )
+
+        ##### Search exact component_id
         snomedComponents = MappingCodesystemComponent.objects.filter(
-            Q(component_id__icontains=query) |
-            Q(component_title__icontains=query)
+            component_id=query
+        ).select_related(
+            'codesystem_id',
         )
+
         for result in snomedComponents:
+            try:
+                if (result.component_extra_dict.get('Actief',False) == "True") or (result.component_extra_dict.get('Actief',False) == True) :
+                    active = 'Ja'
+                else:
+                    active = 'Nee'
+            except:
+                active = 'Onbekend'
             output.append({
-                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title}",
+                'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [Actief: {active}]",
                 'value': result.component_id,
                 'component': {'id':result.id, 'title':result.component_title},
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
                 'extra': result.component_extra_dict,
             })
-        # In addition, full text search if needed
-        if len(output) == 0:
-            snomedComponents = MappingCodesystemComponent.objects.annotate(search=SearchVector('component_title','component_id',),).filter(search=query)        
-            for result in snomedComponents:
-                output.append({
-                    'text' : result.component_title,
-                    'value': result.component_id,
-                    'component': {'id':result.id, 'title':result.component_title},
-                    'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
-                    'extra': result.component_extra_dict,
-                })
-        output = sorted(output, key=lambda item: len(item.get("text")), reverse=False)
-        return Response(output[:20])
+        ###### Full text search disabled
+        # # In addition, full text search if needed
+        # if len(output) == 0:
+        #     snomedComponents = MappingCodesystemComponent.objects.annotate(search=SearchVector('component_title','component_id',),).filter(search=query)        
+        #     for result in snomedComponents:
+        #         output.append({
+        #             'text' : result.component_title,
+        #             'value': result.component_id,
+        #             'component': {'id':result.id, 'title':result.component_title},
+        #             'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
+        #             'extra': result.component_extra_dict,
+        #         })
+        # output = sorted(output, key=lambda item: len(item.get("text")), reverse=False)
+        return Response(output)
 
 class RuleSearchByComponent(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
@@ -166,65 +185,123 @@ class MappingDialog(viewsets.ViewSet):
 
     def create(self, request):
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-            print(request.data)
+            print(f"[MappingDialog/create] @ {request.user.username}")
+            print(f"Data: {request.data}")
   
-            task = MappingTask.objects.get(id=request.data.get('task'))
-            current_user = User.objects.get(id=request.user.id)
-            if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
-                try:
-                    if task.project_id.project_type == "1": # One to many
-                        source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
-                        print('Project type 1')
-                    elif task.project_id.project_type == "2": # Many to one
-                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        print('Project type 2')
-                    elif task.project_id.project_type == "4": # ECL to one
-                        source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                        target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
-                        print('Project type 4')
+            if request.data.get('new'):
+                print("Target is bekend - uitvoeren")
+                task = MappingTask.objects.get(id=request.data.get('task'))
+                current_user = User.objects.get(id=request.user.id)
+                if MappingProject.objects.get(id=task.project_id.id, access__username=current_user):
+                    try:
+                        if task.project_id.project_type == "1": # One to many
+                            source_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            target_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))                
+                            print('Project type 1')
+                        elif task.project_id.project_type == "2": # Many to one
+                            source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                            target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            print('Project type 2')
+                        elif task.project_id.project_type == "4": # ECL to one
+                            source_component = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                            target_component = MappingCodesystemComponent.objects.get(id=task.source_component.id)
+                            print('Project type 4')
+                        else:
+                            print("No support for this project type in MappingDialog POST method [type 3?]")
+                    except Exception as e:
+                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                        error = 'Exc [MappingDialog/create] error type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+                        print(error)
+
+                    print('Mapping:', request.data.get('mapping'),'\n\n')
+                    if request.data.get('mapping').get('id') == 'extra':
+                        print('ID=extra -> Zou een nieuwe mapping moeten worden.')
+                        print('Task',request.data.get('task'))
+                        print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
+                        new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        mapping = MappingRule.objects.create(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                            target_component = new_target,
+                            active = True,
+                        )
+                        mapping.save()
                     else:
-                        print("No support for this project type in MappingDialog POST method [type 3?]")
-                except Exception as e:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    error = 'Exc MappingDialog/create type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
-                    print(error)
+                        print('Betreft bestaande mapping.')
+                        print('Replacing mapping',request.data.get('mapping',{}).get('id'))
+                        print(f"New target: {request.data.get('new')}")
+                        print(f"Target is ingesteld - wordt aangepast")
+                        mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
+                        new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
+                        mapping.target_component = new_target
+                        mapping.save()
+                        print(f"Mapping object: {str(mapping)}")
 
-                print('\n\n','Raw request data',request.data,'\n\n')
-
-                print('Mapping:', request.data.get('mapping'),'\n\n')
-                if request.data.get('mapping').get('id') == 'extra':
-                    print('Zou een nieuwe mapping moeten worden.')
-                    print('Task',request.data.get('task'))
-                    print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
-                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    mapping = MappingRule.objects.create(
-                        project_id = task.project_id,
-                        source_component = task.source_component,
-                        target_component = new_target,
-                        active = True,
-                    )
-                    mapping.save()
-                else:
-                    print('Betreft bestaande mapping.')
-                    print('New target:', request.data.get('new'),'\n\n')
-                    print('User',request.user.username,': Replacing mapping',request.data.get('mapping').get('id'),'with',request.data.get('new').get('component').get('id'))
-                    mapping = MappingRule.objects.get(id = request.data.get('mapping').get('id'))
-                    new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                    mapping.target_component = new_target
-                    mapping.save()
-
-                audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                    print("Start audit")
+                    audit_async.delay('multiple_mapping', task.project_id.id, task.id)
 
                 return Response(str(mapping))
+            else:
+                print("Target is niet bekend - geen actie ondernomen")
+                return Response(None)
         else:
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
+
+class MappingExclusions(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+    def create(self, request):
+        print(f"[MappingExclusions/create] @ {request.user.username} - {request.data}")
+        try:
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                print(f"[MappingExclusions/create] @ {request.user.username} => Go")
+                task = MappingTask.objects.get(id=request.data.get('payload').get('id'))
+                obj, created = MappingEclPartExclusion.objects.get_or_create(task = task)
+                exclusion_list = list(request.data.get('payload').get('exclusions',{}).get('string').split('\n'))
+                obj.components = sorted(exclusion_list)
+                obj.save()
+                print(obj, created)
+            else:
+                print(f"[MappingExclusions/create] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[MappingExclusions/create] @ {request.user.username} => error ({e})")
+            
+        return Response(True)
+
+class ReverseMappingExclusions(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+    def retrieve(self, request, pk=None):
+        print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} - {request.data}")
+        result = None
+        try:
+            output = []
+            if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
+                print(f"[MappingExclusions/create] @ {request.user.username} => Go")
+                
+                component_id = MappingTask.objects.get(id = str(pk))
+
+                exclusions = MappingEclPartExclusion.objects.filter(components__contains = str(component_id.source_component.component_id)).select_related(
+                    'task',
+                    'task__source_component'
+                )
+                for exclusion in exclusions:
+                    output.append({
+                        'task' : exclusion.task.id,
+                        'component_id' : str(exclusion.task.source_component.component_id),
+                        'component_title' : str(exclusion.task.source_component.component_title),
+                    })
+            else:
+                print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => error ({e})")
+            
+        return Response(output)
 
 class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
+        print(f"[MappingTargets/create] @ {request.user.username}")
+
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
                 print(str(request.data)[:100],"........")
@@ -331,11 +408,16 @@ class MappingTargets(viewsets.ViewSet):
                                 elif query.get('id') != 'extra' and query.get('description') and query.get('query') and query.get('correlation'):
                                     print(f"Editing existing query {query.get('id')}")
                                     currentQuery = MappingEclPart.objects.get(id = query.get('id'))
-                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
                                     currentQuery.description = query.get('description')
                                     currentQuery.query = query.get('query')
                                     currentQuery.mapcorrelation = query.get('correlation')
                                     currentQuery.save()
+                                    print(f"---\nUsed the following data for update:\nQuery: {query.get('query')}\nDescription: {query.get('description')}\nCorrelation: {query.get('correlation')}\n")
+                                    queryInDatabase = MappingEclPart.objects.get(id = query.get('id'))
+                                    print(f"Update resulted in:\nQuery {queryInDatabase.id}: {queryInDatabase.query}\nDescription: {queryInDatabase.description}\nCorrelation: {queryInDatabase.mapcorrelation}\n---")
+                                    print("---")
+                                    print(f"Handled {str(queryInDatabase)}")
+                                    UpdateECL1Task.delay(currentQuery.id, query.get('query'))
                                 else:
                                     print("Empty query?")
 
@@ -501,6 +583,35 @@ class MappingTargets(viewsets.ViewSet):
                     })
                 
 
+                # Retrieve results from components that should be excluded
+                exclude_componentIDs = []
+                excluded_componentIDs = []
+                try:
+                    obj = MappingEclPartExclusion.objects.get(task = task)
+                    components = MappingCodesystemComponent.objects.filter(
+                            codesystem_id = obj.task.source_component.codesystem_id,
+                            component_id__in=list(obj.components)
+                        )
+                    # print(f"Will exclude ECL results from {str(components)}")
+                    # Loop components
+                    for component in components:
+                        # print(f"Handling exclusion of {str(component)}")
+                        # For each, retrieve their tasks, in this same project
+                        exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
+                        # print(f"Found tasks: {str(exclude_tasks)}")
+                        for exclude_task in exclude_tasks:
+                            # print(f"Handling exclude_task {str(exclude_task)}")
+                            queries = MappingEclPart.objects.filter(task=exclude_task)
+                            for query in queries:
+                                # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
+                                for key, value in query.result.get('concepts').items():
+                                    exclude_componentIDs.append(key)
+                        
+                        # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
+                    # print(f"Full exclude list: {exclude_componentIDs}")
+                except Exception as e:
+                    True
+
                 # Get all ECL Queries - including cached snowstorm response
                 all_results = list()
                 query_list = list()
@@ -529,15 +640,18 @@ class MappingTargets(viewsets.ViewSet):
                     # Add all results to a list for easy viewing
                     try:
                         for key, result in query.result.get('concepts').items():
-                            # print(result)   
-                            _query = result
-                            _query.update({
-                                'queryId' : query.id,
-                                'query' : query.query,
-                                'description' : query.description,
-                                'correlation' : query.mapcorrelation,
-                            })
-                            all_results.append(_query) 
+                            if key not in exclude_componentIDs:
+                                # print(result)   
+                                _query = result
+                                _query.update({
+                                    'queryId' : query.id,
+                                    'query' : query.query,
+                                    'description' : query.description,
+                                    'correlation' : query.mapcorrelation,
+                                })
+                                all_results.append(_query) 
+                            else:
+                                excluded_componentIDs.append(result)
                     except:
                         print("Retrieve mappings: No results")
                 query_list.append({
@@ -556,6 +670,9 @@ class MappingTargets(viewsets.ViewSet):
                     'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
                     'allResults' : all_results, # Results of all ECL queries combined in 1 list
 
+                    'exclusion_list' : exclude_componentIDs,
+                    'excluded' : excluded_componentIDs,
+
                     'mappings' : mapping_list,
                     'mappings_unfinished' : mapping_list_unfinished,
                 })
@@ -571,6 +688,27 @@ class MappingEclToRules(viewsets.ViewSet):
         )
         return Response(str(celery))
 
+class MappingRemoveRules(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def retrieve(self, request, pk=None):
+        task = MappingTask.objects.get(id=str(pk))
+        current_user = User.objects.get(id=request.user.id)
+        if (MappingProject.objects.get(id=task.project_id.id, access__username=current_user)) and \
+            (task.user == current_user):
+            print(request.user,"Removing mapping rules associated with task",str(pk))
+            
+            rules = MappingRule.objects.filter(
+                project_id = task.project_id,
+                target_component = task.source_component,
+            )
+            count = rules.count()
+            rules.delete()
+
+            return Response(count)
+        else:
+            return Response('Nope - mag jij helemaal niet.')
+
 class MappingReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
@@ -579,26 +717,29 @@ class MappingReverse(viewsets.ViewSet):
         ).get(id = pk)
         component = MappingCodesystemComponent.objects.get(id = task.source_component.id)
         if task.project_id.project_type == "1":
-            reverse_mappings = MappingRule.objects.filter(target_component = component)
+            reverse_mappings = MappingRule.objects.filter(target_component = component).select_related(
+                'source_component'
+            )
 
             reverse = []
             for mapping in reverse_mappings:
-                # reverse.append(f"{mapping.target_component.codesystem_id.codesystem_title} #{mapping.target_component.component_id} - {mapping.target_component.component_title}")
                 reverse.append({
-                    'id' : mapping.target_component.component_id,
-                    'title' : mapping.target_component.component_title,
+                    'id' : mapping.source_component.component_id,
+                    'title' : mapping.source_component.component_title,
                     'codesystem' : {
-                        'title': mapping.target_component.codesystem_id.codesystem_title,
+                        'title': mapping.source_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
                 })
 
         elif task.project_id.project_type == "4":
-            reverse_mappings = MappingRule.objects.filter(source_component = component)
+            reverse_mappings = MappingRule.objects.filter(source_component = component).select_related(
+                'target_component',
+                'target_component__codesystem_id'
+            )
 
             reverse = []
             for mapping in reverse_mappings:
-                # reverse.append(f"{mapping.target_component.codesystem_id.codesystem_title} #{mapping.target_component.component_id} - {mapping.target_component.component_title}")
                 reverse.append({
                     'id' : mapping.target_component.component_id,
                     'title' : mapping.target_component.component_title,
@@ -611,6 +752,39 @@ class MappingReverse(viewsets.ViewSet):
         # output = " /".join(reverse)
         return Response(reverse)
         
+class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
+    """
+    Exporteert een lijst van alle componenten uit 1 codesysteem die gebruikt worden in een mapping rule.
+    Er wordt hierbij geen rekening gehouden met de status van de betreffende taak; het kan ook een afgewezen taak zijn met een foutieve mapping.
+    Bedoeld om een overzicht te krijgen van alle gebruikte codes uit een stelsel.
+    """
+    permission_classes = [Permission_MappingProject_Access]
+    def retrieve(self, request, pk=None):
+
+        codesystem = MappingCodesystem.objects.get(id = pk)
+
+
+        # Regels ván codesysteem af
+        output_from = []
+        rules = MappingRule.objects.filter(source_component__codesystem_id = codesystem).select_related(
+            'source_component'
+        ).order_by("id")
+        for rule in rules:
+            output_from.append(str(rule.source_component.component_id))
+        # Regels náár codesysteem toe
+        output_to = []
+        rules = MappingRule.objects.filter(target_component__codesystem_id = codesystem).select_related(
+            'target_component'
+        ).order_by("id")
+        for rule in rules:
+            output_to.append(str(rule.target_component.component_id))
+        
+
+        return Response({
+            'source' : output_from,
+            'target' : output_to,
+        })
+
 
 class MappingListLookup(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]

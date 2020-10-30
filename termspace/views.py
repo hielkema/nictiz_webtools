@@ -168,6 +168,40 @@ class componentApi(viewsets.ViewSet):
         })
         # MethodNotAllowed(method, detail=None, code=None)
 
+# SNOMED Ancestor list
+class cached_results(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+    def list(self, request):
+        cached = cachedResults.objects.all()
+        output = []
+        for cache in cached:
+            output.append({
+                'id' : cache.id,
+                'title' : cache.title,
+                'finished' : cache.finished,
+            })
+        return Response(output)
+
+    def retrieve(self, request, pk=None):
+        try:
+            obj = cachedResults.objects.get(id=pk)
+            
+            data = {
+                'id' : obj.id,
+                'time' : obj.time,
+                'title' : obj.title,
+                'finished' : obj.finished,
+                'data' : obj.data,
+            }
+            return Response(data)
+        except Exception as e:
+            return Response(e)
+    def create(self, request):
+        return Response({
+            'error' : 'Not allowed'
+        })
+        # MethodNotAllowed(method, detail=None, code=None)
+
 # ECL query results
 class eclQueryApi(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -320,8 +354,10 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
             return Response('error')
         else:
             codesystem  = MappingCodesystem.objects.get(id=pk)
-            components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem)
-            projects    = MappingProject.objects.all()
+            components  = MappingCodesystemComponent.objects.filter(codesystem_id=codesystem).select_related(
+                'codesystem_id'
+            )
+            # projects    = MappingProject.objects.all()
 
             print('Received request for codesystem',codesystem.codesystem_title)
             if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
@@ -329,7 +365,11 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                 return Response('error')
             else:
                 for component in components:
-                    tasks = MappingTask.objects.filter(source_component = component)
+                    tasks = MappingTask.objects.filter(source_component = component).select_related(
+                        'project_id',
+                        'status',
+                        'user',
+                    )
                     extra = component.component_extra_dict
                     aub = extra.get('Aanvraag/Uitslag/Beide')
                     if aub == 'A': aub="Aanvraag"
@@ -343,10 +383,15 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                             if task.project_id.project_type == "3": task_type = '?'
                             if task.project_id.project_type == "4": task_type = 'Target'
 
+                            try:
+                                user = task.user.username
+                            except:
+                                user = None
+
                             output.append({
                                 'id' : component.component_id,
                                 'codesystem' : component.codesystem_id.codesystem_title,
-                                # 'extra' : extra,
+                                'extra' : extra,
                                 'group' : extra.get('Groep'),
                                 'AUB' : aub,
                                 'actief' : extra.get('Actief'),
@@ -355,13 +400,15 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'aantal taken' : tasks.count(),
                                 'project' : task.project_id.title,
                                 'source or target' : task_type,
+                                'category' : task.category,
                                 'status' : task.status.status_title,
+                                'user' : user,
                             })
                     else:
                         output.append({
                                 'id' : component.component_id,
                                 'codesystem' : component.codesystem_id.codesystem_title,
-                                # 'extra' : extra,
+                                'extra' : extra,
                                 'group' : extra.get('Groep'),
                                 'AUB' : aub,
                                 'actief' : extra.get('Actief'),
@@ -370,7 +417,9 @@ class Mapping_Progressreport_perProject(viewsets.ViewSet):
                                 'aantal taken' : tasks.count(),
                                 'project' : None,
                                 'source or target' : None,
+                                'category' : None,
                                 'status' : None,
+                                'user' : None,
                             })
 
                 # Return Json response

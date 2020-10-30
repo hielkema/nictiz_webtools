@@ -65,13 +65,19 @@ class Projects(viewsets.ViewSet):
         # List all projects
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
-        projects = MappingProject.objects.filter(active=True).filter(access__username=current_user)
+        projects = MappingProject.objects.filter(active=True).filter(access__username=current_user).select_related(
+                'source_codesystem',
+                'target_codesystem'
+            )
     
         project_list = []
         for project in projects:
             # if project.access.filter(username=current_user).exists():
             # Get task count for current user
-            tasks = MappingTask.objects.filter(user=current_user, project_id=project).exclude(status=project.status_complete).exclude(status=project.status_rejected)
+            tasks = MappingTask.objects.filter(user=current_user, project_id=project).exclude(status=project.status_complete).exclude(status=project.status_rejected).select_related(
+                'source_codesystem',
+                'target_codesystem'
+            )
             project_list.append({
                 'id' : project.id,
                 'active' : project.active,
@@ -98,6 +104,14 @@ class Projects(viewsets.ViewSet):
                 'count_user' : tasks.filter(status__status_title = status, user = current_user).count(),
             })
 
+        categories = list(MappingTask.objects.filter(project_id = project).values_list('category', flat=True).distinct())
+        categories.append('Prioriteit 1')
+        categories.append('Prioriteit 2')
+        categories.append('Prioriteit 3')
+        categories.append('Prioriteit 4')
+        categories.append('Geparkeerd')
+        categories = sorted(set(categories))
+
         project_data = {
             'id' : project.id,
             'active' : project.active,
@@ -105,6 +119,7 @@ class Projects(viewsets.ViewSet):
             'source' : project.source_codesystem.codesystem_title,
             'target' : project.target_codesystem.codesystem_title,
             'tags' : project.tags,
+            'categories' : categories,
 
             'open_tasks' : tasks.exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),
             'open_tasks_user' : tasks.filter(user=current_user).exclude(status=project.status_complete).exclude(status=project.status_rejected).count(),

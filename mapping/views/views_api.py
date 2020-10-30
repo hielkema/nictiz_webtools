@@ -245,54 +245,39 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             print('Labcode', json.loads(request.POST.get('codesystem[labcode]')))
             if json.loads(request.POST.get('codesystem[labcode]')):
                 import_labcodeset_async.delay()
-                # Import pre-existent mappings as a comment
-                try:
-                    df = read_excel('/webserver/mapping/resources/labcodeset/init_mapping_NHG45-LOINC.xlsx')
-                    # Vervang lege cellen door False
-                    df=df.fillna(value=False)
-                    codesystem = MappingCodesystem.objects.get(id='4') # NHG tabel 45
-                    user = User.objects.get(username='hielkema')
-                    for index, row in df.iterrows():
-                        bepalingnr = row['bepalingsnr']
-                        notitie = row['Notitie']
-                        loinc_id = row['LOINC-id']
-                        loinc_name = row['LOINC-naam']
-                        component = MappingCodesystemComponent.objects.get(codesystem_id=codesystem, component_id=bepalingnr)
-                        try:
-                            if loinc_id != 'UNMAPPED':
-                                task = MappingTask.objects.get(source_component=component)
-                                comment = "Voorstel import: [{notitie}] LOINC-ID {loinc_id} - {loinc_name}".format(notitie=notitie, loinc_id=loinc_id, loinc_name=loinc_name)
-                                MappingComment.objects.get_or_create(
-                                    comment_title = 'NHG-LOINC mapping (Hielkema)',
-                                    comment_task = task,
-                                    comment_body = comment,
-                                    comment_user = user,
-                                )
-                        except:
-                            print('Geen taak voor dit concept')
-                            print(bepalingnr, notitie, loinc_id, loinc_name)
-                except:
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
-                    print(error)
+
+            print('Apache', json.loads(request.POST.get('codesystem[apache]')))
+            if json.loads(request.POST.get('codesystem[apache]')):
+                import_apache_async.delay()
+
+            print('G-Standaard Diagnoses', json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')))
+            if json.loads(request.POST.get('codesystem[gstandaardDiagnoses]')):
+                import_gstandaardDiagnoses_task.delay()
 
             print('Snomed', json.loads(request.POST.get('codesystem[snomed]')))
             if json.loads(request.POST.get('codesystem[snomed]')): # codesystem 1 = snomed
-                import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
-                import_snomed_async.delay('260787004') # fysiek object (fysiek object)
-                import_snomed_async.delay('78621006') # fysieke kracht (fysieke kracht)
-                import_snomed_async.delay('272379006') # gebeurtenis (gebeurtenis)
-                import_snomed_async.delay('419891008') # gegevensobject (gegevensobject)
-                import_snomed_async.delay('404684003') # klinische bevinding (bevinding)
-                import_snomed_async.delay('362981000') # kwalificatiewaarde (kwalificatiewaarde)
-                import_snomed_async.delay('123037004') # lichaamsstructuur (lichaamsstructuur)
-                import_snomed_async.delay('123038009') # monster (monster)
-                import_snomed_async.delay('410607006') # organisme (organisme)
-                import_snomed_async.delay('243796009') # situatie met expliciete context (situatie)
-                import_snomed_async.delay('48176007') # sociale context (sociaal concept)
-                import_snomed_async.delay('105590001') # substantie (substantie)
-                import_snomed_async.delay('71388002') #  verrichting (verrichting)
-                import_snomed_async.delay('363787002') #   waarneembare entiteit (waarneembare entiteit)
+                # import_snomed_async.delay('373873005') # farmaceutisch/biologisch product (product)
+                # import_snomed_async.delay('260787004') # fysiek object (fysiek object)
+                # import_snomed_async.delay('78621006') # fysieke kracht (fysieke kracht)
+                # import_snomed_async.delay('272379006') # gebeurtenis (gebeurtenis)
+                # import_snomed_async.delay('419891008') # gegevensobject (gegevensobject)
+                # import_snomed_async.delay('404684003') # klinische bevinding (bevinding)
+                # import_snomed_async.delay('362981000') # kwalificatiewaarde (kwalificatiewaarde)
+                # import_snomed_async.delay('123037004') # lichaamsstructuur (lichaamsstructuur)
+                # import_snomed_async.delay('123038009') # monster (monster)
+                # import_snomed_async.delay('410607006') # organisme (organisme)
+                # import_snomed_async.delay('243796009') # situatie met expliciete context (situatie)
+                # import_snomed_async.delay('48176007') # sociale context (sociaal concept)
+                # import_snomed_async.delay('105590001') # substantie (substantie)
+                # import_snomed_async.delay('71388002') #  verrichting (verrichting)
+                # import_snomed_async.delay('363787002') # waarneembare entiteit (waarneembare entiteit)
+
+                # # Now check all SNOMED concepts in the database for status active/inactive.
+                # concepts = MappingCodesystemComponent.objects.filter(codesystem_id__id = '1').values_list('component_id', flat = True)
+                # for concept in list(concepts):
+                #     check_snomed_active.delay(concept=concept)
+                
+                import_snomed_snowstorm.delay()
 
             print('nhgVerr', json.loads(request.POST.get('codesystem[nhgverr]')))
             if json.loads(request.POST.get('codesystem[nhgverr]')):
@@ -322,7 +307,9 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             # Return JSON
             return JsonResponse(context,safe=False)
         except Exception as e:
-            print(type(e), e, kwargs)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
+            print(type(e), e, kwargs, error)
     def get(self, request, **kwargs):        
         return render(request, 'mapping/v2/import_codesystems.html', {
             'page_title': 'Mapping project',

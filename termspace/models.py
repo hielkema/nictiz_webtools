@@ -55,3 +55,12 @@ class SnomedTree(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, default=None, null=True, blank=True) # ID van gebruiker
     finished = models.BooleanField(default=False)
     data = JSONField(encoder=DjangoJSONEncoder, default=None, blank=True, null=True)
+
+class cachedResults(models.Model):
+    time   = models.DateTimeField(default=timezone.now)
+    title = models.CharField(max_length=500)
+    finished = models.BooleanField(default=False)
+    data = JSONField(encoder=DjangoJSONEncoder, default=None, blank=True, null=True)
+
+    def __str__(self):
+        return str(self.id) + ': ' + str(self.time) + ' ' + str(self.title) + ' ' + str(self.finished)

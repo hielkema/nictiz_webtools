@@ -45,7 +45,7 @@ class DownloadFile(UserPassesTestMixin, TemplateView):
         filename = "/webserver/static_files/tree/{}".format(taskData[0]['filename'])
         response = HttpResponse(open(filename, 'rb').read())
         response['Content-Type'] = 'text/plain'
-        response['Content-Disposition'] = 'attachment; filename=SnomedTree-{}.xlsx'.format(taskData[0]['conceptFSN'])
+        response['Content-Disposition'] = 'attachment; filename=SnomedTree-{}.xlsx'.format(taskData[0]['conceptFSN'].replace(" ", "_"))
 
         # Set file as not available in database and delete html file
         obj = taskRecordBuildFlat.objects.get(id=downloadfileId)
