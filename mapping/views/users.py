@@ -47,10 +47,10 @@ class MappingUsers(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
-        users = User.objects.all().order_by('username')
-        tasks = MappingTask.objects.all().select_related(
-            'user'
+        users = User.objects.all().order_by('username').prefetch_related(
+            'groups'
         )
+        tasks = MappingTask.objects.all()
         output = []
         # For each user
         for user in users:

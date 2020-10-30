@@ -157,30 +157,6 @@ class MappingRule(models.Model):
     # def __str__(self):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
 
-class MappingEclQuery(models.Model):
-    ###
-    ### Only for use with the legacy (non-vue) tooling
-    ###
-    project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
-    target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
-    query               = models.TextField(default=None, blank=True, null=True)
-    
-    type_options = [
-        # (code, readable)
-        ('1', 'Children'),
-        ('2', 'Descendants and self'),
-        ('3', 'Custom'),
-    ]
-    query_type  = models.CharField(max_length=50, choices=type_options, default=None, blank=True, null=True)
-
-    function_options = [
-        # (code, readable)
-        ('1', 'MINUS'),
-        ('2', 'ADD'),
-        ('3', 'Custom'),
-    ]
-    query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
-
 class MappingEclPart(models.Model):
     ##
     ##  For use with the vue mapping tooling
