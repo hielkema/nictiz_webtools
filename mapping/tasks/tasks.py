@@ -1614,7 +1614,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 products.append({
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
-                                    'code' : target.get('id'),
+                                    'value' : target.get('id'),
                                     # 'display' : target.get('title'), ## TODO - remove for production
                                 })
 
