@@ -1704,7 +1704,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             'description' : rc.metadata_description,
             'version' : rc.metadata_version,
             'status' : status,
-            'DEBUG_export_all' : rc.export_all,
+            # 'DEBUG_export_all' : rc.export_all,
             'experimental' : rc.metadata_experimental,
             'date' : rc.metadata_date,
             'publisher' : rc.metadata_publisher,
@@ -1713,7 +1713,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             'sourceCanonical' : rc.metadata_sourceCanonical,
 
             # 'DEBUG_projects' : list(projects),
-            'groups' : groups,
+            'group' : groups,
         }
 
 
