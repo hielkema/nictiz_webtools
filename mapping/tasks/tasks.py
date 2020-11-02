@@ -1688,16 +1688,17 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
         for code, readable in status_options:
             status = status.replace(code, readable)
 
-        contact = {
+        contact = [{
             "telecom": [
                 {
                     "system": "url",
-                    "name": rc.metadata_contact,
+                    "value": rc.metadata_contact,
                 }
             ]
-        }
+        }]
 
         output = {
+            'url' : 'https://termservice.test-nictiz.nl/mapping/api/1.0/rc_export_fhir_json/',
             'resourceType' : 'ConceptMap',
             'id' : rc.metadata_id,
             'name' : rc.title,
