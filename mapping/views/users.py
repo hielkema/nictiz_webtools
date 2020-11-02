@@ -115,7 +115,9 @@ class MappingUsers(viewsets.ViewSet):
                 )
             event.save()
             print(str(task))
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+
+            # Disabled due to resource management -> usual workflow changes user+status, triggering 2 simultaneous audits.
+            # audit_async.delay('multiple_mapping', task.project_id.id, task.id)
 
             return Response([])
         else:
