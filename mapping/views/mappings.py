@@ -296,6 +296,37 @@ class ReverseMappingExclusions(viewsets.ViewSet):
             
         return Response(output)
 
+class MappingTargetFromReverse(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def create(self, request):
+        print(f"[MappingTargetFromReverse/create] @ {request.user.username}")
+
+        try:
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                payload = request.data.get('payload')
+                task = MappingTask.objects.get(id=payload.get('taskid'))
+                if task.user == request.user:
+                    if task.project_id.project_type == '1':
+                        component = MappingCodesystemComponent.objects.get(
+                            component_id=payload.get('conceptid'),
+                            codesystem_id__id=payload.get('codesystem'),
+                            )
+                        obj = MappingRule.objects.create(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                            target_component = component,
+                        )
+                        return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Succes")
+                    else:
+                        return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Not supported for projects other than 1-N")
+                else:
+                    return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Not allowed: not your task?")
+            else:
+                return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Geen toegang")
+        except Exception as e:
+            return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Error: {str(e)}")
+
 class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
@@ -304,7 +335,7 @@ class MappingTargets(viewsets.ViewSet):
 
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-                print(str(request.data)[:100],"........")
+                # print(str(request.data)[:100],"........")
                 task = MappingTask.objects.get(id=request.data.get('task'))
                 current_user = User.objects.get(id=request.user.id)
 
@@ -727,6 +758,7 @@ class MappingReverse(viewsets.ViewSet):
                     'id' : mapping.source_component.component_id,
                     'title' : mapping.source_component.component_title,
                     'codesystem' : {
+                        'id': mapping.source_component.codesystem_id.id,
                         'title': mapping.source_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
@@ -744,6 +776,7 @@ class MappingReverse(viewsets.ViewSet):
                     'id' : mapping.target_component.component_id,
                     'title' : mapping.target_component.component_title,
                     'codesystem' : {
+                        'id': mapping.target_component.codesystem_id.id,
                         'title': mapping.target_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
