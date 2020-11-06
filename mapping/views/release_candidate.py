@@ -342,7 +342,9 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             'target_component__codesystem_id',
             ).prefetch_related(
                 'accepted',
-                'rejected',    
+                'accepted__groups',
+                'rejected',
+                'rejected__groups',
             ).filter(export_rc = rc)
         print('Exporting',rules.count(),'rules')
         source_components = rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
@@ -591,8 +593,10 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
             'target_component',
             'target_component__codesystem_id',
             ).prefetch_related(
-                'accepted',
-                'rejected',
+                # 'accepted',
+                # 'accepted__groups',
+                # 'rejected',
+                # 'rejected__groups',
             )
         
         ## DEBUG RULE - REMOVE FOR PRODUCTION
@@ -691,37 +695,39 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                 except:
                     export_task_id = '[deleted]'
 
+
                 # TO BE FIXED - results in many extra queries due to many-many relationships
-                current_rule = db_rules.get(id=_rule['id'])
-                accepted_nvmm   = False
-                accepted_nvkc   = False
-                accepted_nictiz = False
-                accepted_nhg    = False
-                accepted_palga  = False
-                if current_rule.accepted.count() > 0:
-                    if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nictiz = True
-                    if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_palga = True
-                    if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nhg = True
-                    if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nvmm = True
-                    if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nvkc = True
-                    if current_rule.accepted.count() > 0:
-                        accepted = True
-                        for user in current_rule.accepted.values_list('username', flat=True):
-                            accepted_list.append(user)
-                        if request.user.username in accepted_list:
-                            fiat_me = True
-                if current_rule.rejected.count() > 0:
-                    rejected = True
-                    for user in current_rule.rejected.values_list('username', flat=True):
-                        rejected_list.append(user)
-                    if request.user.username in rejected_list:
-                        veto_me = True
+                # current_rule = db_rules.get(id=_rule['id'])
+                # accepted_nvmm   = False
+                # accepted_nvkc   = False
+                # accepted_nictiz = False
+                # accepted_nhg    = False
+                # accepted_palga  = False
+                # if current_rule.accepted.count() > 0:
+                #     if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nictiz = True
+                #     if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_palga = True
+                #     if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nhg = True
+                #     if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nvmm = True
+                #     if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nvkc = True
+                #     if current_rule.accepted.count() > 0:
+                #         accepted = True
+                #         for user in current_rule.accepted.values_list('username', flat=True):
+                #             accepted_list.append(user)
+                #         if request.user.username in accepted_list:
+                #             fiat_me = True
+                # if current_rule.rejected.count() > 0:
+                #     rejected = True
+                #     for user in current_rule.rejected.values_list('username', flat=True):
+                #         rejected_list.append(user)
+                #     if request.user.username in rejected_list:
+                #         veto_me = True
                 
+
 
 
                 rule_list.append({
@@ -745,24 +751,20 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                     'accepted' : accepted,
                     'rejected' : rejected,
 
-                    'accepted_nvmm'     : accepted_nvmm,
-                    'accepted_nvkc'     : accepted_nvkc,
-                    'accepted_nictiz'   : accepted_nictiz,
-                    'accepted_nhg'      : accepted_nhg,
-                    'accepted_palga'    : accepted_palga,
+                    # 'accepted_nvmm'     : accepted_nvmm,
+                    # 'accepted_nvkc'     : accepted_nvkc,
+                    # 'accepted_nictiz'   : accepted_nictiz,
+                    # 'accepted_nhg'      : accepted_nhg,
+                    # 'accepted_palga'    : accepted_palga,
 
-                    # 'raw' : _rule,
+                    'raw' : _rule,
                 })
 
                 # Filter -> ID not in rejected list
                 for single_rule in rule_list:
-                    # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
-                    # print(ignore_list)
                     if single_rule.get('target').get('identifier') in ignore_list:
-                        # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
                         True
                     else:
-                        # print("ADDED")
                         filtered_rule_list.append(single_rule)
 
             task_list.append({
