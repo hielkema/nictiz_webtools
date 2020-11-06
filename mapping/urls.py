@@ -56,7 +56,6 @@ router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping com
 router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
 router_1_0.register(r'rules_by_codesystem', views.MappingRulesInvolvingCodesystem, basename="Retrieve components used in rules by codesystem")
 
-
 urlpatterns = [
     # DRF router
     path(r'api/1.0/', include(router_1_0.urls)),

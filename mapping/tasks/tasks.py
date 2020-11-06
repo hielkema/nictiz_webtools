@@ -1066,6 +1066,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
             # logger.info('Spawning QA scripts for ECL-1 queries')
             send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
             send_task('mapping.tasks.qa_ecl_duplicates.check_duplicate_rules', [], {'taskid':task.id})
+            send_task('mapping.tasks.qa_recursive_exclusions.test_recursive_ecl_exclusion', [], {'taskid':task.id})
         
         # logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
