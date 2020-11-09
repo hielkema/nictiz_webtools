@@ -79,6 +79,7 @@ class searchTermspaceComments(viewsets.ViewSet):
         for comment in comments_found:
             results.append({
                 'id' : comment.concept,
+                'time' : comment.time,
                 'author' : comment.assignee,
                 'folder' : comment.folder,
                 'status' : comment.status,
