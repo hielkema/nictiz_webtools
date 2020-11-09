@@ -546,17 +546,20 @@ def load_termspace_comments():
             for comment in comments:
                 # print('all:',comment)
                 # print('Comment:',comment.get('text'))
-                obj, created = TermspaceComments.objects.get_or_create(
-                    concept = task.get('terminologyComponent').get('id'),
-                    task_id = task.get('_id'),
-                    fsn = task.get('terminologyComponent').get('name'),
-                    comment = comment.get('text'),
-                    time = comment.get('time'),
-                    folder = task.get('folder'),
-                )
-                obj.status = task.get('workflowState')
-                obj.assignee = comment.get('author')
-                obj.save()
+                try:
+                    obj, created = TermspaceComments.objects.get_or_create(
+                        concept = task.get('terminologyComponent').get('id'),
+                        task_id = task.get('_id'),
+                        fsn = task.get('terminologyComponent').get('name'),
+                        comment = comment.get('text'),
+                        time = comment.get('time'),
+                        folder = task.get('folder'),
+                    )
+                    obj.status = task.get('workflowState')
+                    obj.assignee = comment.get('author')
+                    obj.save()
+                except Exception as e:
+                    print("Error - duplicate? Error:",e)
 
     print('Got',retrieved_tasks,'tasks from termspace.')
 
