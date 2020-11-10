@@ -296,6 +296,59 @@ class ReverseMappingExclusions(viewsets.ViewSet):
             
         return Response(output)
 
+class AddRemoteExclusion(viewsets.ViewSet):
+    """     Will add an exclusion for the current task to a different task.                 """
+    """     Usecase: Working on code A, you want to add an exclusion to task B for code A   """
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+    def create(self, request, pk=None):
+        print(f"[AddRemoteExclusion/create] @ {request.user.username} - {request.data}")
+        result = None
+        try:
+            output = []
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                payload = request.data.get('payload')
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => Go. Payload: {payload}")
+                task = MappingTask.objects.get(id=payload.get('task'))
+                
+                remote_task = MappingTask.objects.get(
+                    source_component__component_id = payload.get('sourceComponent'),
+                    project_id = task.project_id,
+                )
+                try:
+                    remote_exclusions = MappingEclPartExclusion.objects.get(
+                        task = remote_task,
+                        )
+
+                    print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestaat.")
+                    if remote_exclusions.components == None:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestaat, met foutieve inhoud (None).")
+                        remote_exclusions.components = []
+
+                    excl_list = remote_exclusions.components
+                    if payload['targetComponent'] not in excl_list:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bevatte dit component nog niet. Wordt aangevuld.")
+                        excl_list.append(payload['targetComponent'])
+                    else:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bevatte dit component al.")
+
+                    remote_exclusions.save()
+
+                except ObjectDoesNotExist:
+                    print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestond nog niet. Wordt aangemaakt.")
+                    remote_exclusions = MappingEclPartExclusion.objects.create(
+                        task = remote_task,
+                        components = [payload.get('targetComponent')]
+                        )
+                    remote_exclusions.save()
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => Result: {remote_exclusions.task.source_component.component_id} => {remote_exclusions.components}")
+
+            else:
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[AddRemoteExclusion/create] @ {request.user.username} => error ({e})")
+            
+        return Response(output)
+
 class MappingTargetFromReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
