@@ -268,12 +268,12 @@ class MappingExclusions(viewsets.ViewSet):
         return Response(True)
 
 class ReverseMappingExclusions(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
         print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} - {request.data}")
         result = None
+        output = []
         try:
-            output = []
             if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
                 print(f"[MappingExclusions/create] @ {request.user.username} => Go")
                 
