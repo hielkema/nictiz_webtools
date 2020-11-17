@@ -286,7 +286,8 @@ class RelatedTasks(viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         # Get data
-        component = MappingCodesystemComponent.objects.get(id = int(pk))
+        task = MappingTask.objects.get(id=int(pk))
+        component = MappingCodesystemComponent.objects.get(id = task.source_component.id)
 
         tasks = MappingTask.objects.filter(
             source_component = component
