@@ -236,6 +236,7 @@ class TaskDetails(viewsets.ViewSet):
                     'id' : task.project_id.id,
                 },
                 'component' : {
+                    'pk' : task.source_component.id,
                     'id'  :   task.source_component.component_id,
                     'title' :   task.source_component.component_title,
                     'codesystem' : {
@@ -277,6 +278,34 @@ class TaskDetails(viewsets.ViewSet):
                 
 
             return Response(output)
+
+class RelatedTasks(viewsets.ViewSet):
+    """ Takes component ID as PK, returns all tasks with the same component as source_component """
+
+    permission_classes = [Permission_MappingProject_Access]
+
+    def retrieve(self, request, pk=None):
+        # Get data
+        component = MappingCodesystemComponent.objects.get(id = int(pk))
+
+        tasks = MappingTask.objects.filter(
+            source_component = component
+        )
+        output = []
+        for task in tasks:
+            output.append({
+                'id' : task.id,
+                'source_component' : {
+                    'component_id' : task.source_component.component_id,
+                    'component_title' : task.source_component.component_title,
+                },
+                'project' : {
+                    'id' : task.project_id.id,
+                    'title' : task.project_id.title,
+                }
+            })
+
+        return Response(output)
 
 class EventsAndComments(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
