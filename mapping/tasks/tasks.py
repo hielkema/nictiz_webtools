@@ -1339,21 +1339,23 @@ def exportCodesystemToRCRules(rc_id, user_id):
         #         ).order_by('source_component__component_id')
         # else:
             # print("Target filter NOT applied")
-        tasks = MappingTask.objects.filter(
-                source_component__codesystem_id__id = rc.codesystem.id,
-            ).order_by('source_component__component_id')
 
-        try:
-            tasks = tasks | MappingTask.objects.filter(
-                        source_component__codesystem_id__id = rc.target_codesystem.id,
-                    ).order_by('source_component__component_id')
-        except:
-            tasks = tasks
+
+        # tasks = MappingTask.objects.filter(
+        #         source_component__codesystem_id__id = rc.codesystem.id,
+        #     ).order_by('source_component__component_id')
+
+        # try:
+        #     tasks = tasks | MappingTask.objects.filter(
+        #                 source_component__codesystem_id__id = rc.target_codesystem.id,
+        #             ).order_by('source_component__component_id')
+        # except:
+        #     tasks = tasks
             
         # Only include tasks included in the RC spec
         project_list = rc.export_project.values_list('id')
         print("Only include project ID's: ",project_list)
-        tasks = tasks.filter(project_id__id__in = project_list)
+        tasks = MappingTask.objects.all().filter(project_id__id__in = project_list)
 
         print('Found',tasks.count(),'tasks.')
         
