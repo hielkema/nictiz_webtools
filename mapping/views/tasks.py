@@ -302,6 +302,12 @@ class RelatedTasks(viewsets.ViewSet):
                 'project' : {
                     'id' : task.project_id.id,
                     'title' : task.project_id.title,
+                },
+                'status' : {
+                    'title' : task.status.status_title,
+                },
+                'user' : {
+                    'username' : task.user.username,
                 }
             })
 
