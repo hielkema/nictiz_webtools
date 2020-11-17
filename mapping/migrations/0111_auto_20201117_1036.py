@@ -15,7 +15,4 @@ class Migration(migrations.Migration):
             name='export_project',
             field=models.ManyToManyField(blank=True, default=[], related_name='project', to='mapping.MappingProject'),
         ),
-        migrations.DeleteModel(
-            name='MappingEclQuery',
-        ),
     ]
