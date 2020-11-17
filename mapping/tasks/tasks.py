@@ -1059,7 +1059,10 @@ def audit_async(audit_type=None, project=None, task_id=None):
     for task in tasks:
         # logger.info('Checking task: {0}'.format(task.id))
         
-        # logger.info('Spawning QA scripts for NHG<->LOINC')
+        # logger.info('Spawning QA scripts for Labcodeset)
+        send_task('mapping.tasks.qa_labcodeset.labcodeset_order_as_source', [], {'taskid':task.id})
+
+        # logger.info('Spawning QA scripts for NHG<->Labcodeset')
         send_task('mapping.tasks.qa_nhg_labcodeset.nhg_loinc_order_vs_observation', [], {'taskid':task.id})
         
         if task.project_id.project_type == '4':

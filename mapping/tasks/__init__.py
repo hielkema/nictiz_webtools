@@ -1,6 +1,7 @@
 from .tasks import *
 from .createRulesFromEcl import *
 from .qa_nhg_labcodeset import *
+from .qa_labcodeset import *
 from .qa_snomed import *
 from .qa_ecl_vs_rules import *
 from .qa_ecl_duplicates import *
