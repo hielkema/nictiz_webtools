@@ -296,6 +296,32 @@ class ReverseMappingExclusions(viewsets.ViewSet):
             
         return Response(output)
 
+class RemoveMappingExclusions(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+    def create(self, request):
+        print(f"[RemoveMappingExclusions/create] @ {request.user.username} - {request.data}")
+        try:
+            if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
+                data = request.data.get('payload')
+                task = MappingTask.objects.get(id=data.get('task'))
+                remote_exclusions = MappingEclPartExclusion.objects.get(
+                        task = task,
+                        )
+                
+                _components = remote_exclusions.components
+                print(f"[RemoveMappingExclusions/create] @ {request.user.username} - Old list: {_components}")
+                _components.remove(data.get('component'))
+                remote_exclusions.components = _components
+                remote_exclusions.save()
+                print(f"[RemoveMappingExclusions/create] @ {request.user.username} - Result: {remote_exclusions.components}")
+
+            else:
+                print(f"[ReverseMappingExclusions/create] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[ReverseMappingExclusions/create] @ {request.user.username} => error ({e})")
+            
+        return Response(request.data['payload']['task'])
+
 class AddRemoteExclusion(viewsets.ViewSet):
     """     Will add an exclusion for the current task to a different task.                 """
     """     Usecase: Working on code A, you want to add an exclusion to task B for code A   """
@@ -341,7 +367,7 @@ class AddRemoteExclusion(viewsets.ViewSet):
                         )
                     remote_exclusions.save()
                 print(f"[AddRemoteExclusion/create] @ {request.user.username} => Result: {remote_exclusions.task.source_component.component_id} => {remote_exclusions.components}")
-
+                output = remote_exclusions.task.id
             else:
                 print(f"[AddRemoteExclusion/create] @ {request.user.username} => No permission")
         except Exception as e:
