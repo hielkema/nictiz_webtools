@@ -245,6 +245,10 @@ class MappingReleaseCandidate(models.Model):
     metadata_copyright = models.TextField(default=None, blank=True, null=True)
     metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
 
+    # Projects to include in export
+    export_project = models.ManyToManyField('MappingProject', related_name="project", default=[], blank=True)
+
+    # Who has access to the RC
     access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
     
     # Source codesystem
