@@ -110,6 +110,11 @@ class Projects(viewsets.ViewSet):
         categories.append('Prioriteit 3')
         categories.append('Prioriteit 4')
         categories.append('Geparkeerd')
+        try:
+            categories.extend(project.categories)
+            print("Added categories from db")
+        except:
+            print("Categories not available for project")
         categories = sorted(set(categories))
 
         project_data = {

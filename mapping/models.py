@@ -22,6 +22,7 @@ class MappingProject(models.Model):
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
+    categories = JSONField(default=[], null=True, blank=True)
     tags = JSONField(default=None, null=True, blank=True)
 
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
