@@ -91,7 +91,7 @@ def fetch_termspace_tasks():
             return response
         except Exception as e:
             print('Error in retrieving tasks', e)
-            return None
+            return []
 
     try:
         token = TermspaceMeta.objects.get(username=env('termspace_user3'))
