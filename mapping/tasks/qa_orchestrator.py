@@ -28,25 +28,35 @@ logger = get_task_logger(__name__)
 def audit_async(audit_type=None, project=None, task_id=None):
     project = MappingProject.objects.get(id=project)
     if task_id == None:
-        tasks = MappingTask.objects.filter(project_id=project)
+        tasks = MappingTask.objects.select_related(
+            'project_id',
+            'source_component',
+            'source_component__codesystem_id',
+            'source_codesystem',
+            'target_codesystem',
+            'user',
+            'status',
+        ).filter(project_id=project)
     else:
-        tasks = MappingTask.objects.filter(project_id=project, id=task_id).order_by('id')
-
-    # Delete existing audit hits for tasks (unless whitelisted)
-    for task in tasks:
-            # Print task identification, sanity check
-            # logger.info('Deleting hits for: TASK {0} - {1}'.format(task.source_component.component_title, task.id))
-
-            # Delete all old audit hits for this task if not whitelisted
-            delete = MappingTaskAudit.objects.filter(task=task, ignore=False, sticky=False).delete()
-            # logger.info(delete)
+        tasks = MappingTask.objects.select_related(
+            'project_id',
+            'source_component',
+            'source_component__codesystem_id',
+            'source_codesystem',
+            'target_codesystem',
+            'user',
+            'status',
+        ).filter(project_id=project, id=task_id).order_by('id')
 
     ###### Slowly moving to separate audit QA scripts.
-    logger.info('Spawning QA processes')
-    logger.info('Auditing project: #{0} {1}'.format(project.id, project.title))
+    logger.info(f'Orchestrator is spawning QA processes for {tasks.count()} task(s) in project {project.id} - {project.title}')
     
     # Spawn QA for labcodeset<->NHG tasks
     for task in tasks:
+        logger.info("Handling taskID "+str(task.id))
+        # Delete all old audit hits for this task if not whitelisted
+        delete = MappingTaskAudit.objects.filter(task=task, ignore=False, sticky=False).delete()
+
         # logger.info('Checking task: {0}'.format(task.id))
         send_task('mapping.tasks.qa_check_rule_attributes.check_rule_attributes', [], {'taskid':task.id})
         

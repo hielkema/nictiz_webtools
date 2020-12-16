@@ -23,7 +23,7 @@ environ.Env.read_env(env.str('ENV_PATH', '.env'))
 
 logger = get_task_logger(__name__)
 
-# Example task
+# Will go through each rule for a specific task and check if the attributes of the rules are valid (priority, priority order, group, etc.)
 @shared_task
 def check_rule_attributes(taskid):
     logger.info("Spawned check_rule_attributes for TASK "+str(taskid))
