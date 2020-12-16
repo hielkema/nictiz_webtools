@@ -57,7 +57,7 @@ class SnomedFailbackImport(viewsets.ViewSet):
     """
 
     def retrieve(self, request, pk=None):
-        print(f"[snomed_failback_import/SnomedFailbackImport retrieve] requested by {request.user}")
+        print(f"[snomed_failback_import/SnomedFailbackImport retrieve] requested by {request.user} - {pk}")
         
         conceptid = str(pk)
         import_snomed_async(conceptid)

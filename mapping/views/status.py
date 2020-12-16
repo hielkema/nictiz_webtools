@@ -43,7 +43,7 @@ class MappingStatuses(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[status/MappingStatuses retrieve] requested by {request.user}")
+        print(f"[status/MappingStatuses retrieve] requested by {request.user} - {pk}")
 
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
@@ -64,7 +64,7 @@ class MappingStatuses(viewsets.ViewSet):
         return Response(output)
 
     def create(self, request):
-        print(f"[status/MappingStatuses create] requested by {request.user}")
+        print(f"[status/MappingStatuses create] requested by {request.user} - data: {str(request.data)[:500]}")
 
         task = MappingTask.objects.get(id=request.data.get('task'))
         current_user = User.objects.get(id=request.user.id)

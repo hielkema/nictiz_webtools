@@ -45,7 +45,7 @@ class MappingPostComment(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[comments/MappingPostComment create] requested by {request.user}")
+        print(f"[comments/MappingPostComment create] requested by {request.user} - data: {str(request.data)[:500]}")
         if 'mapping | place comments' in request.user.groups.values_list('name', flat=True):
             print("Commentaar:",request.user, request.data.get('task'), request.data.get('comment'))
             current_user = User.objects.get(id=request.user.id)
@@ -79,7 +79,7 @@ class MappingPostComment(viewsets.ViewSet):
             return Response('Geen toegang', status=status.HTTP_401_UNAUTHORIZED)
 
     def retrieve(self, request, pk=None):
-        print(f"[comments/MappingPostComment retrieve] requested by {request.user}")
+        print(f"[comments/MappingPostComment retrieve] requested by {request.user} - {pk}")
         comment = MappingComment.objects.get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         if MappingProject.objects.filter(id=comment.comment_task.project_id.id, access__username=current_user).exists():

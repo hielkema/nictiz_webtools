@@ -90,7 +90,7 @@ class Projects(viewsets.ViewSet):
             })
         return Response(project_list)
     def retrieve(self, request, pk=None):
-        print(f"[projects/Codesystems retrieve] requested by {request.user}")
+        print(f"[projects/Codesystems retrieve] requested by {request.user} - {pk}")
         # Details on the selected project
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)

@@ -53,7 +53,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
             })
         return Response(output)
     def retrieve(self, request, pk=None):
-        print(f"[release_candidate/RCFHIRConceptMapList retrieve] requested by {request.user}")
+        print(f"[release_candidate/RCFHIRConceptMapList retrieve] requested by {request.user} - {pk}")
         output = []
         cache = MappingReleaseCandidateFHIRConceptMap.objects.filter(rc__id=pk)
         for fhirmap in cache:
@@ -77,7 +77,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     """
     permission_classes = [permissions.AllowAny]
     def create(self, request):
-        print(f"[release_candidate/RCFHIRConceptMap create] requested by {request.user}")
+        print(f"[release_candidate/RCFHIRConceptMap create] requested by {request.user} - data: {str(request.data)[:500]}")
         payload = request.data
         print(payload)
         # Check permissions
@@ -95,7 +95,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             )
 
     def retrieve(self, request, pk=None):
-        print(f"[release_candidate/RCFHIRConceptMap retrieve] requested by {request.user}")
+        print(f"[release_candidate/RCFHIRConceptMap retrieve] requested by {request.user} - {pk}")
         payload = request.data
         # Start celery task
         task = GenerateFHIRConceptMap(
@@ -130,7 +130,7 @@ class RCRuleReview(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
-        print(f"[release_candidate/RCRuleReview create] requested by {request.user}")
+        print(f"[release_candidate/RCRuleReview create] requested by {request.user} - data: {str(request.data)[:500]}")
 
         payload = request.data
         component_id = str(payload.get('component_id'))
@@ -221,7 +221,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
-        print(f"[release_candidate/exportReleaseCandidateRules create] requested by {request.user}")
+        print(f"[release_candidate/exportReleaseCandidateRules create] requested by {request.user} - data: {str(request.data)[:500]}")
         
         payload = request.data
         selection = str(payload.get('selection',None))
@@ -328,7 +328,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             })
             
     def retrieve(self, request, pk=None):
-        print(f"[release_candidate/exportReleaseCandidateRules retrieve] requested by {request.user}")
+        print(f"[release_candidate/exportReleaseCandidateRules retrieve] requested by {request.user} - {pk}")
         
         task_list = []
         id = int(pk)
@@ -576,7 +576,7 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
     permission_classes = [Permission_MappingRcAudit]
             
     def retrieve(self, request, pk=None):
-        print(f"[release_candidate/exportReleaseCandidateRulesV2 retrieve] requested by {request.user}")
+        print(f"[release_candidate/exportReleaseCandidateRulesV2 retrieve] requested by {request.user} - {pk}")
         
         task_list = []
         id = int(pk)

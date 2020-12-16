@@ -53,7 +53,7 @@ class CreateTasks(viewsets.ViewSet):
     permission_classes = [Permission_CreateMappingTasks]
 
     def create(self, request):
-        print(f"[tasks/CreateTasks create] requested by {request.user}")
+        print(f"[tasks/CreateTasks create] requested by {request.user} - data: {str(request.data)[:500]}")
 
         # Create new tasks
         current_user = User.objects.get(id=request.user.id)
@@ -173,7 +173,7 @@ class Tasklist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[tasks/Tasklist retrieve] requested by {request.user}")
+        print(f"[tasks/Tasklist retrieve] requested by {request.user} - {pk}")
 
         # List all tasks
         # TODO filter on which projects the user has access to
@@ -219,7 +219,7 @@ class TaskDetails(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[tasks/TaskDetails retrieve] requested by {request.user}")
+        print(f"[tasks/TaskDetails retrieve] requested by {request.user} - {pk}")
 
         # Get data
         task = MappingTask.objects.select_related('project_id','user','source_component','source_component__codesystem_id','status').get(id=pk)
@@ -291,7 +291,7 @@ class RelatedTasks(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[tasks/RelatedTasks retrieve] requested by {request.user}")
+        print(f"[tasks/RelatedTasks retrieve] requested by {request.user} - {pk}")
 
         # Get data
         task = MappingTask.objects.get(id=int(pk))
@@ -326,7 +326,7 @@ class EventsAndComments(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[tasks/EventsAndComments retrieve] requested by {request.user}")
+        print(f"[tasks/EventsAndComments retrieve] requested by {request.user} - {pk}")
 
         # List all events
         # TODO filter on which projects the user has access to

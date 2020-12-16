@@ -55,7 +55,7 @@ class MappingTargetSearch(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[mappings/MappingTargetSearch create] requested by {request.user}")
+        print(f"[mappings/MappingTargetSearch create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('query').strip()
         print(request.user.username,": mappings/MappingTargetSearch : Searching for",query)
 
@@ -111,7 +111,7 @@ class RuleSearchByComponent(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[mappings/RuleSearchByComponent create] requested by {request.user}")
+        print(f"[mappings/RuleSearchByComponent create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('query')
         print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
 
@@ -155,7 +155,7 @@ class MappingDialog(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
-        print(f"[mappings/MappingDialog retrieve] requested by {request.user}")
+        print(f"[mappings/MappingDialog retrieve] requested by {request.user} - {pk}")
         print("Retrieving mappingrule",pk)
         if pk != 'extra':
             mapping = MappingRule.objects.get(id = pk)
@@ -187,7 +187,7 @@ class MappingDialog(viewsets.ViewSet):
         return Response(output)
 
     def create(self, request):
-        print(f"[mappings/MappingDialog create] requested by {request.user}")
+        print(f"[mappings/MappingDialog create] requested by {request.user} - data: {str(request.data)[:500]}")
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
             print(f"[MappingDialog/create] @ {request.user.username}")
             print(f"Data: {request.data}")
@@ -254,7 +254,7 @@ class MappingDialog(viewsets.ViewSet):
 class MappingExclusions(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
     def create(self, request):
-        print(f"[mappings/MappingExclusions create] requested by {request.user}")
+        print(f"[mappings/MappingExclusions create] requested by {request.user} - data: {str(request.data)[:500]}")
         print(f"[MappingExclusions/create] @ {request.user.username} - {request.data}")
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
@@ -302,8 +302,8 @@ class ReverseMappingExclusions(viewsets.ViewSet):
 class RemoveMappingExclusions(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def create(self, request):
-        print(f"[mappings/RemoveMappingExclusions create] requested by {request.user}")
-        print(f"[RemoveMappingExclusions/create] @ {request.user.username} - {request.data}")
+        print(f"[mappings/RemoveMappingExclusions create] requested by {request.user} - data: {str(request.data)[:500]}")
+
         try:
             if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
                 data = request.data.get('payload')
@@ -331,8 +331,8 @@ class AddRemoteExclusion(viewsets.ViewSet):
     """     Usecase: Working on code A, you want to add an exclusion to task B for code A   """
     permission_classes = [Permission_MappingProject_ChangeMappings]
     def create(self, request, pk=None):
-        print(f"[mappings/AddRemoteExclusion create] requested by {request.user}")
-        print(f"[AddRemoteExclusion/create] @ {request.user.username} - {request.data}")
+        print(f"[mappings/AddRemoteExclusion create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
         result = None
         try:
             output = []
@@ -384,9 +384,8 @@ class MappingTargetFromReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[mappings/MappingTargetFromReverse create] requested by {request.user}")
-        print(f"[MappingTargetFromReverse/create] @ {request.user.username}")
-
+        print(f"[mappings/MappingTargetFromReverse create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
                 payload = request.data.get('payload')
@@ -416,9 +415,8 @@ class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[mappings/MappingTargets create] requested by {request.user}")
-        print(f"[MappingTargets/create] @ {request.user.username}")
-
+        print(f"[mappings/MappingTargets create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
                 # print(str(request.data)[:100],"........")
@@ -557,7 +555,7 @@ class MappingTargets(viewsets.ViewSet):
 
 
     def retrieve(self, request, pk=None):
-        print(f"[mappings/MappingTargets retrieve] requested by {request.user}")
+        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         
@@ -800,7 +798,7 @@ class MappingEclToRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
     def retrieve(self, request, pk=None):
-        print(f"[mappings/MappingEclToRules retrieve] requested by {request.user}")
+        print(f"[mappings/MappingEclToRules retrieve] requested by {request.user} - {pk}")
         print(request.user,"Creating mapping rules for ECL queries associated with task",pk)
         
         celery = createRulesFromEcl.delay(
@@ -812,7 +810,7 @@ class MappingRemoveRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
     def retrieve(self, request, pk=None):
-        print(f"[mappings/MappingRemoveRules retrieve] requested by {request.user}")
+        print(f"[mappings/MappingRemoveRules retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=str(pk))
         current_user = User.objects.get(id=request.user.id)
         if (MappingProject.objects.get(id=task.project_id.id, access__username=current_user)) and \
@@ -833,7 +831,7 @@ class MappingRemoveRules(viewsets.ViewSet):
 class MappingReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
-        print(f"[mappings/MappingReverse retrieve] requested by {request.user}")
+        print(f"[mappings/MappingReverse retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.select_related(
             'project_id',
         ).get(id = pk)
@@ -885,7 +883,7 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
 
-        print(f"[mappings/MappingRulesInvolvingCodesystem retrieve] requested by {request.user}")
+        print(f"[mappings/MappingRulesInvolvingCodesystem retrieve] requested by {request.user} - {pk}")
         codesystem = MappingCodesystem.objects.get(id = pk)
 
 
@@ -915,7 +913,7 @@ class MappingListLookup(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[mappings/MappingListLookup create] requested by {request.user}")
+        print(f"[mappings/MappingListLookup create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('list')
         print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
 
