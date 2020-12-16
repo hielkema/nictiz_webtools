@@ -41,6 +41,8 @@ class ChangeMappingTasks(viewsets.ViewSet):
     permission_classes = [Permission_MappingTasks]
 
     def create(self, request):
+        print(f"[status/MappingStatuses create] requested by {request.user}")
+
         payload = request.data
         
         if payload.get('tasks'):
@@ -124,6 +126,8 @@ class MappingTasks(viewsets.ViewSet):
         # return Response(tasks)
 
     def retrieve(self, request, pk=None):
+        print(f"[status/MappingTasks retrieve] requested by {request.user}")
+
         # Get data
         project = MappingProject.objects.get(id=pk)
         data = MappingTask.objects.filter(project_id=project).order_by('id').select_related(

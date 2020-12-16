@@ -53,6 +53,7 @@ class MappingTriggerAudit(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingTriggerAudit retrieve] requested by {request.user}")
         try:
             task = MappingTask.objects.get(id=pk)
             send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
@@ -65,6 +66,7 @@ class MappingTriggerProjectAudit(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingTriggerProjectAudit retrieve] requested by {request.user}")
         try:
             project = MappingProject.objects.get(id=pk)
             send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', project.id, None], {})
@@ -77,6 +79,7 @@ class MappingAudits(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAudits retrieve] requested by {request.user}")
         task = MappingTask.objects.get(id=pk)
         audit_hits = MappingTaskAudit.objects.filter(task=task)
 
@@ -91,6 +94,7 @@ class MappingAudits(viewsets.ViewSet):
             })
         return Response(audits)
     def create(self, request):
+        print(f"[audits/MappingAudits create] requested by {request.user}")
         payload = request.data
         taskid = str(payload.get('task_id'))
         task = MappingTask.objects.get(id=taskid)
@@ -107,6 +111,7 @@ class MappingAuditWhitelist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAuditWhitelist retrieve] requested by {request.user}")
         audit_hit = MappingTaskAudit.objects.get(id=pk)
         audit_hit.ignore = True
         audit_hit.save()
@@ -117,6 +122,7 @@ class MappingAuditRemoveWhitelist(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAuditRemoveWhitelist retrieve] requested by {request.user}")
         audit_hit = MappingTaskAudit.objects.get(id=pk)
         audit_hit.ignore = False
         audit_hit.save()
@@ -127,6 +133,7 @@ class MappingAuditRemove(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAuditRemove retrieve] requested by {request.user}")
         audit_hit = MappingTaskAudit.objects.get(id=pk)
         audit_hit.delete()
         
@@ -136,6 +143,7 @@ class MappingAuditsPerProject(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAuditsPerProject retrieve] requested by {request.user}")
         project = MappingProject.objects.get(id=pk)
         audit_hits = MappingTaskAudit.objects.filter(task__project_id=project)
 
@@ -159,6 +167,7 @@ class MappingAuditStatus(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
 
     def retrieve(self, request, pk=None):
+        print(f"[audits/MappingAuditStatus retrieve] requested by {request.user}")
         i = inspect()
         active = i.active()
         info = []

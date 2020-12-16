@@ -46,6 +46,8 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
         return self.request.user.groups.filter(name='mapping | admin codesystems').exists()
 
     def post(self, request, **kwargs):
+        print(f"[update_codesystems/api_UpdateCodesystems_post post] requested by {request.user}")
+
         try:
             print('Diagnosethesaurus', json.loads(request.POST.get('codesystem[diagnosethesaurus]')))
             if json.loads(request.POST.get('codesystem[diagnosethesaurus]')):
@@ -120,6 +122,8 @@ class api_UpdateCodesystems_post(UserPassesTestMixin,TemplateView):
             error = 'Exc type: {} \n TB: {}'.format(exc_type, exc_tb.tb_lineno)
             print(type(e), e, kwargs, error)
     def get(self, request, **kwargs):        
+        print(f"[update_codesystems/api_UpdateCodesystems_post get] requested by {request.user}")
+
         return render(request, 'mapping/v2/import_codesystems.html', {
             'page_title': 'Mapping project',
         })
@@ -138,6 +142,8 @@ class vue_MappingIndex(UserPassesTestMixin,TemplateView):
         return self.request.user.groups.filter(name='mapping | access').exists()
 
     def get(self, request, **kwargs):
+        print(f"[update_codesystems/vue_MappingIndex get] requested by {request.user}")
+
         # TODO - Check if active projects exist, otherwise -> error.
         # TODO - Check if active projects exist, otherwise -> error.
         current_user = User.objects.get(id=request.user.id)

@@ -45,6 +45,7 @@ class Codesystems(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def list(self, request):
+        print(f"[projects/Codesystems list] requested by {request.user}")
         # List all projects
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
@@ -62,6 +63,7 @@ class Projects(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def list(self, request):
+        print(f"[projects/Projects list] requested by {request.user}")
         # List all projects
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
@@ -88,6 +90,7 @@ class Projects(viewsets.ViewSet):
             })
         return Response(project_list)
     def retrieve(self, request, pk=None):
+        print(f"[projects/Codesystems retrieve] requested by {request.user}")
         # Details on the selected project
         # TODO filter on which projects the user has access to
         current_user = User.objects.get(id=request.user.id)
