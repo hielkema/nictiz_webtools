@@ -1223,6 +1223,10 @@ def audit_async(audit_type=None, project=None, task_id=None):
                         if (rule.project_id.id == 3) and (other_rule.target_component.component_id in specimen_exclusion_list):
                             # logger.info('Project 3 -> negeer <<specimen voor dubbele mappings')
                             True
+                        # Separate rule for project 3 (NHG Diagn-LOINC/SNOMED)    
+                        elif (rule.project_id.id == 13) and (other_rule.target_component.component_id in specimen_exclusion_list):
+                            # logger.info('Project 13 -> negeer <<specimen voor dubbele mappings')
+                            True
                         elif (rule.project_id.id == 4) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='182353008').descendants)):
                             # logger.info('Project 7 -> negeer <<zijde voor dubbele mappings')
                             True
