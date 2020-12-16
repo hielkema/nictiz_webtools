@@ -55,9 +55,10 @@ class MappingTriggerAudit(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         try:
             task = MappingTask.objects.get(id=pk)
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
             return Response(True)
         except Exception as e:
+            print(e)
             return Response(e)    
 
 class MappingTriggerProjectAudit(viewsets.ViewSet):
@@ -66,7 +67,8 @@ class MappingTriggerProjectAudit(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         try:
             project = MappingProject.objects.get(id=pk)
-            audit_async.delay('multiple_mapping', project.id, None)
+            send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', project.id, None], {})
+
             return Response(True)
         except Exception as e:
             return Response(e)  

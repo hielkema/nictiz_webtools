@@ -108,7 +108,7 @@ class MappingStatuses(viewsets.ViewSet):
                 user_source=current_user,
             )
             event.save()
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
 
             return Response([])
         else:

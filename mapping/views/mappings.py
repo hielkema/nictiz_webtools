@@ -238,7 +238,7 @@ class MappingDialog(viewsets.ViewSet):
                         print(f"Mapping object: {str(mapping)}")
 
                     print("Start audit")
-                    audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                    send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
 
                 return Response(str(mapping))
             else:
@@ -492,7 +492,8 @@ class MappingTargets(viewsets.ViewSet):
                                     print("Done handling dependency for",dependency)
                                 mapping_rule.save()
 
-                        audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                        send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
+
                         return Response([])
                     # Handle ECL-1 mapping targets
                     elif task.project_id.project_type == '4':
