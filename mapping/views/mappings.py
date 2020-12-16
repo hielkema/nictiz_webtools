@@ -275,14 +275,11 @@ class MappingExclusions(viewsets.ViewSet):
 class ReverseMappingExclusions(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
-        print(f"[mappings/ReverseMappingExclusions retrieve] requested by {request.user}")
-        print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} - {request.data}")
+        print(f"[mappings/ReverseMappingExclusions retrieve] requested by {request.user} - {pk}")
         result = None
         output = []
         try:
             if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
-                print(f"[MappingExclusions/create] @ {request.user.username} => Go")
-                
                 component_id = MappingTask.objects.get(id = str(pk))
 
                 exclusions = MappingEclPartExclusion.objects.filter(components__contains = str(component_id.source_component.component_id)).select_related(
@@ -296,9 +293,9 @@ class ReverseMappingExclusions(viewsets.ViewSet):
                         'component_title' : str(exclusion.task.source_component.component_title),
                     })
             else:
-                print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => No permission")
+                print(f"[mappings/ReverseMappingExclusions retrieve] @ {request.user.username} => No permission")
         except Exception as e:
-            print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => error ({e})")
+            print(f"[mappings/ReverseMappingExclusions retrieve] @ {request.user.username} => error ({e})")
             
         return Response(output)
 
