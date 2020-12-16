@@ -165,16 +165,26 @@ def dump_termspace_progress():
         data__assignee = 'volkert',
         data__workflowState = 'semantic review',
     )
+    sem_2021 = TermspaceTask.objects.filter(
+        data__folder__icontains = 'januari 2021',
+        data__assignee = 'volkert',
+        data__workflowState = 'semantic review',
+    )
     prob = TermspaceTask.objects.filter(
         data__folder__icontains = '2019',
         data__assignee = 'volkert',
         data__workflowState = 'problem',
     )
+    prob_2021 = TermspaceTask.objects.filter(
+        data__folder__icontains = 'januari 2021',
+        data__assignee = 'volkert',
+        data__workflowState = 'problem',
+    )
     obj = TermspaceProgressReport.objects.create(
         tag = 'SemanticProblem2019volkert',
-        title = 'Semantic review / Problem, _2019, volkert',
+        title = 'Semantic review / Problem, _2019/2021, volkert',
         description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status semantic review of problem.',
-        count = sem.count() + prob.count(),
+        count = sem.count() + prob.count() + sem_2021.count() + prob_2021.count(),
     )
     output.append(str(obj))
 
@@ -201,11 +211,16 @@ def dump_termspace_progress():
         data__assignee = 'volkert',
         data__workflowState = 'medical review',
     )
+    query_2021 = TermspaceTask.objects.filter(
+        data__folder__icontains = 'januari 2021',
+        data__assignee = 'volkert',
+        data__workflowState = 'medical review',
+    )
     obj = TermspaceProgressReport.objects.create(
         tag = 'Medical2019volkert',
         title = 'Medical review, _2019, volkert',
-        description = 'Alle taken op Volkert, in een map met naam (.*)2019(.*), en status medical review.',
-        count = query.count(),
+        description = 'Alle taken op Volkert, in een map met naam (.*)2019/2021(.*), en status medical review.',
+        count = query.count() + query_2021.count(),
     )
     output.append(str(obj))
 
@@ -228,11 +243,16 @@ def dump_termspace_progress():
         data__assignee = 'volkert',
         data__workflowState = 'incomplete CAT',
     )
+    query_2021 = TermspaceTask.objects.filter(
+        data__folder__icontains = 'januari 2021',
+        data__assignee = 'volkert',
+        data__workflowState = 'incomplete CAT',
+    )
     obj = TermspaceProgressReport.objects.create(
         tag = 'incompleteCAT2019volkert',
         title = 'incomplete CAT, _2019, volkert',
-        description = 'Alle taken in een map met naam (.*)2019(.*), en status incomplete CAT.',
-        count = query.count(),
+        description = 'Alle taken in een map met naam (.*)2019/2021(.*), en status incomplete CAT.',
+        count = query.count() + query_2021.count(),
     )
     output.append(str(obj))
 
