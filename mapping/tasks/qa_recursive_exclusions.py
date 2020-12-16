@@ -34,23 +34,26 @@ def test_recursive_ecl_exclusion(taskid):
     for exclusion in exclusions.components:
         # exclusion is a source component for a task in the current codesystem
         # Now; look for the task with this source component
-        other_task = MappingTask.objects.select_related(
-                'source_component'
-            ).get(
-                project_id = task.project_id,
-                source_component__component_id = exclusion,
-            )
-
-        # Then retrieve the exclusions for that task
-        other_exclusions = MappingEclPartExclusion.objects.get(task=other_task)
-        if task.source_component.component_id in other_exclusions.components:
-            # print(f"{str(task.source_component.component_id)} excludes {exclusion}. {exclusion} excludes {other_exclusions.components}")
-            # print(f"ALARM - Wederzijdse exclusie {task.source_component.component_id} en {other_task.source_component.component_id}")
-            logger.info("That's a problem. Mismatch.")
-            obj, created = MappingTaskAudit.objects.get_or_create(
-                    task=task,
-                    audit_type="ecl_recursive_exclusion",
-                    hit_reason=f"Wederzijdse exclusie {task.source_component.component_id} en {other_task.source_component.component_id}",
+        try:
+            other_task = MappingTask.objects.select_related(
+                    'source_component'
+                ).get(
+                    project_id = task.project_id,
+                    source_component__component_id = exclusion,
                 )
-            logger.info(str(obj))
+
+            # Then retrieve the exclusions for that task
+            other_exclusions = MappingEclPartExclusion.objects.get(task=other_task)
+            if task.source_component.component_id in other_exclusions.components:
+                # print(f"{str(task.source_component.component_id)} excludes {exclusion}. {exclusion} excludes {other_exclusions.components}")
+                # print(f"ALARM - Wederzijdse exclusie {task.source_component.component_id} en {other_task.source_component.component_id}")
+                logger.info("That's a problem. Mismatch.")
+                obj, created = MappingTaskAudit.objects.get_or_create(
+                        task=task,
+                        audit_type="ecl_recursive_exclusion",
+                        hit_reason=f"Wederzijdse exclusie {task.source_component.component_id} en {other_task.source_component.component_id}",
+                    )
+                logger.info(str(obj))
+        except Exception as e:
+            logger.info("Error in QA [test_recursive_ecl_exclusion]: "+str(e))
     
