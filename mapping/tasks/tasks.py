@@ -797,8 +797,10 @@ def import_diagnosethesaurus_task():
 
 @shared_task
 def import_nhgbepalingen_task():
+    ##### Version wordt gebruikt voor de bestandsnaam EN versie in de database! #####
+    version = "35"
     df = read_csv(
-        '/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie 32 - bepaling.txt',
+        f'/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie {version} - bepaling.txt',
         sep='\t',
         header = 1,
         )
@@ -806,6 +808,12 @@ def import_nhgbepalingen_task():
     # Vervang lege cellen door False
     df=df.fillna(value=False)
 
+    # Select codesystem
+    codesystem = MappingCodesystem.objects.get(id='4')
+    # Update codesystem version
+    codesystem.codesystem_version = str(version)
+    codesystem.save()
+    
     # Verwerk dataset -> database
     for index, row in df.iterrows():
         i+=1
@@ -864,8 +872,7 @@ def import_nhgbepalingen_task():
         if row[2] == 'XP': voorstel_materiaal = '119397002 Specimen from penis (specimen)'
         if row[2] == 'YX': voorstel_materiaal = '119347001 Seminal fluid specimen (specimen)'
         if not voorstel_materiaal: voorstel_materiaal = "Geen voorstel gevonden"
-
-        codesystem = MappingCodesystem.objects.get(id='4')
+        
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
             component_id=row[0],

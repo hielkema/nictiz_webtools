@@ -87,8 +87,8 @@ class MappingTargetSearch(viewsets.ViewSet):
                 active = 'Onbekend'
             output.append({
                 'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [Actief: {active}]",
-                'value': result.component_id,
-                'component': {'id':result.id, 'title':result.component_title},
+                'value': result.id,
+                'component': {'id':result.id, 'component_id':result.component_id, 'title':result.component_title},
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
                 'extra': result.component_extra_dict,
             })
