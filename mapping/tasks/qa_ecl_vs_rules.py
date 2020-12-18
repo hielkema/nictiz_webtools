@@ -39,7 +39,10 @@ def ecl_vs_rules(taskid):
         excluded_componentIDs = []
         try:
             obj = MappingEclPartExclusion.objects.get(task = task)
-            components = MappingCodesystemComponent.objects.filter(
+            components = MappingCodesystemComponent.objects.select_related(
+                'task',
+                'task__source_component'
+            ).filter(
                     codesystem_id = obj.task.source_component.codesystem_id,
                     component_id__in=list(obj.components)
                 )
@@ -74,7 +77,9 @@ def ecl_vs_rules(taskid):
                     if conceptid not in exclude_componentIDs:
                         # logger.info(f"[ECL vs RULES] Task {task.id} / Rule for {conceptid} is not excluded by MappingEclPartExclusion")
                         #Check if a rule with this conceptid and correlation exists
-                        rules = MappingRule.objects.filter(
+                        rules = MappingRule.objects.select_related(
+                            'source_component'
+                        ).filter(
                             source_component__component_id = conceptid,
                             mapcorrelation = query.mapcorrelation,
                         )
@@ -109,11 +114,12 @@ def ecl_vs_rules(taskid):
         # Check if there are any additional rules present that should not be there according to the ECL results.
         logger.info(f"[ECL vs RULES] Task {task.id} checking if the present rules SHOULD be there")
         rules = MappingRule.objects.select_related(
-            'source_component'
+            'source_component',
+            'target_component'
         ).filter(
             project_id = task.project_id,
             target_component = task.source_component,
-        ).select_related('target_component', 'source_component')
+        )
         for rule in rules:
             valid = valid_concept_ids.get(str(rule.source_component.component_id), False)
             if valid:
