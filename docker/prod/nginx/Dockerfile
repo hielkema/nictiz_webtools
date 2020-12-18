@@ -25,9 +25,9 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY ./docker/prod/nginx/django.conf /etc/nginx/conf.d/
 
 # Copy entrypoint from amplify github
-RUN curl -LJO https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/entrypoint.sh
+RUN wget https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/entrypoint.sh
 COPY ./entrypoint.sh /entrypoint.sh
-RUN curl -LJO https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/conf.d/stub_status.conf
+RUN wget https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/conf.d/stub_status.conf
 COPY ./stub_status.conf /etc/nginx/conf.d
 
 ENTRYPOINT ["/entrypoint.sh"]
