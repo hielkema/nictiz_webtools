@@ -37,6 +37,8 @@ services:
       - VIRTUAL_PORT=${PORT}
       - LETSENCRYPT_HOST=${DJANGO_DOMAIN}
       - LETSENCRYPT_EMAIL=${EMAIL}
+      - AMPLIFY_API_KEY=${AMPLIFY_API_KEY}
+      - AMPLIFY_IMAGENAME=${AMPLIFY_IMAGENAME}
 
   ## RabbitMQ as message queue for Celery
   rabbitmq:
