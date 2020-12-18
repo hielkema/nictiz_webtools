@@ -20,9 +20,6 @@ RUN unlink /var/log/nginx/access.log \
     && chown nginx /var/log/nginx/*log \
     && chmod 644 /var/log/nginx/*log
 
-# Copy nginx stub_status config
-COPY ./conf.d/stub_status.conf /etc/nginx/conf.d
-
 RUN rm /etc/nginx/conf.d/default.conf
 
 COPY ./docker/prod/nginx/django.conf /etc/nginx/conf.d/
