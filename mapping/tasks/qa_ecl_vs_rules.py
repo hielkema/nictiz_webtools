@@ -38,11 +38,11 @@ def ecl_vs_rules(taskid):
         exclude_componentIDs = []
         excluded_componentIDs = []
         try:
-            obj = MappingEclPartExclusion.objects.get(task = task)
-            components = MappingCodesystemComponent.objects.select_related(
+            obj = MappingEclPartExclusion.objects.select_related(
                 'task',
                 'task__source_component'
-            ).filter(
+            ).get(task = task)
+            components = MappingCodesystemComponent.objects.filter(
                     codesystem_id = obj.task.source_component.codesystem_id,
                     component_id__in=list(obj.components)
                 )
