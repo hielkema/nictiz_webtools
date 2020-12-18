@@ -28,4 +28,5 @@ COPY ./docker/prod/nginx/django.conf /etc/nginx/conf.d/
 RUN wget https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/entrypoint.sh
 RUN wget https://raw.githubusercontent.com/nginxinc/docker-nginx-amplify/master/conf.d/stub_status.conf && cp stub_status.conf /etc/nginx/conf.d
 
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
