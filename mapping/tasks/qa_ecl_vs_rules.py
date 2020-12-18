@@ -64,7 +64,7 @@ def ecl_vs_rules(taskid):
                 # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
             # print(f"Full exclude list: {exclude_componentIDs}")
         except Exception as e:
-            True
+            print(f"Error in QA ecl_vs_rules for task {task.id}: {str(e)}")
 
 
         queries = MappingEclPart.objects.filter(task=task)
@@ -91,7 +91,7 @@ def ecl_vs_rules(taskid):
                             obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
                                     audit_type="Mismatch ECL vs rules",
-                                    hit_reason='Resultaat van ECL query komt niet overeen met mapping rules in database',
+                                    hit_reason=f'Resultaat van ECL query [{conceptid}/{query.mapcorrelation}] heeft onterecht geen mapping rule',
                                 )
                         valid_concept_ids.update({
                             conceptid : {
