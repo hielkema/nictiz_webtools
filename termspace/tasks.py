@@ -529,7 +529,7 @@ def load_termspace_comments():
             return response
         except Exception as e:
             print('Error in retrieving tasks', e)
-            return None
+            return []
     start = 0
     limit = 30000
     while True:
