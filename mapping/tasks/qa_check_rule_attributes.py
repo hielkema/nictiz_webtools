@@ -161,7 +161,7 @@ def check_rule_attributes(taskid):
 
     # Look for rules with the same target component
     for target in mapping_targets:
-        other_rules = MappingRule.objects.filter(target_component=target).order_by('-source_component__component_id')
+        other_rules = MappingRule.objects.filter(target_component=target).order_by('source_component__component_id')
         if other_rules.count() > 0:
             other_tasks_same_target = []
             for other_rule in other_rules:
