@@ -161,7 +161,7 @@ def check_rule_attributes(taskid):
 
     # Look for rules with the same target component
     for target in mapping_targets:
-        other_rules = MappingRule.objects.filter(target_component=target).order_by('id')
+        other_rules = MappingRule.objects.filter(target_component=target).order_by('-source_component__component_id')
         if other_rules.count() > 0:
             other_tasks_same_target = []
             for other_rule in other_rules:
@@ -186,10 +186,11 @@ def check_rule_attributes(taskid):
                     True
                 else:
                     if (other_rule.source_component != task.source_component) and (task.source_component.codesystem_id == other_rule.source_component.codesystem_id):
+                        
                         obj, created = MappingTaskAudit.objects.get_or_create(
                             task=task,
                             audit_type="Target used in multiple tasks",
-                            hit_reason='Meerdere taken {} gebruiken hetzelfde target: component #{} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
+                            hit_reason='Meerdere taken {} gebruiken hetzelfde target: {} - {}'.format(other_tasks_same_target, other_rule.target_component.component_id, other_rule.target_component.component_title)
                         )
                     
     # Specific rules for single or multiple mappings
