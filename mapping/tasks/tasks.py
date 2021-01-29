@@ -798,9 +798,9 @@ def import_diagnosethesaurus_task():
 @shared_task
 def import_nhgbepalingen_task():
     ##### Version wordt gebruikt voor de bestandsnaam EN versie in de database! #####
-    version = "35"
+    version = "36"
     df = read_csv(
-        f'/webserver/mapping/resources/nhg/NHG-Tabel 45 Diagnostische bepalingen - versie {version} - bepaling.txt',
+        f'/webserver/mapping/resources/nhg/NHG-Tabel-45-Diagnostische-bepalingen-versie-{version}-bepaling.txt',
         sep='\t',
         header = 1,
         )
@@ -1448,7 +1448,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
         }]
 
         output = {
-            'url' : 'https://termservice.test-nictiz.nl/mapping/api/1.0/rc_export_fhir_json/',
+            'url' : rc.metadata_url,
             'resourceType' : 'ConceptMap',
             'id' : rc.metadata_id,
             'name' : rc.title,
