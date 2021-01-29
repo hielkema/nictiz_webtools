@@ -244,7 +244,7 @@ class MappingReleaseCandidate(models.Model):
     metadata_publisher = models.TextField(default=None, blank=True, null=True)
     metadata_contact = models.TextField(default=None, blank=True, null=True)
     metadata_copyright = models.TextField(default=None, blank=True, null=True)
-    metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
+    metadata_sourceUri = models.TextField(default=None, blank=True, null=True)
 
     # Projects to include in export
     export_project = models.ManyToManyField('MappingProject', related_name="project", default=[], blank=True)

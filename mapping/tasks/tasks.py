@@ -1461,7 +1461,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             'publisher' : rc.metadata_publisher,
             'contact' : contact,
             'copyright' : rc.metadata_copyright,
-            'sourceCanonical' : rc.metadata_sourceCanonical,
+            # 'sourceUri' : rc.metadata_sourceUri,
 
             # 'DEBUG_projects' : list(projects),
             'group' : groups,
