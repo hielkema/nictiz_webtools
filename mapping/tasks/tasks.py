@@ -43,43 +43,61 @@ def UpdateECL1Task(record_id, query):
     currentQuery.error = None
     currentQuery.failed = False
     currentQuery.save()
-    try:
-        snowstorm = Snowstorm(
-            baseUrl="https://snowstorm.test-nictiz.nl",
-            debug=False,
-            preferredLanguage="nl",
-            defaultBranchPath="MAIN/SNOMEDCT-NL",
-        )
-        result = snowstorm.findConcepts(ecl=query.strip())
-
+    retry = True
+    tries = 0
+    max_tries = 10
+    sleep_time = 15
+    while retry:
         try:
-            num_results = len(result)
-        except Exception as e:
-            num_results = 0
-            print("Error in UpdateECL1Task:",e)
+            snowstorm = Snowstorm(
+                baseUrl="https://snowstorm.test-nictiz.nl",
+                debug=False,
+                preferredLanguage="nl",
+                defaultBranchPath="MAIN/SNOMEDCT-NL",
+            )
+            result = snowstorm.findConcepts(ecl=query.strip())
 
-        currentQuery.result = {
-            'concepts': result,
-            'numResults': num_results,
-        }
-        currentQuery.finished = True
-        currentQuery.error = None
-        currentQuery.failed = False
-        currentQuery.save()
-        return str(currentQuery)
-    except Exception as e:
-        currentQuery.result = {
-            'concepts': {},
-            'numResults': 0,
-        }
-        currentQuery.finished = True
-        currentQuery.failed = True
-        currentQuery.error = f"Fout in Snowstorm connectie. Waarschijnlijk is de ECL query niet juist. Error: {str(e)}"
-        currentQuery.save()
-        return {
-            'query' : str(currentQuery),
-            'error' : str(e),
-        }
+            try:
+                num_results = len(result)
+            except Exception as e:
+                num_results = 0
+                print("Error in UpdateECL1Task:",e)
+
+            currentQuery.result = {
+                'concepts': result,
+                'numResults': num_results,
+            }
+            currentQuery.finished = True
+            currentQuery.error = None
+            currentQuery.failed = False
+            currentQuery.save()
+            retry = False
+            tries += 1
+            return str(currentQuery)
+        except Exception as e:
+            currentQuery.result = {
+                'concepts': {},
+                'numResults': 0,
+            }
+            currentQuery.finished = True
+            currentQuery.failed = True
+            currentQuery.error = f"Fout in Snowstorm connectie. Waarschijnlijk is de ECL query niet juist. Error: {str(e)}"
+            currentQuery.save()
+            print({
+                'query' : str(currentQuery),
+                'error' : str(e),
+            })
+            if tries > max_tries: 
+                retry = False
+                tries += 1
+                print(f"Error while running ECL query - try [{tries}/{max_tries}] - exiting loop - big error.")
+                break
+            else:
+                print(f"Error while running ECL query - try [{tries}/{max_tries}] - sleeping for {sleep_time} seconds before retrying.")
+                time.sleep(sleep_time)
+                tries += 1
+                continue
+
 
 # @shared_task
 # def check_snomed_active(concept = None):
