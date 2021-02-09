@@ -45,12 +45,14 @@ class MappingUsers(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[users/MappingUsers retrieve] requested by {request.user} - {pk}")
+
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
-        users = User.objects.all().order_by('username')
-        tasks = MappingTask.objects.all().select_related(
-            'user'
+        users = User.objects.all().order_by('username').prefetch_related(
+            'groups'
         )
+        tasks = MappingTask.objects.all()
         output = []
         # For each user
         for user in users:
@@ -63,6 +65,8 @@ class MappingUsers(viewsets.ViewSet):
 
         return Response(output)
     def create(self, request):
+        print(f"[users/MappingUsers create] requested by {request.user} - data: {str(request.data)[:500]}")
+
         task = MappingTask.objects.get(id=request.data.get('task'))
         current_user = User.objects.get(id=request.user.id)
         if MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
@@ -115,7 +119,9 @@ class MappingUsers(viewsets.ViewSet):
                 )
             event.save()
             print(str(task))
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+
+            # Disabled due to resource management -> usual workflow changes user+status, triggering 2 simultaneous audits.
+            # audit_async.delay('multiple_mapping', task.project_id.id, task.id)
 
             return Response([])
         else:

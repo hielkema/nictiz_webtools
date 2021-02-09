@@ -49,28 +49,6 @@ class Permission_MappingProject_Whitelist(permissions.BasePermission):
         if 'mapping | audit whitelist' in request.user.groups.values_list('name', flat=True):
             return True
 
-class MappingTriggerAudit(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_Access]
-
-    def retrieve(self, request, pk=None):
-        try:
-            task = MappingTask.objects.get(id=pk)
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
-            return Response(True)
-        except Exception as e:
-            return Response(e)    
-
-class MappingTriggerProjectAudit(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_Access]
-
-    def retrieve(self, request, pk=None):
-        try:
-            project = MappingProject.objects.get(id=pk)
-            audit_async.delay('multiple_mapping', project.id, None)
-            return Response(True)
-        except Exception as e:
-            return Response(e)  
-
 class SnomedFailbackImport(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Whitelist]
 
@@ -79,6 +57,8 @@ class SnomedFailbackImport(viewsets.ViewSet):
     """
 
     def retrieve(self, request, pk=None):
+        print(f"[snomed_failback_import/SnomedFailbackImport retrieve] requested by {request.user} - {pk}")
+        
         conceptid = str(pk)
         import_snomed_async(conceptid)
 

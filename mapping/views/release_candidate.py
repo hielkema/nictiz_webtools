@@ -38,6 +38,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def list(self, request):
+        print(f"[release_candidate/RCFHIRConceptMapList list] requested by {request.user}")
         output = []
         cache = MappingReleaseCandidateFHIRConceptMap.objects.all()
         for fhirmap in cache:
@@ -52,6 +53,7 @@ class RCFHIRConceptMapList(viewsets.ViewSet):
             })
         return Response(output)
     def retrieve(self, request, pk=None):
+        print(f"[release_candidate/RCFHIRConceptMapList retrieve] requested by {request.user} - {pk}")
         output = []
         cache = MappingReleaseCandidateFHIRConceptMap.objects.filter(rc__id=pk)
         for fhirmap in cache:
@@ -75,6 +77,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
     """
     permission_classes = [permissions.AllowAny]
     def create(self, request):
+        print(f"[release_candidate/RCFHIRConceptMap create] requested by {request.user} - data: {str(request.data)[:500]}")
         payload = request.data
         print(payload)
         # Check permissions
@@ -92,6 +95,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
             )
 
     def retrieve(self, request, pk=None):
+        print(f"[release_candidate/RCFHIRConceptMap retrieve] requested by {request.user} - {pk}")
         payload = request.data
         # Start celery task
         task = GenerateFHIRConceptMap(
@@ -102,6 +106,7 @@ class RCFHIRConceptMap(viewsets.ViewSet):
         return Response(task)
 
     def list(self, request):
+        print(f"[release_candidate/RCFHIRConceptMap list] requested by {request.user}")
         cached = MappingReleaseCandidateFHIRConceptMap.objects.all().order_by('-created')
         rc_list = []
         for conceptmap in cached:
@@ -125,6 +130,8 @@ class RCRuleReview(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
+        print(f"[release_candidate/RCRuleReview create] requested by {request.user} - data: {str(request.data)[:500]}")
+
         payload = request.data
         component_id = str(payload.get('component_id'))
         rc_id = str(payload.get('rc_id'))
@@ -173,6 +180,8 @@ class ReleaseCandidates(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def list(self, request, pk=None):
+        print(f"[release_candidate/ReleaseCandidates list] requested by {request.user}")
+
         current_user = User.objects.get(id=request.user.id)
         rc_list = MappingReleaseCandidate.objects.filter(access__username=current_user).order_by('-created')
         output = []
@@ -212,6 +221,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
     """
     permission_classes = [Permission_MappingRcAudit]
     def create(self, request, pk=None):
+        print(f"[release_candidate/exportReleaseCandidateRules create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
         payload = request.data
         selection = str(payload.get('selection',None))
         rc_id = int(payload.get('rc_id',0))
@@ -317,6 +328,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             })
             
     def retrieve(self, request, pk=None):
+        print(f"[release_candidate/exportReleaseCandidateRules retrieve] requested by {request.user} - {pk}")
+        
         task_list = []
         id = int(pk)
         # Get RC
@@ -342,7 +355,9 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             'target_component__codesystem_id',
             ).prefetch_related(
                 'accepted',
-                'rejected',    
+                'accepted__groups',
+                'rejected',
+                'rejected__groups',
             ).filter(export_rc = rc)
         print('Exporting',rules.count(),'rules')
         source_components = rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
@@ -561,6 +576,8 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
     permission_classes = [Permission_MappingRcAudit]
             
     def retrieve(self, request, pk=None):
+        print(f"[release_candidate/exportReleaseCandidateRulesV2 retrieve] requested by {request.user} - {pk}")
+        
         task_list = []
         id = int(pk)
         # Get RC
@@ -591,8 +608,10 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
             'target_component',
             'target_component__codesystem_id',
             ).prefetch_related(
-                'accepted',
-                'rejected',
+                # 'accepted',
+                # 'accepted__groups',
+                # 'rejected',
+                # 'rejected__groups',
             )
         
         ## DEBUG RULE - REMOVE FOR PRODUCTION
@@ -691,37 +710,39 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                 except:
                     export_task_id = '[deleted]'
 
+
                 # TO BE FIXED - results in many extra queries due to many-many relationships
-                current_rule = db_rules.get(id=_rule['id'])
-                accepted_nvmm   = False
-                accepted_nvkc   = False
-                accepted_nictiz = False
-                accepted_nhg    = False
-                accepted_palga  = False
-                if current_rule.accepted.count() > 0:
-                    if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nictiz = True
-                    if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_palga = True
-                    if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nhg = True
-                    if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nvmm = True
-                    if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
-                        accepted_nvkc = True
-                    if current_rule.accepted.count() > 0:
-                        accepted = True
-                        for user in current_rule.accepted.values_list('username', flat=True):
-                            accepted_list.append(user)
-                        if request.user.username in accepted_list:
-                            fiat_me = True
-                if current_rule.rejected.count() > 0:
-                    rejected = True
-                    for user in current_rule.rejected.values_list('username', flat=True):
-                        rejected_list.append(user)
-                    if request.user.username in rejected_list:
-                        veto_me = True
+                # current_rule = db_rules.get(id=_rule['id'])
+                # accepted_nvmm   = False
+                # accepted_nvkc   = False
+                # accepted_nictiz = False
+                # accepted_nhg    = False
+                # accepted_palga  = False
+                # if current_rule.accepted.count() > 0:
+                #     if 'groepen | nictiz' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nictiz = True
+                #     if 'groepen | palga' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_palga = True
+                #     if 'groepen | nhg' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nhg = True
+                #     if 'groepen | nvmm' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nvmm = True
+                #     if 'groepen | nvkc' in current_rule.accepted.values_list('groups__name', flat=True):
+                #         accepted_nvkc = True
+                #     if current_rule.accepted.count() > 0:
+                #         accepted = True
+                #         for user in current_rule.accepted.values_list('username', flat=True):
+                #             accepted_list.append(user)
+                #         if request.user.username in accepted_list:
+                #             fiat_me = True
+                # if current_rule.rejected.count() > 0:
+                #     rejected = True
+                #     for user in current_rule.rejected.values_list('username', flat=True):
+                #         rejected_list.append(user)
+                #     if request.user.username in rejected_list:
+                #         veto_me = True
                 
+
 
 
                 rule_list.append({
@@ -745,24 +766,20 @@ class exportReleaseCandidateRulesV2(viewsets.ViewSet):
                     'accepted' : accepted,
                     'rejected' : rejected,
 
-                    'accepted_nvmm'     : accepted_nvmm,
-                    'accepted_nvkc'     : accepted_nvkc,
-                    'accepted_nictiz'   : accepted_nictiz,
-                    'accepted_nhg'      : accepted_nhg,
-                    'accepted_palga'    : accepted_palga,
+                    # 'accepted_nvmm'     : accepted_nvmm,
+                    # 'accepted_nvkc'     : accepted_nvkc,
+                    # 'accepted_nictiz'   : accepted_nictiz,
+                    # 'accepted_nhg'      : accepted_nhg,
+                    # 'accepted_palga'    : accepted_palga,
 
-                    # 'raw' : _rule,
+                    'raw' : _rule,
                 })
 
                 # Filter -> ID not in rejected list
                 for single_rule in rule_list:
-                    # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
-                    # print(ignore_list)
                     if single_rule.get('target').get('identifier') in ignore_list:
-                        # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
                         True
                     else:
-                        # print("ADDED")
                         filtered_rule_list.append(single_rule)
 
             task_list.append({

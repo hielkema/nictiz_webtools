@@ -21,7 +21,6 @@ router_1_0.register(r'create_tasks', views.CreateTasks, basename="Create_Mapping
 
 router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
 
-
 router_1_0.register(r'audits', views.MappingAudits, basename="Audits")
 router_1_0.register(r'audits_per_project', views.MappingAuditsPerProject, basename="Audits per project")
 router_1_0.register(r'audit_whitelist', views.MappingAuditWhitelist, basename="Audits whitelist")
@@ -43,8 +42,12 @@ router_1_0.register(r'mappings_ecl_to_rules', views.MappingEclToRules, basename=
 router_1_0.register(r'mapping_exclusions', views.MappingExclusions, basename="Mapping exclusions")
 router_1_0.register(r'mapping_reverse_exclusions', views.ReverseMappingExclusions, basename="Mapping reverse exclusions")
 router_1_0.register(r'remove_rules', views.MappingRemoveRules, basename="Remove rules for task")
+router_1_0.register(r'mapping_add_from_reverse', views.MappingTargetFromReverse, basename="Add a rule from a reverse mapping")
+router_1_0.register(r'mapping_add_remote_exclusion', views.AddRemoteExclusion, basename="Add a remote exclusion")
+router_1_0.register(r'mapping_remove_reverse', views.RemoveMappingExclusions, basename="Remove an exclusion")
 
 
+router_1_0.register(r'related_tasks', views.RelatedTasks, basename="Related tasks")
 router_1_0.register(r'reverse', views.MappingReverse, basename="Reverse mappings")
 router_1_0.register(r'mapping_dialog', views.MappingDialog, basename="Mappings")
 router_1_0.register(r'componentsearch', views.MappingTargetSearch, basename="Component search endpoint")
@@ -56,61 +59,11 @@ router_1_0.register(r'comments', views.MappingPostComment, basename="Mapping com
 router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
 router_1_0.register(r'rules_by_codesystem', views.MappingRulesInvolvingCodesystem, basename="Retrieve components used in rules by codesystem")
 
-
 urlpatterns = [
     # DRF router
     path(r'api/1.0/', include(router_1_0.urls)),
 
-    # API based views
-    url(r'api/componentsearch/', views.api_TargetSearch_get.as_view(), name='targetsearch'),
-    
-    url(r'api/task/get/project/(?P<project_id>\w+)', views.api_TaskList_get.as_view(), name='api_task_get'),
-    url(r'api/task/get/(?P<task>\w+)', views.api_TaskId_get.as_view(), name='api_task_get'),
-
-    url(r'api/comment/del/', views.api_DelComment_post.as_view(), name='delcomment'),
-    url(r'api/comment/put/', views.api_PostComment_post.as_view(), name='postcomment'),
-
-    url(r'api/user/get/', views.api_User_get.as_view(), name='users'),
-    
-    url(r'api/eclquery/get/(?P<task>\w+)', views.api_EclQuery_get.as_view(), name='eclquery'),
-    url(r'api/eclquery/put/', views.api_EclQuery_put.as_view(), name='eclquery'),
-    
-    url(r'api/reverse_mapping/get/(?P<task>\w+)', views.api_ReverseMapping_get.as_view(), name='reversemapping'),
-    
-    url(r'api/mapping/get/(?P<task>\w+)', views.api_Mapping_get.as_view(), name='mapping'),
-    url(r'api/mapping/put/', views.api_Mapping_post.as_view(), name='mapping'),
-    
-    url(r'api/general/get/(?P<project>\w+)', views.api_GeneralData_get.as_view(), name='general_data'),
-    
-    url(r'api/hashtag/post/', views.api_hashtag_post.as_view(), name='api_hashtag_post'),
-
-    url(r'api/audit/get/(?P<task>\w+)', views.api_GetAudit_get.as_view(), name='get_audit'),
-    url(r'api/audit/post/', views.api_WhitelistAudit_post.as_view(), name='whitelist_audit'),
-
-    url(r'api/permissions/get/', views.api_Permissions_get.as_view(), name='permissions'),
-    
-    url(r'api/taskuser/put/', views.api_UserChange_post.as_view(), name='change_status'),
-    
-    url(r'api/status/put/', views.api_StatusChange_post.as_view(), name='change_status'),
-    
-    url(r'api/events/get/task/(?P<task>\w+)', views.api_EventList_get.as_view(), name='events'),
-
-    url(r'api/updatecodesystems/put/', views.api_UpdateCodesystems_post.as_view(), name='updatecodesystems'),
+    # The last remnants of the old static interface
     url(r'updatecodesystems/', views.api_UpdateCodesystems_post.as_view(), name='updatecodesystems'),
-
-    # V2 static views
-    url(r'project/(?P<project>\w+)/task/(?P<task>\w+)', views.vue_TaskEditor.as_view(), name='task_editor'),
-    url(r'project/(?P<project>\w+)/task/', views.vue_TaskEditor.as_view(), name='task_editor'),
-    url(r'project/(?P<project>\w+)', views.vue_ProjectIndex.as_view(), name='project_index'),
-
-    # V1 static views
-    url(r'project/?project_id=(?P<project>\w+)', views.ProjectIndexPageView.as_view(), name='project_index'),
-    url(r'taskmanager/(?P<project>\w+)', views.TaskManagerPageView.as_view(), name='taskmanager_project'),
-    url(r'taskmanager', views.TaskManagerPageView.as_view(), name='taskmanager'),
-
-    url(r'audit/(?P<project>\w+)/(?P<audit_type>\w+)', views.AuditPageView.as_view(), name='audit'),
-
-    url(r'task_create', views.TaskCreatePageView.as_view(), name='task_create'),
-
     url(r'', views.vue_MappingIndex.as_view(), name='index'),
 ]

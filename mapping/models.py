@@ -22,6 +22,7 @@ class MappingProject(models.Model):
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
+    categories = JSONField(default=list, null=True, blank=True)
     tags = JSONField(default=None, null=True, blank=True)
 
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
@@ -157,30 +158,6 @@ class MappingRule(models.Model):
     # def __str__(self):
     #     return str(self.id), str(self.project_id.title), str(self.source_component.component_title)
 
-class MappingEclQuery(models.Model):
-    ###
-    ### Only for use with the legacy (non-vue) tooling
-    ###
-    project_id          = models.ForeignKey('MappingProject', on_delete=models.PROTECT)
-    target_component    = models.ForeignKey('MappingCodesystemComponent', on_delete=models.PROTECT) # Uniek ID van codesystem waar naartoe in deze taak gemapt moet worden
-    query               = models.TextField(default=None, blank=True, null=True)
-    
-    type_options = [
-        # (code, readable)
-        ('1', 'Children'),
-        ('2', 'Descendants and self'),
-        ('3', 'Custom'),
-    ]
-    query_type  = models.CharField(max_length=50, choices=type_options, default=None, blank=True, null=True)
-
-    function_options = [
-        # (code, readable)
-        ('1', 'MINUS'),
-        ('2', 'ADD'),
-        ('3', 'Custom'),
-    ]
-    query_function  = models.CharField(max_length=50, choices=function_options, default=None, blank=True, null=True)
-
 class MappingEclPart(models.Model):
     ##
     ##  For use with the vue mapping tooling
@@ -267,8 +244,12 @@ class MappingReleaseCandidate(models.Model):
     metadata_publisher = models.TextField(default=None, blank=True, null=True)
     metadata_contact = models.TextField(default=None, blank=True, null=True)
     metadata_copyright = models.TextField(default=None, blank=True, null=True)
-    metadata_sourceCanonical = models.TextField(default=None, blank=True, null=True)
+    metadata_sourceUri = models.TextField(default=None, blank=True, null=True)
 
+    # Projects to include in export
+    export_project = models.ManyToManyField('MappingProject', related_name="project", default=[], blank=True)
+
+    # Who has access to the RC
     access = models.ManyToManyField(User, related_name="access_rc_users", default=None, blank=True)
     
     # Source codesystem

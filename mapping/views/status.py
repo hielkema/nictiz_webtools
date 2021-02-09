@@ -43,6 +43,8 @@ class MappingStatuses(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[status/MappingStatuses retrieve] requested by {request.user} - {pk}")
+
         current_user = User.objects.get(id=request.user.id)
         project = MappingProject.objects.get(id=pk, access__username=current_user)
         status_list = MappingTaskStatus.objects.filter(project_id = project).order_by('status_id')
@@ -62,6 +64,8 @@ class MappingStatuses(viewsets.ViewSet):
         return Response(output)
 
     def create(self, request):
+        print(f"[status/MappingStatuses create] requested by {request.user} - data: {str(request.data)[:500]}")
+
         task = MappingTask.objects.get(id=request.data.get('task'))
         current_user = User.objects.get(id=request.user.id)
         if ('mapping | change task status' in request.user.groups.values_list('name', flat=True)) and MappingProject.objects.filter(id=task.project_id.id, access__username=current_user).exists():
@@ -108,7 +112,7 @@ class MappingStatuses(viewsets.ViewSet):
                 user_source=current_user,
             )
             event.save()
-            audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+            send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
 
             return Response([])
         else:

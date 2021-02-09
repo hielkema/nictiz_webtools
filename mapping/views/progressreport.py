@@ -48,6 +48,7 @@ class progressReturnAll(viewsets.ViewSet):
     permission_classes = [Permission_Secret]
 
     def retrieve(self, request, pk=None):
+        print(f"[progressreport/progressReturnAll retrieve] requested by {request.user} - {pk}")
         if pk == 'status':
             records = MappingProgressRecord.objects.filter(name='TasksPerStatus')
             output = []

@@ -24,7 +24,11 @@ logger = get_task_logger(__name__)
 @shared_task
 def ecl_vs_rules(taskid):
     # Check the ECL result of every ecl_part attached to a task, and check if all rules are present in the mapping rule database.
-    task = MappingTask.objects.get(id=taskid)
+    task = MappingTask.objects.select_related(
+        'source_component',
+        'source_component__codesystem_id',
+        'project_id',
+    ).get(id=taskid)
     # only run if task is ECL-1
     if task.project_id.project_type == '4':
         logger.info(f"[ECL vs RULES] Task {task.id} check started")
@@ -34,7 +38,10 @@ def ecl_vs_rules(taskid):
         exclude_componentIDs = []
         excluded_componentIDs = []
         try:
-            obj = MappingEclPartExclusion.objects.get(task = task)
+            obj = MappingEclPartExclusion.objects.select_related(
+                'task',
+                'task__source_component'
+            ).get(task = task)
             components = MappingCodesystemComponent.objects.filter(
                     codesystem_id = obj.task.source_component.codesystem_id,
                     component_id__in=list(obj.components)
@@ -57,7 +64,7 @@ def ecl_vs_rules(taskid):
                 # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
             # print(f"Full exclude list: {exclude_componentIDs}")
         except Exception as e:
-            True
+            print(f"Error in QA ecl_vs_rules for task {task.id}: {str(e)}")
 
 
         queries = MappingEclPart.objects.filter(task=task)
@@ -70,7 +77,9 @@ def ecl_vs_rules(taskid):
                     if conceptid not in exclude_componentIDs:
                         # logger.info(f"[ECL vs RULES] Task {task.id} / Rule for {conceptid} is not excluded by MappingEclPartExclusion")
                         #Check if a rule with this conceptid and correlation exists
-                        rules = MappingRule.objects.filter(
+                        rules = MappingRule.objects.select_related(
+                            'source_component'
+                        ).filter(
                             source_component__component_id = conceptid,
                             mapcorrelation = query.mapcorrelation,
                         )
@@ -82,7 +91,7 @@ def ecl_vs_rules(taskid):
                             obj, created = MappingTaskAudit.objects.get_or_create(
                                     task=task,
                                     audit_type="Mismatch ECL vs rules",
-                                    hit_reason='Resultaat van ECL query komt niet overeen met mapping rules in database',
+                                    hit_reason=f'Resultaat van ECL query [{conceptid}/{query.mapcorrelation}] heeft onterecht geen mapping rule',
                                 )
                         valid_concept_ids.update({
                             conceptid : {
@@ -104,10 +113,13 @@ def ecl_vs_rules(taskid):
 
         # Check if there are any additional rules present that should not be there according to the ECL results.
         logger.info(f"[ECL vs RULES] Task {task.id} checking if the present rules SHOULD be there")
-        rules = MappingRule.objects.filter(
+        rules = MappingRule.objects.select_related(
+            'source_component',
+            'target_component'
+        ).filter(
             project_id = task.project_id,
             target_component = task.source_component,
-        ).select_related('target_component', 'source_component')
+        )
         for rule in rules:
             valid = valid_concept_ids.get(str(rule.source_component.component_id), False)
             if valid:

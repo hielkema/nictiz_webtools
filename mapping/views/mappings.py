@@ -55,6 +55,7 @@ class MappingTargetSearch(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
+        print(f"[mappings/MappingTargetSearch create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('query').strip()
         print(request.user.username,": mappings/MappingTargetSearch : Searching for",query)
 
@@ -86,8 +87,8 @@ class MappingTargetSearch(viewsets.ViewSet):
                 active = 'Onbekend'
             output.append({
                 'text' : f"{result.codesystem_id.codesystem_title} {result.component_id} - {result.component_title} [Actief: {active}]",
-                'value': result.component_id,
-                'component': {'id':result.id, 'title':result.component_title},
+                'value': result.id,
+                'component': {'id':result.id, 'component_id':result.component_id, 'title':result.component_title},
                 'codesystem': {'title': result.codesystem_id.codesystem_title, 'version': result.codesystem_id.codesystem_version},
                 'extra': result.component_extra_dict,
             })
@@ -110,6 +111,7 @@ class RuleSearchByComponent(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
+        print(f"[mappings/RuleSearchByComponent create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('query')
         print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
 
@@ -153,6 +155,7 @@ class MappingDialog(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
+        print(f"[mappings/MappingDialog retrieve] requested by {request.user} - {pk}")
         print("Retrieving mappingrule",pk)
         if pk != 'extra':
             mapping = MappingRule.objects.get(id = pk)
@@ -184,6 +187,7 @@ class MappingDialog(viewsets.ViewSet):
         return Response(output)
 
     def create(self, request):
+        print(f"[mappings/MappingDialog create] requested by {request.user} - data: {str(request.data)[:500]}")
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
             print(f"[MappingDialog/create] @ {request.user.username}")
             print(f"Data: {request.data}")
@@ -238,7 +242,7 @@ class MappingDialog(viewsets.ViewSet):
                         print(f"Mapping object: {str(mapping)}")
 
                     print("Start audit")
-                    audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                    send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
 
                 return Response(str(mapping))
             else:
@@ -250,6 +254,7 @@ class MappingDialog(viewsets.ViewSet):
 class MappingExclusions(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
     def create(self, request):
+        print(f"[mappings/MappingExclusions create] requested by {request.user} - data: {str(request.data)[:500]}")
         print(f"[MappingExclusions/create] @ {request.user.username} - {request.data}")
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
@@ -268,15 +273,13 @@ class MappingExclusions(viewsets.ViewSet):
         return Response(True)
 
 class ReverseMappingExclusions(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_ChangeMappings]
+    permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
-        print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} - {request.data}")
+        print(f"[mappings/ReverseMappingExclusions retrieve] requested by {request.user} - {pk}")
         result = None
+        output = []
         try:
-            output = []
             if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
-                print(f"[MappingExclusions/create] @ {request.user.username} => Go")
-                
                 component_id = MappingTask.objects.get(id = str(pk))
 
                 exclusions = MappingEclPartExclusion.objects.filter(components__contains = str(component_id.source_component.component_id)).select_related(
@@ -290,21 +293,133 @@ class ReverseMappingExclusions(viewsets.ViewSet):
                         'component_title' : str(exclusion.task.source_component.component_title),
                     })
             else:
-                print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => No permission")
+                print(f"[mappings/ReverseMappingExclusions retrieve] @ {request.user.username} => No permission")
         except Exception as e:
-            print(f"[ReverseMappingExclusions/retrieve] @ {request.user.username} => error ({e})")
+            print(f"[mappings/ReverseMappingExclusions retrieve] @ {request.user.username} => error ({e})")
             
         return Response(output)
+
+class RemoveMappingExclusions(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+    def create(self, request):
+        print(f"[mappings/RemoveMappingExclusions create] requested by {request.user} - data: {str(request.data)[:500]}")
+
+        try:
+            if 'mapping | view tasks' in request.user.groups.values_list('name', flat=True):
+                data = request.data.get('payload')
+                task = MappingTask.objects.get(id=data.get('task'))
+                remote_exclusions = MappingEclPartExclusion.objects.get(
+                        task = task,
+                        )
+                
+                _components = remote_exclusions.components
+                print(f"[RemoveMappingExclusions/create] @ {request.user.username} - Old list: {_components}")
+                _components.remove(data.get('component'))
+                remote_exclusions.components = _components
+                remote_exclusions.save()
+                print(f"[RemoveMappingExclusions/create] @ {request.user.username} - Result: {remote_exclusions.components}")
+
+            else:
+                print(f"[ReverseMappingExclusions/create] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[ReverseMappingExclusions/create] @ {request.user.username} => error ({e})")
+            
+        return Response(request.data['payload']['task'])
+
+class AddRemoteExclusion(viewsets.ViewSet):
+    """     Will add an exclusion for the current task to a different task.                 """
+    """     Usecase: Working on code A, you want to add an exclusion to task B for code A   """
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+    def create(self, request, pk=None):
+        print(f"[mappings/AddRemoteExclusion create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
+        result = None
+        try:
+            output = []
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                payload = request.data.get('payload')
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => Go. Payload: {payload}")
+                task = MappingTask.objects.get(id=payload.get('task'))
+                
+                remote_task = MappingTask.objects.get(
+                    source_component__component_id = payload.get('sourceComponent'),
+                    project_id = task.project_id,
+                )
+                try:
+                    remote_exclusions = MappingEclPartExclusion.objects.get(
+                        task = remote_task,
+                        )
+
+                    print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestaat.")
+                    if remote_exclusions.components == None:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestaat, met foutieve inhoud (None).")
+                        remote_exclusions.components = []
+
+                    excl_list = remote_exclusions.components
+                    if payload['targetComponent'] not in excl_list:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bevatte dit component nog niet. Wordt aangevuld.")
+                        excl_list.append(payload['targetComponent'])
+                    else:
+                        print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bevatte dit component al.")
+
+                    remote_exclusions.save()
+
+                except ObjectDoesNotExist:
+                    print(f"[AddRemoteExclusion/create] @ {request.user.username} => Exclusie-object bestond nog niet. Wordt aangemaakt.")
+                    remote_exclusions = MappingEclPartExclusion.objects.create(
+                        task = remote_task,
+                        components = [payload.get('targetComponent')]
+                        )
+                    remote_exclusions.save()
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => Result: {remote_exclusions.task.source_component.component_id} => {remote_exclusions.components}")
+                output = remote_exclusions.task.id
+            else:
+                print(f"[AddRemoteExclusion/create] @ {request.user.username} => No permission")
+        except Exception as e:
+            print(f"[AddRemoteExclusion/create] @ {request.user.username} => error ({e})")
+            
+        return Response(output)
+
+class MappingTargetFromReverse(viewsets.ViewSet):
+    permission_classes = [Permission_MappingProject_Access]
+
+    def create(self, request):
+        print(f"[mappings/MappingTargetFromReverse create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
+        try:
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                payload = request.data.get('payload')
+                task = MappingTask.objects.get(id=payload.get('taskid'))
+                if task.user == request.user:
+                    if task.project_id.project_type == '1':
+                        component = MappingCodesystemComponent.objects.get(
+                            component_id=payload.get('conceptid'),
+                            codesystem_id__id=payload.get('codesystem'),
+                            )
+                        obj = MappingRule.objects.create(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                            target_component = component,
+                        )
+                        return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Succes")
+                    else:
+                        return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Not supported for projects other than 1-N")
+                else:
+                    return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Not allowed: not your task?")
+            else:
+                return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Geen toegang")
+        except Exception as e:
+            return Response(f"[MappingTargetFromReverse/create] @ {request.user.username} - Error: {str(e)}")
 
 class MappingTargets(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
-        print(f"[MappingTargets/create] @ {request.user.username}")
-
+        print(f"[mappings/MappingTargets create] requested by {request.user} - data: {str(request.data)[:500]}")
+        
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
-                print(str(request.data)[:100],"........")
+                # print(str(request.data)[:100],"........")
                 task = MappingTask.objects.get(id=request.data.get('task'))
                 current_user = User.objects.get(id=request.user.id)
 
@@ -382,7 +497,8 @@ class MappingTargets(viewsets.ViewSet):
                                     print("Done handling dependency for",dependency)
                                 mapping_rule.save()
 
-                        audit_async.delay('multiple_mapping', task.project_id.id, task.id)
+                        send_task('mapping.tasks.qa_orchestrator.audit_async', ['multiple_mapping', task.project_id.id, task.id], {})
+
                         return Response([])
                     # Handle ECL-1 mapping targets
                     elif task.project_id.project_type == '4':
@@ -439,6 +555,7 @@ class MappingTargets(viewsets.ViewSet):
 
 
     def retrieve(self, request, pk=None):
+        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         
@@ -681,6 +798,7 @@ class MappingEclToRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
     def retrieve(self, request, pk=None):
+        print(f"[mappings/MappingEclToRules retrieve] requested by {request.user} - {pk}")
         print(request.user,"Creating mapping rules for ECL queries associated with task",pk)
         
         celery = createRulesFromEcl.delay(
@@ -692,6 +810,7 @@ class MappingRemoveRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
     def retrieve(self, request, pk=None):
+        print(f"[mappings/MappingRemoveRules retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=str(pk))
         current_user = User.objects.get(id=request.user.id)
         if (MappingProject.objects.get(id=task.project_id.id, access__username=current_user)) and \
@@ -712,6 +831,7 @@ class MappingRemoveRules(viewsets.ViewSet):
 class MappingReverse(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
+        print(f"[mappings/MappingReverse retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.select_related(
             'project_id',
         ).get(id = pk)
@@ -727,6 +847,7 @@ class MappingReverse(viewsets.ViewSet):
                     'id' : mapping.source_component.component_id,
                     'title' : mapping.source_component.component_title,
                     'codesystem' : {
+                        'id': mapping.source_component.codesystem_id.id,
                         'title': mapping.source_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
@@ -744,6 +865,7 @@ class MappingReverse(viewsets.ViewSet):
                     'id' : mapping.target_component.component_id,
                     'title' : mapping.target_component.component_title,
                     'codesystem' : {
+                        'id': mapping.target_component.codesystem_id.id,
                         'title': mapping.target_component.codesystem_id.codesystem_title,
                     },
                     'correlation' : mapping.mapcorrelation,
@@ -761,6 +883,7 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
     def retrieve(self, request, pk=None):
 
+        print(f"[mappings/MappingRulesInvolvingCodesystem retrieve] requested by {request.user} - {pk}")
         codesystem = MappingCodesystem.objects.get(id = pk)
 
 
@@ -790,6 +913,7 @@ class MappingListLookup(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
     def create(self, request):
+        print(f"[mappings/MappingListLookup create] requested by {request.user} - data: {str(request.data)[:500]}")
         query = request.data.get('list')
         print(request.user.username,": mappings/RuleSearchByComponent : Searching for",query)
 
