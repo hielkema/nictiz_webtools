@@ -953,6 +953,8 @@ def import_nhgbepalingen_task():
 
         extra = {
             'Omschrijving' : row[4],
+            'Memo' : row[1],
+            'Sleutelcode' : f"{row[1]} {row[2]} {row[3]}",
             'Bepaling nummer' : row[0],
             'Aanvraag/Uitslag/Beide' : row[6],
             'Soort' : soort,
