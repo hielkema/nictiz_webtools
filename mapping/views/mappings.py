@@ -722,7 +722,13 @@ class MappingTargets(viewsets.ViewSet):
                             for query in queries:
                                 # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
                                 for key, value in query.result.get('concepts').items():
-                                    exclude_componentIDs.append(key)
+                                    exclude_componentIDs.append({
+                                        'key' : key,
+                                        'component' : {
+                                            'component_id': exclude_task.source_component.component_id,
+                                            'title': exclude_task.source_component.component_title,
+                                        }
+                                    })
                         
                         # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
                     # print(f"Full exclude list: {exclude_componentIDs}")
@@ -757,7 +763,8 @@ class MappingTargets(viewsets.ViewSet):
                     # Add all results to a list for easy viewing
                     try:
                         for key, result in query.result.get('concepts').items():
-                            if key not in exclude_componentIDs:
+                            excluded_ids = [ x['key'] for x in exclude_componentIDs ] 
+                            if key not in excluded_ids:
                                 # print(result)   
                                 _query = result
                                 _query.update({
@@ -768,6 +775,11 @@ class MappingTargets(viewsets.ViewSet):
                                 })
                                 all_results.append(_query) 
                             else:
+                                exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
+                                _query = result
+                                _query.update({
+                                    'exclusion_reason': exclusion_reason,
+                                })
                                 excluded_componentIDs.append(result)
                     except:
                         print("Retrieve mappings: No results")
