@@ -302,6 +302,20 @@ class RelatedTasks(viewsets.ViewSet):
         )
         output = []
         for task in tasks:
+
+            comments = MappingComment.objects.filter(
+                comment_task = task,
+            ).select_related()
+
+            comment_list = []
+            for comment in comments:
+                comment_list.append({
+                    'title': comment.comment_title,
+                    'body' : comment.comment_body,
+                    'user' : comment.comment_user.username,
+                    'created' : comment.comment_created.strftime('%B %d %Y'),
+                })
+
             output.append({
                 'id' : task.id,
                 'source_component' : {
@@ -317,7 +331,8 @@ class RelatedTasks(viewsets.ViewSet):
                 },
                 'user' : {
                     'username' : task.user.username,
-                }
+                },
+                'comments' : comment_list,
             })
 
         return Response(output)

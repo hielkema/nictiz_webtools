@@ -99,7 +99,7 @@ class MappingCodesystemComponent(models.Model):
         ]
 
     def __str__(self):
-        return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_title
+        return str(self.id) + " - " + str(self.codesystem_id.codesystem_title) + " - " + self.component_id + ' - ' + self.component_title
 
 
 class MappingTask(models.Model):
@@ -113,7 +113,7 @@ class MappingTask(models.Model):
     task_created   = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return '{}: {} * source component {}'.format(
+        return 'Taak ID {}: {} * source component {}'.format(
             self.id,
             self.project_id,
             self.source_component,
