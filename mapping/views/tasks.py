@@ -297,9 +297,24 @@ class RelatedTasks(viewsets.ViewSet):
         task = MappingTask.objects.get(id=int(pk))
         component = MappingCodesystemComponent.objects.get(id = task.source_component.id)
 
+        # Fetch mapping rules that use the current source as source
+        rules = MappingRule.objects.filter(
+            target_component = component
+        )
+        # Create a list of component ids from the targets of these rules
+        target_list = list(rules.distinct().values_list('source_component__id', flat=True))
+        # print(target_list)
+
+
+        # Collect relevant tasks
         tasks = MappingTask.objects.filter(
             source_component = component
+        ) | MappingTask.objects.filter(
+            source_component__id__in = target_list
         )
+        # print(tasks.values_list('id'))
+
+        # Loop tasks and comments
         output = []
         for task in tasks:
 
