@@ -8,6 +8,8 @@ app_name = 'mapping'
 
 # Define DRF URL router
 router_1_0 = SimpleRouter()
+router_1_0.register(r'status', views.StatusReport, basename="server_status_report")
+
 router_1_0.register(r'export_rc_rules', views.exportReleaseCandidateRules, basename="export_rc_rules")
 router_1_0.register(r'export_rc_rules_v2', views.exportReleaseCandidateRulesV2, basename="export_rc_rules")
 router_1_0.register(r'rc_export_fhir_json', views.RCFHIRConceptMap, basename="RC FHIR ConceptMap")

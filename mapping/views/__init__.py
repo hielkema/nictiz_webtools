@@ -13,3 +13,4 @@ from .status import *
 from .users import *
 from .comments import *
 from .snomed_failback_import import *
+from .server_status import *
