@@ -81,7 +81,12 @@ class MappingAudits(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         print(f"[audits/MappingAudits retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=pk)
-        audit_hits = MappingTaskAudit.objects.filter(task=task)
+        audit_hits = MappingTaskAudit.objects.filter(task=task).select_related(
+            'task',
+            'task__status',
+            'task__user',
+            'task__project_id',
+        )
 
         audits = []
         for audit in audit_hits:
@@ -145,7 +150,12 @@ class MappingAuditsPerProject(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         print(f"[audits/MappingAuditsPerProject retrieve] requested by {request.user} - {pk}")
         project = MappingProject.objects.get(id=pk)
-        audit_hits = MappingTaskAudit.objects.filter(task__project_id=project)
+        audit_hits = MappingTaskAudit.objects.filter(task__project_id=project).select_related(
+            'task',
+            'task__status',
+            'task__user',
+            'task__project_id',
+        )
 
         audits = []
         for audit in audit_hits:
