@@ -1,8 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
+from django.contrib.postgres.fields import ArrayField
 
 class MappingProject(models.Model):
     title = models.CharField(max_length=300)
@@ -22,8 +22,8 @@ class MappingProject(models.Model):
     ]
     project_type  = models.CharField(max_length=50, choices=project_types_options, default=None, blank=True, null=True)
 
-    categories = JSONField(default=list, null=True, blank=True)
-    tags = JSONField(default=None, null=True, blank=True)
+    categories = models.JSONField(default=list, null=True, blank=True)
+    tags = models.JSONField(default=None, null=True, blank=True)
 
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
     target_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_target', default=None, blank=True, null=True)
@@ -81,8 +81,8 @@ class MappingCodesystemComponent(models.Model):
     component_id        = models.CharField(max_length=50)
     component_title     = models.CharField(max_length=500)
     component_created   = models.DateTimeField(default=timezone.now)
-    descriptions        = JSONField(default=None, null=True, blank=True)
-    component_extra_dict = JSONField(default=None, null=True, blank=True)
+    descriptions        = models.JSONField(default=None, null=True, blank=True)
+    component_extra_dict = models.JSONField(default=None, null=True, blank=True)
     parents             = models.TextField(default=None, null=True, blank=True)
     children            = models.TextField(default=None, null=True, blank=True)
     descendants         = models.TextField(default=None, null=True, blank=True)
@@ -169,7 +169,7 @@ class MappingEclPart(models.Model):
     failed              = models.BooleanField(default=False) # Query or export failed?
     error               = models.TextField(default=None, blank=True, null=True)
     description         = models.TextField(default=None, blank=True, null=True)
-    result              = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+    result              = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
     export_finished     = models.BooleanField(default=True) # Export to mapping rules finished?
 
     correlation_options = [
@@ -190,7 +190,7 @@ class MappingEclPartExclusion(models.Model):
     ##  Ie. putting A80 in the list in MappingEclPartExclusion.components will exclude the results of all ECL queries linked to A80 for the linked task.
     ##
     task                = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
-    components          = JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
+    components          = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True, null=True)
     
 class MappingEventLog(models.Model):
     task = models.ForeignKey('MappingTask', on_delete=models.PROTECT)
@@ -288,7 +288,7 @@ class MappingReleaseCandidateFHIRConceptMap(models.Model):
 
     deprecated = models.BooleanField(default=False)
 
-    data = JSONField(encoder=DjangoJSONEncoder)
+    data = models.JSONField(encoder=DjangoJSONEncoder)
 
 class MappingReleaseCandidateRules(models.Model):
     # Contains the individual rules to be included in the MappingReleaseCandidate
@@ -306,11 +306,11 @@ class MappingReleaseCandidateRules(models.Model):
     # Denormalized source component
     source_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'source_component', default=None, blank=True, null=True)
     static_source_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
-    static_source_component = JSONField(default=None, null=True, blank=True)
+    static_source_component = models.JSONField(default=None, null=True, blank=True)
     # Denormalized target component
     target_component = models.ForeignKey('MappingCodesystemComponent', on_delete=models.SET_NULL, related_name = 'target_component', default=None, blank=True, null=True)
     static_target_component_ident = models.CharField(max_length=50, default=None, blank=True, null=True)
-    static_target_component = JSONField(default=None, null=True, blank=True)
+    static_target_component = models.JSONField(default=None, null=True, blank=True)
     # Denormalized rule components
     mapgroup        = models.IntegerField(default=None, blank=True, null=True)
     mappriority     = models.IntegerField(default=None, blank=True, null=True)
@@ -327,11 +327,11 @@ class MappingReleaseCandidateRules(models.Model):
     mapadvice       = models.CharField(max_length=500, default=None, blank=True, null=True)
     maprule         = models.CharField(max_length=500, default=None, blank=True, null=True)
     # Denormalized rule bindings
-    mapspecifies    = JSONField(default=None, null=True, blank=True)
+    mapspecifies    = models.JSONField(default=None, null=True, blank=True)
     # Log accepted
-    accepted = models.ManyToManyField(User, related_name="accepted_users", default=None, blank=True)
+    accepted = ArrayField(models.IntegerField(), null=True, blank=True)
     # Log rejected
-    rejected = models.ManyToManyField(User, related_name="rejected_users", default=None, blank=True)
+    rejected = ArrayField(models.IntegerField(), null=True, blank=True)
 
     def __str__(self):
         return str(self.export_task)

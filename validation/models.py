@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 
 class Project(models.Model):
@@ -27,7 +26,7 @@ class Status(models.Model):
 class Task(models.Model):
     created     = models.DateTimeField(default=timezone.now)
     project     = models.ForeignKey('Project', related_name="task_project_validation", on_delete=models.PROTECT, blank=True, null=True, default=None)
-    data        = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+    data        = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
     # status      = models.ForeignKey('Status', related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
     access      = models.ManyToManyField(User, related_name="validation_task_users", default=None, blank=True)
     # user        = models.ForeignKey(User, related_name="status_current", on_delete=models.PROTECT, blank=True, null=True, default=None)
@@ -35,11 +34,11 @@ class Task(models.Model):
 # class Question(models.Model):
 #     created     = models.DateTimeField(default=timezone.now)
 #     task        = models.ForeignKey('Task', on_delete=models.PROTECT, blank=True, null=True, default=None)
-#     data        = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+#     data        = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
     
 class Answer(models.Model):
     created     = models.DateTimeField(default=timezone.now)
     # question    = models.ForeignKey('Question', on_delete=models.PROTECT, blank=True, null=True, default=None)
     task        = models.ForeignKey('Task', on_delete=models.PROTECT, blank=True, null=True, default=None)
     user        = models.ForeignKey(User, related_name="answer_user", on_delete=models.PROTECT, blank=True, null=True, default=None)
-    data        = JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
+    data        = models.JSONField(encoder=DjangoJSONEncoder, default=dict, blank=True, null=True)
