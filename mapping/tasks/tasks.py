@@ -63,6 +63,7 @@ def UpdateECL1Task(record_id, query):
         url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
             quote_plus(query.strip())
         )
+        print(url)
         response = requests.get(url, params = {'Accept-Language': "nl"})
         
         # Start of status code 200 section
@@ -118,6 +119,7 @@ def UpdateECL1Task(record_id, query):
         elif response.status_code == 400:
             print("400 error")
             body = json.loads(response.text)
+            print(body)
             currentQuery.finished = True
             currentQuery.error = f"{body.get('error')}: {body.get('message')}"
             currentQuery.failed = True
@@ -128,9 +130,10 @@ def UpdateECL1Task(record_id, query):
         elif response.status_code == 500:
             print("500 error")
             body = json.loads(response.text)
+            print(body)
             currentQuery.finished = True
             currentQuery.error = f"{body.get('error')}: {body.get('message')}"
-            currentQuery.failed = False
+            currentQuery.failed = True
             currentQuery.save()
             break
         
