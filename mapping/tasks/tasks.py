@@ -61,7 +61,7 @@ def UpdateECL1Task(record_id, query):
         url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
             quote_plus(query.strip())
         )
-        req = Request(url)
+        req = urllib.request.Request(url)
         req.add_header('Accept-Language', "nl")
         response = urlopen(req).read()
         
@@ -92,7 +92,7 @@ def UpdateECL1Task(record_id, query):
                         quote_plus(query).strip(),
                     )
                     print(url)
-                    req = Request(url)
+                    req = urllib.request.Request(url)
                     req.add_header('Accept-Language', self.preferredLanguage)
                     response = urlopen(req).read()
                     items = json.loads(response.decode('utf-8'))
