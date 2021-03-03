@@ -66,14 +66,17 @@ def UpdateECL1Task(record_id, query):
         
         # Start of status code 200 section
         if response.status_code == 200:
+            print("200 result")
             items = json.loads(response.text)
             results = {}
             total_results = items['total']
+            print(f"Looking for a total of {total_results}")
             # Update query count
-            self.queryCount += 1
+            queryCount += 1
 
             # Loop while the cacheTemp is smaller than the total results
             while counter < total_results:
+                print(f"Loop {queryCount}")
                 # If no results, break while loop - Probably redundant
                 if items['total'] == 0:
                     break
@@ -95,7 +98,10 @@ def UpdateECL1Task(record_id, query):
                     items = json.loads(response.text)
                     # Update query count
                     queryCount += 1
+                
+                print(f"End of loop {queryCount} - we have {len(items)} now.")
 
+            print("Writing out results to db")
             currentQuery.result = {
                 'concepts': results,
                 'numResults': len(results),
@@ -104,10 +110,12 @@ def UpdateECL1Task(record_id, query):
             currentQuery.error = None
             currentQuery.failed = False
             currentQuery.save()
+            print("Breaking loop")
             break
         # End of status code 200 section
         # Handle 400 errors: Syntax correct, other mistakes were made
         elif response.status_code == 400:
+            print("400 error")
             body = json.loads(response.text)
             currentQuery.finished = True
             currentQuery.error = f"{body.get('error')}: {body.get('message')}"
@@ -117,6 +125,7 @@ def UpdateECL1Task(record_id, query):
 
         # Handle 500 errors: Query syntax error
         elif response.status_code == 500:
+            print("500 error")
             body = json.loads(response.text)
             currentQuery.finished = True
             currentQuery.error = f"{body.get('error')}: {body.get('message')}"
@@ -126,7 +135,7 @@ def UpdateECL1Task(record_id, query):
         
         # Other errors: retry
         else:
-            print(f"Error in UpdateECL1Task ({record_id}):",e)
+            print(f"Other error in UpdateECL1Task ({record_id}):",e)
             if tries > max_tries:
                 print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Giving up - big error.")
 
@@ -141,8 +150,7 @@ def UpdateECL1Task(record_id, query):
                 time.sleep(sleep_time)
                 continue
         
-
-    currentQuery.save()
+    print("Done")
     return str(currentQuery)
 
 # @shared_task
