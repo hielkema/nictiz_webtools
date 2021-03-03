@@ -55,6 +55,7 @@ def UpdateECL1Task(record_id, query):
 
 
     # Enter loop
+    queryCount = 0
     while True:
         tries += 1
 
@@ -119,7 +120,7 @@ def UpdateECL1Task(record_id, query):
             body = json.loads(response.text)
             currentQuery.finished = True
             currentQuery.error = f"{body.get('error')}: {body.get('message')}"
-            currentQuery.failed = False
+            currentQuery.failed = True
             currentQuery.save()
             break
 
