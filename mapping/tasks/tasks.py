@@ -11,6 +11,7 @@ import xmltodict
 from ..forms import *
 from ..models import *
 import urllib.request
+from urllib.parse import quote, quote_plus
 from pandas import read_excel, read_csv
 import environ
 import sys, os
@@ -42,64 +43,110 @@ def UpdateECL1Task(record_id, query):
     sleep_time = 15
     tries = 0
 
+    # Fetch query object
     currentQuery = MappingEclPart.objects.get(id = record_id)
+    # Empty results and set it to active
     currentQuery.result = {}
     currentQuery.finished = False
     currentQuery.error = None
     currentQuery.failed = False
     currentQuery.save()
-    try:
-        snowstorm = Snowstorm(
-            baseUrl="https://snowstorm.test-nictiz.nl",
-            debug=False,
-            preferredLanguage="nl",
-            defaultBranchPath="MAIN/SNOMEDCT-NL",
+
+
+    # Enter loop
+    while True:
+        tries += 1
+
+        counter = 0
+        url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
+            quote_plus(ecl.strip())
         )
+        req = Request(url)
+        req.add_header('Accept-Language', "nl")
+        response = urlopen(req).read()
         
-        while True:
-            try:
-                result = snowstorm.findConcepts(ecl=query.strip())
-                tries += 1
-                num_results = len(result)
-                break
-            except Exception as e:
-                num_results = 0
-                print(f"Error in UpdateECL1Task ({record_id}):",e)
-                if tries > max_tries:
-                    print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Giving up - big error.")
-                    return {
-                        'query' : str(currentQuery),
-                        'error' : str(e),
-                    }
+        # Start of status code 200 section
+        if response.status_code == 200:
+            items = json.loads(response.decode('utf-8'))
+            results = {}
+            total_results = items['total']
+            # Update query count
+            self.queryCount += 1
+
+            # Loop while the cacheTemp is smaller than the total results
+            while counter < total_results:
+                # If no results, break while loop - Probably redundant
+                if items['total'] == 0:
                     break
-                else:
-                    print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Sleeping {sleep_time} and retrying.")
-                    time.sleep(sleep_time)
-                    continue
 
+                # For all results, add to cache
+                for value in items['items']:
+                    results.update({value['conceptId']: value})
+                    counter += 1
 
-        currentQuery.result = {
-            'concepts': result,
-            'numResults': num_results,
-        }
-        currentQuery.finished = True
-        currentQuery.error = None
-        currentQuery.failed = False
-        currentQuery.save()
-        return str(currentQuery)
-    except Exception as e:
-        currentQuery.result = {
-            'concepts': {},
-            'numResults': 0,
-        }
-        currentQuery.finished = True
-        currentQuery.failed = True
-        currentQuery.error = f"Fout opgetreden bij uitvoeren ECL query. Waarschijnlijk is de ECL query niet juist. Error: {str(e)}"
-        currentQuery.save()
-        return {
-            'query' : str(currentQuery),
-            'error' : str(e),
-        }
+                # If there are more results than currently present in cacheTemp, run another query
+                if counter < total_results:
+                    # Request results
+                    url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&searchAfter={}&ecl={}".format(
+                        quote_plus(items.get('searchAfter')), 
+                        quote_plus(ecl).strip(),
+                    )
+                    print(url)
+                    req = Request(url)
+                    req.add_header('Accept-Language', self.preferredLanguage)
+                    response = urlopen(req).read()
+                    items = json.loads(response.decode('utf-8'))
+                    # Update query count
+                    self.queryCount += 1
+
+            currentQuery.result = {
+                'concepts': results,
+                'numResults': len(results),
+            }
+            currentQuery.finished = True
+            currentQuery.error = None
+            currentQuery.failed = False
+            currentQuery.save()
+            break
+        # End of status code 200 section
+        # Handle 400 errors: Syntax correct, other mistakes were made
+        elif response.status_code == 400:
+            body = json.loads(response.text)
+            currentQuery.finished = True
+            currentQuery.error = f"{body.get('error')}: {body.get('message')}"
+            currentQuery.failed = False
+            currentQuery.save()
+            break
+
+        # Handle 500 errors: Query syntax error
+        elif response.status_code == 500:
+            body = json.loads(response.text)
+            currentQuery.finished = True
+            currentQuery.error = f"{body.get('error')}: {body.get('message')}"
+            currentQuery.failed = False
+            currentQuery.save()
+            break
+        
+        # Other errors: retry
+        else:
+            print(f"Error in UpdateECL1Task ({record_id}):",e)
+            if tries > max_tries:
+                print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Giving up - big error.")
+
+                currentQuery.finished = True
+                currentQuery.error = f"Na {tries} pogingen opgegeven."
+                currentQuery.failed = True
+                currentQuery.save()
+
+                break
+            else:
+                print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Sleeping {sleep_time} and retrying.")
+                time.sleep(sleep_time)
+                continue
+        
+
+    currentQuery.save()
+    return str(currentQuery)
 
 # @shared_task
 # def check_snomed_active(concept = None):
