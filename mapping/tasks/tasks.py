@@ -63,7 +63,7 @@ def UpdateECL1Task(record_id, query):
         )
         req = urllib.request.Request(url)
         req.add_header('Accept-Language', "nl")
-        response = urlopen(req).read()
+        response = urllib.request.urlopen(req).read()
         
         # Start of status code 200 section
         if response.status_code == 200:
@@ -94,7 +94,7 @@ def UpdateECL1Task(record_id, query):
                     print(url)
                     req = urllib.request.Request(url)
                     req.add_header('Accept-Language', self.preferredLanguage)
-                    response = urlopen(req).read()
+                    response = urllib.request.urlopen(req).read()
                     items = json.loads(response.decode('utf-8'))
                     # Update query count
                     self.queryCount += 1
