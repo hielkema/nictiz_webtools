@@ -62,7 +62,7 @@ def UpdateECL1Task(record_id, query):
         url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
             quote_plus(query.strip())
         )
-        response = requests.get(url, params = {'Accept-Language', "nl"})
+        response = requests.get(url, params = {'Accept-Language': "nl"})
         
         # Start of status code 200 section
         if response.status_code == 200:
@@ -91,7 +91,7 @@ def UpdateECL1Task(record_id, query):
                         quote_plus(query).strip(),
                     )
                     print(url)
-                    response = requests.get(url, params = {'Accept-Language', "nl"})
+                    response = requests.get(url, params = {'Accept-Language': "nl"})
                     items = json.loads(response.text)
                     # Update query count
                     queryCount += 1
