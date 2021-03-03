@@ -15,6 +15,7 @@ from urllib.parse import quote, quote_plus
 from pandas import read_excel, read_csv
 import environ
 import sys, os
+import requests
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -61,13 +62,11 @@ def UpdateECL1Task(record_id, query):
         url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
             quote_plus(query.strip())
         )
-        req = urllib.request.Request(url)
-        req.add_header('Accept-Language', "nl")
-        response = urllib.request.urlopen(req).read()
+        response = requests.get(url, params = {'Accept-Language', "nl"})
         
         # Start of status code 200 section
         if response.status_code == 200:
-            items = json.loads(response.decode('utf-8'))
+            items = json.loads(response.text)
             results = {}
             total_results = items['total']
             # Update query count
@@ -92,12 +91,10 @@ def UpdateECL1Task(record_id, query):
                         quote_plus(query).strip(),
                     )
                     print(url)
-                    req = urllib.request.Request(url)
-                    req.add_header('Accept-Language', self.preferredLanguage)
-                    response = urllib.request.urlopen(req).read()
-                    items = json.loads(response.decode('utf-8'))
+                    response = requests.get(url, params = {'Accept-Language', "nl"})
+                    items = json.loads(response.text)
                     # Update query count
-                    self.queryCount += 1
+                    queryCount += 1
 
             currentQuery.result = {
                 'concepts': results,
