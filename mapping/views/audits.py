@@ -201,3 +201,23 @@ class MappingAuditStatus(viewsets.ViewSet):
         # - audit running for current task true/false
 
         return Response(f'{pk} checked {info}')
+    
+    def list(self, request):
+        print(f"[audits/MappingAuditStatus list] requested by {request.user}")
+        i = inspect()
+        active = i.active()
+        info = []
+        if not active:
+            pk = 'error - celery down?'
+        else:
+            processes = []
+            for worker, tasks in list(active.items()):
+                print(f"[audits/MappingAuditStatus list] worker: {worker} => {tasks}")
+                for task in tasks:
+                    if task.get('type').split(".")[0] == 'mapping':
+                        processes.append(task)
+
+        return Response({
+            'active' : (len(processes) > 0),
+            'list' : processes
+        })
