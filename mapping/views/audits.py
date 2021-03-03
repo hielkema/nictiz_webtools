@@ -174,7 +174,7 @@ class MappingAuditsPerProject(viewsets.ViewSet):
         return Response(audits)
 
 class MappingAuditStatus(viewsets.ViewSet):
-    permission_classes = [Permission_MappingProject_Whitelist]
+    permission_classes = [Permission_MappingProject_Access]
 
     def retrieve(self, request, pk=None):
         print(f"[audits/MappingAuditStatus retrieve] requested by {request.user} - {pk}")
