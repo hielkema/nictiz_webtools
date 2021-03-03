@@ -100,7 +100,7 @@ def UpdateECL1Task(record_id, query):
                     # Update query count
                     queryCount += 1
                 
-                print(f"End of loop {queryCount} - we have {len(items)} now.")
+                print(f"End of loop {queryCount} - we have {len(results)} now.")
 
             print("Writing out results to db")
             currentQuery.result = {
