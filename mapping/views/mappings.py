@@ -736,7 +736,7 @@ class MappingTargets(viewsets.ViewSet):
                         # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
                     # print(f"Full exclude list: {exclude_componentIDs}")
                 except Exception as e:
-                    True
+                    print(e)
 
                 # Get all ECL Queries - including cached snowstorm response
                 all_results = list()
