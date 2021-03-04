@@ -80,11 +80,11 @@ def createRulesFromEcl(taskid):
 
         # Loop through queries to find individual rules, put in list
         for query in queries:  
-            print("[@shared task - createRulesFromEcl] Found query",query.id)
+            print("Found query",query.id)
             if query.finished == False:
                 queries_unfinished = True
             if query.finished:
-                print("[@shared task - createRulesFromEcl] Query is finished, let's go")
+                print("Query is finished, let's go")
                 # Add all results to a list for easy viewing
                 try:
                     for key, result in query.result.get('concepts').items():
@@ -111,90 +111,59 @@ def createRulesFromEcl(taskid):
                             # print(f"{key} mag NIET aangemaakt worden!")
                             True
                 except:
-                    print(f"[@shared task - createRulesFromEcl] Retrieve mappings: No results in query {query.id}")
+                    print(f"Retrieve mappings: No results in query {query.id}")
+
+
 
 
         ## Create new rules
-        ##### OLD METHOD - check before adding
-        #region
-        # for concept in all_results:
-        #     try:
-        #         # print(f"Handling rule for concept {concept.get('id')}")
-        #         # print("Concept",concept.get('id'))
-        #         # print("Correlation",concept.get('correlation'))
-
-        #         # If concepts from the ECL query are not present, import them and try again.
-        #         try:
-        #             component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-        #         except:
-        #             print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
-        #             task = import_snomed_async(str(concept.get('id')))
-        #             while task.result != 'SUCCESS':
-        #                 print("Waiting for data to be retrieved.....")
-        #                 time.sleep(1)
-        #             try:
-        #                 print("Trying again")
-        #                 component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-        #             except Exception as e:
-        #                 print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
-        #                 print(f"Giving up. Error [{str(e)}]")
-
-        #         existing = MappingRule.objects.filter(
-        #             project_id = task.project_id,
-        #             source_component = component,
-        #             target_component = task.source_component,
-        #             mapcorrelation = concept.get('correlation'),
-        #         )
-        #         if existing.count() == 0:
-        #             # print("Start get_or_create")
-        #             rule, created = MappingRule.objects.get_or_create(
-        #                 project_id = task.project_id,
-        #                 source_component = component,
-        #                 target_component = task.source_component,
-        #                 mapcorrelation = concept.get('correlation'),
-        #             )
-        #             # print("Regel in DB", rule)
-        #             # print("Created?", created)
-        #             print("\n\n\n")
-        #         else:
-        #             # print(f"Already {existing.count()} rules in database - skip creating another")
-        #             True
-        #     except Exception as e:
-        #         print(f"[Exception in shared task createRulesFromEcl] - intended to handle {concept.get('id')} - Error: [{str(e)}]")
-        #endregion
-
-        # NEW METHOD - delete, then add all as bulk
-        #region
-        # Delete existing rules for this task
-        print("[@shared task - createRulesFromEcl] Delete old rules related to this project and component")
-        rules = MappingRule.objects.filter(
-            project_id = task.project_id,
-            target_component = task.source_component,
-        ).delete()
-        
-        # Create list for bulk creation
-        print("[@shared task - createRulesFromEcl] Create list for bulk creation")
-        to_create = []
         for concept in all_results:
             try:
-                to_create.append(MappingRule(
+                # print(f"Handling rule for concept {concept.get('id')}")
+                # print("Concept",concept.get('id'))
+                # print("Correlation",concept.get('correlation'))
+
+                # If concepts from the ECL query are not present, import them and try again.
+                try:
+                    component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                except:
+                    print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
+                    task = import_snomed_async(str(concept.get('id')))
+                    while task.result != 'SUCCESS':
+                        print("Waiting for data to be retrieved.....")
+                        time.sleep(1)
+                    try:
+                        print("Trying again")
+                        component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
+                    except Exception as e:
+                        print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
+                        print(f"Giving up. Error [{str(e)}]")
+
+                existing = MappingRule.objects.filter(
                     project_id = task.project_id,
-                    source_component = MappingCodeSystemComponent(component_id = concept.get('id')),
+                    source_component = component,
                     target_component = task.source_component,
                     mapcorrelation = concept.get('correlation'),
-                ))
+                )
+                if existing.count() == 0:
+                    # print("Start get_or_create")
+                    rule, created = MappingRule.objects.get_or_create(
+                        project_id = task.project_id,
+                        source_component = component,
+                        target_component = task.source_component,
+                        mapcorrelation = concept.get('correlation'),
+                    )
+                    # print("Regel in DB", rule)
+                    # print("Created?", created)
+                    print("\n\n\n")
+                else:
+                    # print(f"Already {existing.count()} rules in database - skip creating another")
+                    True
             except Exception as e:
                 print(f"[Exception in shared task createRulesFromEcl] - intended to handle {concept.get('id')} - Error: [{str(e)}]")
 
-        print(f"[@shared task - createRulesFromEcl] Adding {len(to_create)} to db in bulk")
-        msg = MappingRule.objects.bulk_create(to_create)
-        #endregion
-
-
-
         # Cleanup - Remove rules that should not be there
         # print(f"Valid rules:\n {valid_rules}")
-        print("Doing some cleanup")
         ## Get all rules for this task
         rules = MappingRule.objects.filter(
             project_id = task.project_id,
