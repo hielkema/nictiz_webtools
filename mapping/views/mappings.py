@@ -709,16 +709,16 @@ class MappingTargets(viewsets.ViewSet):
                             codesystem_id = obj.task.source_component.codesystem_id,
                             component_id__in=list(obj.components)
                         )
-                    print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Will exclude ECL results from {str(components)}")
+                    # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Will exclude ECL results from {str(components)}")
                     # Loop components
                     for component in components:
-                        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclusion of {str(component)}")
+                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclusion of {str(component)}")
                         # For each, retrieve their tasks, in this same project
                         exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
-                        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Found tasks: {str(exclude_tasks)}")
+                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Found tasks: {str(exclude_tasks)}")
 
                         for exclude_task in exclude_tasks:
-                            print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclude_task {str(exclude_task)}")
+                            # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclude_task {str(exclude_task)}")
                             queries = MappingEclPart.objects.filter(task=exclude_task)
 
                             for query in queries:
@@ -733,7 +733,8 @@ class MappingTargets(viewsets.ViewSet):
                                             }
                                         })
                                 except Exception as e:
-                                    print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Issue tijdens uitlezen resultaten: {e}")
+                                    # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Issue tijdens uitlezen resultaten: {e}")
+                                    True
                         
                         # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
                     # print(f"Full exclude list: {exclude_componentIDs}")
