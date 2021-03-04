@@ -47,7 +47,7 @@ def UpdateECL1Task(record_id, query):
     # Fetch query object
     currentQuery = MappingEclPart.objects.get(id = record_id)
     # Empty results and set it to active
-    currentQuery.  = {}
+    currentQuery.result  = {}
     currentQuery.finished = False
     currentQuery.error = None
     currentQuery.failed = False
