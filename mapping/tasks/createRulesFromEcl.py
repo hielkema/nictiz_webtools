@@ -80,11 +80,11 @@ def createRulesFromEcl(taskid):
 
         # Loop through queries to find individual rules, put in list
         for query in queries:  
-            print("Found query",query.id)
+            print("[@shared task - createRulesFromEcl] Found query",query.id)
             if query.finished == False:
                 queries_unfinished = True
             if query.finished:
-                print("Query is finished, let's go")
+                print("[@shared task - createRulesFromEcl] Query is finished, let's go")
                 # Add all results to a list for easy viewing
                 try:
                     for key, result in query.result.get('concepts').items():
@@ -111,7 +111,7 @@ def createRulesFromEcl(taskid):
                             # print(f"{key} mag NIET aangemaakt worden!")
                             True
                 except:
-                    print(f"Retrieve mappings: No results in query {query.id}")
+                    print(f"[@shared task - createRulesFromEcl] Retrieve mappings: No results in query {query.id}")
 
 
         ## Create new rules
@@ -166,12 +166,14 @@ def createRulesFromEcl(taskid):
         # NEW METHOD - delete, then add all as bulk
         #region
         # Delete existing rules for this task
+        print("[@shared task - createRulesFromEcl] Delete old rules related to this project and component")
         rules = MappingRule.objects.filter(
             project_id = task.project_id,
             target_component = task.source_component,
         ).delete()
         
         # Create list for bulk creation
+        print("[@shared task - createRulesFromEcl] Create list for bulk creation")
         to_create = []
         for concept in all_results:
             try:
@@ -189,7 +191,7 @@ def createRulesFromEcl(taskid):
                         component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
                     except Exception as e:
                         print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
-                        print(f"Giving up. Error [{str(e)}]")
+                        print(f"[@shared task - createRulesFromEcl] Giving up. Error [{str(e)}]")
 
                 to_create.append(MappingRule(
                     project_id = task.project_id,
@@ -200,7 +202,7 @@ def createRulesFromEcl(taskid):
             except Exception as e:
                 print(f"[Exception in shared task createRulesFromEcl] - intended to handle {concept.get('id')} - Error: [{str(e)}]")
 
-        print(f"Adding {len(to_create)} to db in bulk")
+        print(f"[@shared task - createRulesFromEcl] Adding {len(to_create)} to db in bulk")
         msg = MappingRule.objects.bulk_create(to_create)
         #endregion
 
