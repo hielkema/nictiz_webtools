@@ -66,13 +66,16 @@ def createRulesFromEcl(taskid):
                     exclusion_queries = MappingEclPart.objects.filter(task=exclude_task)
                     for exclusion_query in exclusion_queries:
                         # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(exclusion_query.result)}] \n{list(exclusion_query.result.get('concepts'))}")
-                        for key, value in exclusion_query.result.get('concepts').items():
-                            exclude_componentIDs.append(key)
-                
+                        try:
+                            for key, value in exclusion_query.result.get('concepts').items():
+                                exclude_componentIDs.append(key)
+                        except Exception as e:
+                            print(f"[Task createRulesFromEcl] ## Issue tijdens uitlezen resultaten: {e}")
+
                 # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
             # print(f"Full exclude list: {exclude_componentIDs}")
         except Exception as e:
-            True
+            print(f"[Task createRulesFromEcl] ## Unhandled exception reverse mappings: {e}")
 
 
         # Loop through queries to find individual rules, put in list
