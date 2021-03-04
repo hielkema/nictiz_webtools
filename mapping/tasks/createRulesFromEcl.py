@@ -181,7 +181,7 @@ def createRulesFromEcl(taskid):
         to_create = []
         for concept in all_results:
             try:
-                _component = list(filter(lambda x: x['id'] == concept['id'], component_list))[0]
+                _component = list(filter(lambda x: x['component_id'] == concept.get('id'), component_list))[0]
                 to_create.append(MappingRule(
                     project_id = task.project_id,
                     source_component__id = _component['id'],
