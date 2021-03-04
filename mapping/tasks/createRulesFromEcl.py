@@ -172,30 +172,19 @@ def createRulesFromEcl(taskid):
             target_component = task.source_component,
         ).delete()
         
+        # Prefetch all components before generating worklist
+        components = MappingCodesystemComponent.objects.filter(component_id__in=[x['id'] for x in all_results])
+        component_list = components.values()
+
         # Create list for bulk creation
         print("[@shared task - createRulesFromEcl] Create list for bulk creation")
         to_create = []
         for concept in all_results:
             try:
-                # If concepts from the ECL query are not present, import them and try again.
-                try:
-                    component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-                except:
-                    print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
-                    task = import_snomed_async(str(concept.get('id')))
-                    while task.result != 'SUCCESS':
-                        print("Waiting for data to be retrieved.....")
-                        time.sleep(1)
-                    try:
-                        print("Trying again")
-                        component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-                    except Exception as e:
-                        print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
-                        print(f"[@shared task - createRulesFromEcl] Giving up. Error [{str(e)}]")
-
+                _component = list(filter(lambda x: x['id'] == concept['id'], component_list))[0]
                 to_create.append(MappingRule(
                     project_id = task.project_id,
-                    source_component = component,
+                    source_component__id = _component['id'],
                     target_component = task.source_component,
                     mapcorrelation = concept.get('correlation'),
                 ))
