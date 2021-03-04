@@ -174,17 +174,15 @@ def createRulesFromEcl(taskid):
         
         # Prefetch all components before generating worklist
         components = MappingCodesystemComponent.objects.filter(component_id__in=[x['id'] for x in all_results])
-        component_list = components.values()
 
         # Create list for bulk creation
         print("[@shared task - createRulesFromEcl] Create list for bulk creation")
         to_create = []
         for concept in all_results:
             try:
-                _component = list(filter(lambda x: x['component_id'] == concept.get('id'), component_list))[0]
                 to_create.append(MappingRule(
                     project_id = task.project_id,
-                    source_component__id = _component['id'],
+                    source_component = components.filter(component_id = concept.get('id')).first(),
                     target_component = task.source_component,
                     mapcorrelation = concept.get('correlation'),
                 ))
