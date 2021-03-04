@@ -25,7 +25,7 @@ logger = get_task_logger(__name__)
 @shared_task
 def createRulesFromEcl(taskid):
     print("Task createRulesFromEcl received by celery")
-    task = MappingTask.objects.get(id=taskid).select_related('project_id', 'source_component', 'target_component')
+    task = MappingTask.objects.get(id=taskid)
 
     # Put the results of all ECL queries for the task in 1 list
     all_results = list()
