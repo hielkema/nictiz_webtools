@@ -709,18 +709,21 @@ class MappingTargets(viewsets.ViewSet):
                             codesystem_id = obj.task.source_component.codesystem_id,
                             component_id__in=list(obj.components)
                         )
-                    # print(f"Will exclude ECL results from {str(components)}")
+                    print(f"Will exclude ECL results from {str(components)}")
                     # Loop components
                     for component in components:
-                        # print(f"Handling exclusion of {str(component)}")
+                        print(f"Handling exclusion of {str(component)}")
                         # For each, retrieve their tasks, in this same project
                         exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
-                        # print(f"Found tasks: {str(exclude_tasks)}")
+                        print(f"Found tasks: {str(exclude_tasks)}")
+
                         for exclude_task in exclude_tasks:
-                            # print(f"Handling exclude_task {str(exclude_task)}")
+                            print(f"Handling exclude_task {str(exclude_task)}")
                             queries = MappingEclPart.objects.filter(task=exclude_task)
+
                             for query in queries:
-                                # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
+                                print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
+                                
                                 for key, value in query.result.get('concepts').items():
                                     exclude_componentIDs.append({
                                         'key' : key,
