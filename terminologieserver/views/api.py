@@ -46,28 +46,28 @@ class ingestAuditEvent(viewsets.ViewSet):
 
     permission_classes = [permissions.AllowAny]
     def create(self, request):
-        print(f"#### NTS #### POST request received\n#### NTS #### {request.data}")
+        print(f"#### NTS #### POST request received\n#### NTS #### {request.body}")
 
         return Response({
             'success' : True
         })
         
     def retrieve(self, request, pk=None):
-        print(f"#### NTS #### RETRIEVE request received\n#### NTS #### {pk} / {request.data}")
+        print(f"#### NTS #### RETRIEVE request received\n#### NTS #### {pk} / {request.body}")
 
         return Response({
             'success' : True
         })
 
     def put(self, request):
-        print(f"#### NTS #### PUT request received\n#### NTS #### {request.data}")
+        print(f"#### NTS #### PUT request received\n#### NTS #### {request.body}")
 
         return Response({
             'success' : True
         })
 
     def list(self, request):
-        print(f"#### NTS #### LIST request received\n#### NTS #### {request.data}")
+        print(f"#### NTS #### LIST request received\n#### NTS #### {request.body}")
         
         return Response({
             'success' : True
