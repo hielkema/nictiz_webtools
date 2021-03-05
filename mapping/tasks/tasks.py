@@ -58,7 +58,7 @@ def UpdateECL1Task(record_id, query):
     queryCount = 0
     while True:
         tries += 1
-        print(f"[Delegate SharedTask UpdateECL1Task] Requested by: {str(currentQuery.task.user)}")
+        print(f"[Delegate SharedTask UpdateECL1Task] Task owned by: {str(currentQuery.task.user)}")
         try:
 
             counter = 0
