@@ -41,7 +41,7 @@ logger = get_task_logger(__name__)
 def UpdateECL1Task(record_id, query):
 
     max_tries = 10
-    sleep_time = 15
+    sleep_time = 10
     tries = 0
 
     # Fetch query object
@@ -58,101 +58,110 @@ def UpdateECL1Task(record_id, query):
     queryCount = 0
     while True:
         tries += 1
+        print(f"[Delegate SharedTask UpdateECL1Task] Requested by: {str(currentQuery.task.user)}")
+        try:
 
-        counter = 0
-        url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
-            quote_plus(query.strip())
-        )
-        print(url)
-        response = requests.get(url, params = {'Accept-Language': "nl"})
-        
-        # Start of status code 200 section
-        if response.status_code == 200:
-            print("200 result")
-            items = json.loads(response.text)
-            results = {}
-            total_results = items['total']
-            print(f"Looking for a total of {total_results}")
-            # Update query count
-            queryCount += 1
+            counter = 0
+            url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&ecl={}".format(
+                quote_plus(query.strip())
+            )
+            print(url)
+            response = requests.get(url, params = {'Accept-Language': "nl"})
+            
+            # Start of status code 200 section
+            if response.status_code == 200:
+                print("200 result")
+                items = json.loads(response.text)
+                results = {}
+                total_results = items['total']
+                print(f"Looking for a total of {total_results}")
+                # Update query count
+                queryCount += 1
 
-            # Loop while the cacheTemp is smaller than the total results
-            while counter < total_results:
-                print(f"Loop {queryCount}")
-                # If no results, break while loop - Probably redundant
-                if items['total'] == 0:
-                    break
+                # Loop while the cacheTemp is smaller than the total results
+                while counter < total_results:
+                    print(f"Loop {queryCount}")
+                    # If no results, break while loop - Probably redundant
+                    if items['total'] == 0:
+                        break
 
-                # For all results, add to cache
-                for value in items['items']:
-                    results.update({value['conceptId']: value})
-                    counter += 1
+                    # For all results, add to cache
+                    for value in items['items']:
+                        results.update({value['conceptId']: value})
+                        counter += 1
 
-                # If there are more results than currently present in cacheTemp, run another query
-                if counter < total_results:
-                    # Request results
-                    url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&searchAfter={}&ecl={}".format(
-                        quote_plus(items.get('searchAfter')), 
-                        quote_plus(query).strip(),
-                    )
-                    print(url)
-                    response = requests.get(url, params = {'Accept-Language': "nl"})
-                    items = json.loads(response.text)
-                    # Update query count
-                    queryCount += 1
-                
-                print(f"End of loop {queryCount} - we have {len(results)} now.")
+                    # If there are more results than currently present in cacheTemp, run another query
+                    if counter < total_results:
+                        # Request results
+                        url = "https://snowstorm.test-nictiz.nl/MAIN/SNOMEDCT-NL/concepts?activeFilter=true&limit=10000&searchAfter={}&ecl={}".format(
+                            quote_plus(items.get('searchAfter')), 
+                            quote_plus(query).strip(),
+                        )
+                        print(url)
+                        response = requests.get(url, params = {'Accept-Language': "nl"})
+                        items = json.loads(response.text)
+                        # Update query count
+                        queryCount += 1
+                    
+                    print(f"End of loop {queryCount} - we have {len(results)} now.")
 
-            print("Writing out results to db")
-            currentQuery.result = {
-                'concepts': results,
-                'numResults': len(results),
-            }
-            currentQuery.finished = True
-            currentQuery.error = None
-            currentQuery.failed = False
-            currentQuery.save()
-            print("Breaking loop")
-            break
-        # End of status code 200 section
-        # Handle 400 errors: Syntax correct, other mistakes were made
-        elif response.status_code == 400:
-            print("400 error")
-            body = json.loads(response.text)
-            print(body)
-            currentQuery.finished = True
-            currentQuery.error = f"{body.get('error')}: {body.get('message')}"
-            currentQuery.failed = True
-            currentQuery.save()
-            break
-
-        # Handle 500 errors: Query syntax error
-        elif response.status_code == 500:
-            print("500 error")
-            body = json.loads(response.text)
-            print(body)
-            currentQuery.finished = True
-            currentQuery.error = f"{body.get('error')}: {body.get('message')}"
-            currentQuery.failed = True
-            currentQuery.save()
-            break
-        
-        # Other errors: retry
-        else:
-            print(f"Other error in UpdateECL1Task ({record_id}):",e)
-            if tries > max_tries:
-                print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Giving up - big error.")
-
+                print("Writing out results to db")
+                currentQuery.result = {
+                    'concepts': results,
+                    'numResults': len(results),
+                }
                 currentQuery.finished = True
-                currentQuery.error = f"Na {tries} pogingen opgegeven."
+                currentQuery.error = None
+                currentQuery.failed = False
+                currentQuery.save()
+                print("Breaking loop")
+                break
+            # End of status code 200 section
+            # Handle 400 errors: Syntax correct, other mistakes were made
+            elif response.status_code == 400:
+                print("400 error")
+                body = json.loads(response.text)
+                print(body)
+                currentQuery.finished = True
+                currentQuery.error = f"{body.get('error')}: {body.get('message')}"
                 currentQuery.failed = True
                 currentQuery.save()
-
                 break
+
+            # Handle 500 errors: Query syntax error
+            elif response.status_code == 500:
+                print("500 error")
+                body = json.loads(response.text)
+                print(body)
+                currentQuery.finished = True
+                currentQuery.error = f"{body.get('error')}: {body.get('message')}"
+                currentQuery.failed = True
+                currentQuery.save()
+                break
+            
+            # Other errors: retry
             else:
-                print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Sleeping {sleep_time} and retrying.")
-                time.sleep(sleep_time)
-                continue
+                if tries > max_tries:
+                    print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Giving up - big error.")
+
+                    currentQuery.finished = True
+                    currentQuery.error = f"Na {tries} pogingen opgegeven. Status code: {response.status_code}"
+                    currentQuery.failed = True
+                    currentQuery.save()
+
+                    break
+                else:
+                    print(f"Error in UpdateECL1Task ({record_id}). Try [{tries}/{max_tries}]. Sleeping {sleep_time*tries} and retrying.")
+                    time.sleep(sleep_time*tries)
+                    continue
+        except Exception as e:
+            print(f"Other breaking error in UpdateECL1Task ({record_id}):",e)
+            currentQuery.finished = True
+            currentQuery.error = f"Na {tries} pogingen opgegeven: {e}"
+            currentQuery.failed = True
+            currentQuery.save()
+            break
+
         
     print("Done")
     return str(currentQuery)
