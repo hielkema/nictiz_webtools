@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.contrib.auth import views as auth_views
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     path(r'admin/', admin.site.urls),
@@ -35,6 +36,7 @@ urlpatterns = [
     path(r'postco/', include('postcoordination.urls')), 
     path(r'validation/', include('validation.urls')), 
     path(r'qa_service/', include('qa_service.urls')), 
+    path(r'nts/', include('terminologieserver.urls')), 
     # url(r'^select2/', include('django_select2.urls')),
     path(r'', include('homepage.urls')),
 ]
