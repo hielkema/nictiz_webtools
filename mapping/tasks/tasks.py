@@ -142,16 +142,16 @@ def UpdateECL1Task(record_id, query):
             # Other errors: retry
             else:
                 if tries > max_tries:
-                    print(f"Error in UpdateECL1Task ({record_id}). Response code: {response.status_code}. Response body: {response.data}. Try [{tries}/{max_tries}]. Giving up - big error.")
+                    print(f"Error in UpdateECL1Task ({record_id}). Response code: {response.status_code}. Response body: {response.text}. Try [{tries}/{max_tries}]. Giving up - big error.")
 
                     currentQuery.finished = True
-                    currentQuery.error = f"Na {tries} pogingen opgegeven. Status code: {response.status_code}. Response body: {response.data}."
+                    currentQuery.error = f"Na {tries} pogingen opgegeven. Status code: {response.status_code}. Response body: {response.text}."
                     currentQuery.failed = True
                     currentQuery.save()
 
                     break
                 else:
-                    print(f"Error in UpdateECL1Task ({record_id}). Response code: {response.status_code}. Response body: {response.data}. Try [{tries}/{max_tries}]. Sleeping {sleep_time*tries} and retrying.")
+                    print(f"Error in UpdateECL1Task ({record_id}). Response code: {response.status_code}. Response body: {response.text}. Try [{tries}/{max_tries}]. Sleeping {sleep_time*tries} and retrying.")
                     time.sleep(sleep_time*tries)
                     continue
         except Exception as e:
