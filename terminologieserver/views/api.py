@@ -52,6 +52,13 @@ class ingestAuditEvent(viewsets.ViewSet):
             'success' : True
         })
         
+    def retrieve(self, request, pk=None):
+        print(f"#### NTS #### RETRIEVE request received\n#### NTS #### {pk} / {request.data}")
+
+        return Response({
+            'success' : True
+        })
+
     def put(self, request):
         print(f"#### NTS #### PUT request received\n#### NTS #### {request.data}")
 

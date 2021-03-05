@@ -7,8 +7,9 @@ from . import views
 
 app_name = 'nts'
 
-router = SimpleRouter()
-router.register(r'event', views.ingestAuditEvent, basename="Test_API")
+router = SimpleRouter(trailing_slash=False)
+router.register(r'AuditEvent', views.ingestAuditEvent, basename="Test_API")
+router.register(r'AuditEvent/', views.ingestAuditEvent, basename="Test_API")
 
 
 urlpatterns = [ 
