@@ -214,6 +214,8 @@ class Tasklist(viewsets.ViewSet):
 
         sort_alphab = [3,13]
         if project.id in sort_alphab:
+            task_list = natsort.natsorted(task_list, key=lambda k: k['component']['title'])
+        else:
             task_list = natsort.natsorted(task_list, key=lambda k: k['component']['id'])
 
 
