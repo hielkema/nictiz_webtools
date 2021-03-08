@@ -76,5 +76,6 @@ def audit_async(audit_type=None, project=None, task_id=None):
         
         # logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
-        if tasks.count() == 1:
+        if task_id == None:
+            print(f"Skipping [mapping.tasks.qa_snomed.snomed_daily_build_active] - only run this in project mode")
             send_task('mapping.tasks.qa_snomed.snomed_daily_build_active', [], {'taskid':task.id})
