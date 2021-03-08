@@ -763,7 +763,7 @@ class MappingTargets(viewsets.ViewSet):
                         'finished' : query.finished,
                         'error' : query.error,
                         'failed' : query.failed,
-                        'result' : query.result,
+                        'numResults' : query.result.get('numResults','-'),
                         'correlation' : query.mapcorrelation,
                     })
                     # Add all results to a list for easy viewing
@@ -800,13 +800,22 @@ class MappingTargets(viewsets.ViewSet):
                     'correlation' : '447561005',
                 })
 
+                # Check for duplicates in ECL queries
+                result_concept_ids = []
+                for query in queries:
+                    result_concept_ids += query.result.get('concepts').keys()
+                duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
+                
+
                 return Response({
                     'queries': query_list, # List of ECL queries
                     'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
                     'allResults' : all_results, # Results of all ECL queries combined in 1 list
 
-                    'exclusion_list' : exclude_componentIDs,
+                    # 'exclusion_list' : exclude_componentIDs,
                     'excluded' : excluded_componentIDs,
+
+                    'duplicates_in_ecl' : duplicates_in_ecl,
 
                     'mappings' : mapping_list,
                     'mappings_unfinished' : mapping_list_unfinished,
