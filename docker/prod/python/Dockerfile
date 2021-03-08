@@ -12,4 +12,4 @@ WORKDIR /webserver
 EXPOSE 8000
 
 
-CMD ["gunicorn", "app.wsgi", "-t 60", "-b 0.0.0.0:8000"]
+CMD ["gunicorn", "app.wsgi", "--timeout 90", "--workers 12", "--log-level=debug", "-b 0.0.0.0:8000"]
