@@ -68,7 +68,9 @@ def audit_async(audit_type=None, project=None, task_id=None):
         
         if task.project_id.project_type == '4':
             # logger.info('Spawning QA scripts for ECL-1 queries')
-            send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+            if task_id == None:
+                print(f"Skipping [mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules] - only run this in project mode")
+                send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
             send_task('mapping.tasks.qa_ecl_duplicates.check_duplicate_rules', [], {'taskid':task.id})
             send_task('mapping.tasks.qa_recursive_exclusions.test_recursive_ecl_exclusion', [], {'taskid':task.id})
         

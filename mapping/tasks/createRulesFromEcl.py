@@ -78,6 +78,12 @@ def createRulesFromEcl(taskid):
             print(f"[Task createRulesFromEcl] ## Unhandled exception reverse mappings: {e}")
 
 
+        # Delete all rules related to the target component of these rules, in the project.
+        rules = MappingRule.objects.filter(
+            project_id = task.project_id,
+            target_component = task.source_component,
+        ).delete()
+
         # Loop through queries to find individual rules, put in list
         for query in queries:  
             print("Found query",query.id)
@@ -165,24 +171,25 @@ def createRulesFromEcl(taskid):
         # Cleanup - Remove rules that should not be there
         # print(f"Valid rules:\n {valid_rules}")
         ## Get all rules for this task
-        rules = MappingRule.objects.filter(
-            project_id = task.project_id,
-            target_component = task.source_component,
-        ).select_related(
-            'source_component'
-        )
-        for rule in rules:
-            # print(f"Checking {str(rule)}")
-            if valid_rules.get(rule.source_component.component_id):
-                if rule.mapcorrelation == valid_rules.get(rule.source_component.component_id).get('correlation'):
-                    # Correct ID and correlation; can stay
-                    True
-                else:
-                    # Correct ID, wrong correlation; Make it gone
-                    rule.delete()
-            else:
-                # Not present in valid_rules at all - delete
-                rule.delete()
+        ##### Changed: Delete all rules before export.
+        # rules = MappingRule.objects.filter(
+        #     project_id = task.project_id,
+        #     target_component = task.source_component,
+        # ).select_related(
+        #     'source_component'
+        # )
+        # for rule in rules:
+        #     # print(f"Checking {str(rule)}")
+        #     if valid_rules.get(rule.source_component.component_id):
+        #         if rule.mapcorrelation == valid_rules.get(rule.source_component.component_id).get('correlation'):
+        #             # Correct ID and correlation; can stay
+        #             True
+        #         else:
+        #             # Correct ID, wrong correlation; Make it gone
+        #             rule.delete()
+        #     else:
+        #         # Not present in valid_rules at all - delete
+        #         rule.delete()
 
 
         # Set all relevant ECL queries to 'done'
@@ -190,7 +197,7 @@ def createRulesFromEcl(taskid):
         for query in eclqueries:
             query.export_finished = True
             query.save()
-        send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+        # send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
     else:
         # No queries - remove all relevant mapping rules
         rules = MappingRule.objects.filter(
