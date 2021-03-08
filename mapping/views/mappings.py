@@ -663,163 +663,167 @@ class MappingTargets(viewsets.ViewSet):
 
             # Handle ECL-1 mapping targets
             elif task.project_id.project_type == '4':
-                ### Get all definitive mappings
-                mappings = MappingRule.objects.filter(
-                    project_id=task.project_id, 
-                    target_component=task.source_component).select_related(
-                        'source_component',
-                        'target_component',
-                    )
-                mappings = mappings.order_by('mapgroup', 'mappriority')
-                mapping_list = []
-                dependency_list = []
                 try:
-                    extra = mapping.target_component.component_extra_dict
-                except:
-                    extra = ""
-                for mapping in mappings:
-                    mapping_list.append({
-                        'id' : mapping.id,
-                        'source' : {
-                            'id': mapping.source_component.id,
-                            'component_id': mapping.source_component.component_id,
-                            'component_title': mapping.source_component.component_title,
-                        },
-                        'target' : {
-                            'id': mapping.target_component.id,
-                            'component_id': mapping.target_component.component_id,
-                            'component_title': mapping.target_component.component_title,
-                            'extra' : extra,
-                            'codesystem': {
-                                'title' : mapping.target_component.codesystem_id.codesystem_title,
-                                'version' : mapping.target_component.codesystem_id.codesystem_version,
-                                'id' : mapping.target_component.codesystem_id.id,
-                            },
-                        },
-                        'correlation' : mapping.mapcorrelation,
-                    })
-                
-
-                # Retrieve results from components that should be excluded
-                exclude_componentIDs = []
-                excluded_componentIDs = []
-                try:
-                    obj = MappingEclPartExclusion.objects.get(task = task)
-                    components = MappingCodesystemComponent.objects.filter(
-                            codesystem_id = obj.task.source_component.codesystem_id,
-                            component_id__in=list(obj.components)
+                    ### Get all definitive mappings
+                    mappings = MappingRule.objects.filter(
+                        project_id=task.project_id, 
+                        target_component=task.source_component).select_related(
+                            'source_component',
+                            'target_component',
+                            'target_component__codesystem_id'
                         )
-                    # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Will exclude ECL results from {str(components)}")
-                    # Loop components
-                    for component in components:
-                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclusion of {str(component)}")
-                        # For each, retrieve their tasks, in this same project
-                        exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
-                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Found tasks: {str(exclude_tasks)}")
-
-                        for exclude_task in exclude_tasks:
-                            # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclude_task {str(exclude_task)}")
-                            queries = MappingEclPart.objects.filter(task=exclude_task)
-
-                            for query in queries:
-                                # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
-                                try:
-                                    for key, value in query.result.get('concepts').items():
-                                        exclude_componentIDs.append({
-                                            'key' : key,
-                                            'component' : {
-                                                'component_id': exclude_task.source_component.component_id,
-                                                'title': exclude_task.source_component.component_title,
-                                            }
-                                        })
-                                except Exception as e:
-                                    # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Issue tijdens uitlezen resultaten: {e}")
-                                    True
-                        
-                        # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
-                    # print(f"Full exclude list: {exclude_componentIDs}")
-                except Exception as e:
-                    print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Unhandled exception reverse mappings: {e}")
-
-                # Get all ECL Queries - including cached snowstorm response
-                all_results = list()
-                query_list = list()
-                queries = MappingEclPart.objects.filter(task=task).select_related(
-                    'task'
-                ).order_by('id')
-                queries_unfinished = False
-                mapping_list_unfinished = False
-                i=0
-                for query in queries:
-                    i+=1
-                    if query.finished == False:
-                        queries_unfinished = True
-                    if query.export_finished == False:
-                        mapping_list_unfinished = True
-                    query_list.append({
-                        'id' : query.id,
-                        'description' : query.description,
-                        'query' : query.query,
-                        'finished' : query.finished,
-                        'error' : query.error,
-                        'failed' : query.failed,
-                        'numResults' : query.result.get('numResults','-'),
-                        'correlation' : query.mapcorrelation,
-                    })
-                    # Add all results to a list for easy viewing
+                    mappings = mappings.order_by('mapgroup', 'mappriority')
+                    mapping_list = []
+                    dependency_list = []
                     try:
-                        for key, result in query.result.get('concepts').items():
-                            excluded_ids = [ x['key'] for x in exclude_componentIDs ] 
-                            if key not in excluded_ids:
-                                # print(result)   
-                                _query = result
-                                _query.update({
-                                    'queryId' : query.id,
-                                    'query' : query.query,
-                                    'description' : query.description,
-                                    'correlation' : query.mapcorrelation,
-                                })
-                                all_results.append(_query) 
-                            else:
-                                exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
-                                _query = result
-                                _query.update({
-                                    'exclusion_reason': exclusion_reason,
-                                })
-                                excluded_componentIDs.append(result)
+                        extra = mapping.target_component.component_extra_dict
                     except:
-                        print("Retrieve mappings: No results")
-                query_list.append({
-                    'id' : 'extra',
-                    'description' : '',
-                    'query' : '',
-                    'finished' : False,
-                    'error' : False,
-                    'failed' : False,
-                    'result' : '',
-                    'correlation' : '447561005',
-                })
+                        extra = ""
+                    for mapping in mappings:
+                        mapping_list.append({
+                            'id' : mapping.id,
+                            'source' : {
+                                'id': mapping.source_component.id,
+                                'component_id': mapping.source_component.component_id,
+                                'component_title': mapping.source_component.component_title,
+                            },
+                            'target' : {
+                                'id': mapping.target_component.id,
+                                'component_id': mapping.target_component.component_id,
+                                'component_title': mapping.target_component.component_title,
+                                'extra' : extra,
+                                'codesystem': {
+                                    'title' : mapping.target_component.codesystem_id.codesystem_title,
+                                    'version' : mapping.target_component.codesystem_id.codesystem_version,
+                                    'id' : mapping.target_component.codesystem_id.id,
+                                },
+                            },
+                            'correlation' : mapping.mapcorrelation,
+                        })
+                    
 
-                # Check for duplicates in ECL queries
-                result_concept_ids = []
-                for query in queries:
-                    result_concept_ids += query.result.get('concepts').keys()
-                duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
-                
+                    # Retrieve results from components that should be excluded
+                    exclude_componentIDs = []
+                    excluded_componentIDs = []
+                    try:
+                        obj = MappingEclPartExclusion.objects.get(task = task)
+                        components = MappingCodesystemComponent.objects.filter(
+                                codesystem_id = obj.task.source_component.codesystem_id,
+                                component_id__in=list(obj.components)
+                            )
+                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Will exclude ECL results from {str(components)}")
+                        # Loop components
+                        for component in components:
+                            # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclusion of {str(component)}")
+                            # For each, retrieve their tasks, in this same project
+                            exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
+                            # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Found tasks: {str(exclude_tasks)}")
 
-                return Response({
-                    'queries': query_list, # List of ECL queries
-                    'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
-                    'allResults' : all_results, # Results of all ECL queries combined in 1 list
+                            for exclude_task in exclude_tasks:
+                                # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclude_task {str(exclude_task)}")
+                                queries = MappingEclPart.objects.filter(task=exclude_task)
 
-                    # 'exclusion_list' : exclude_componentIDs,
-                    'excluded' : excluded_componentIDs,
+                                for query in queries:
+                                    # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
+                                    try:
+                                        for key, value in query.result.get('concepts').items():
+                                            exclude_componentIDs.append({
+                                                'key' : key,
+                                                'component' : {
+                                                    'component_id': exclude_task.source_component.component_id,
+                                                    'title': exclude_task.source_component.component_title,
+                                                }
+                                            })
+                                    except Exception as e:
+                                        # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Issue tijdens uitlezen resultaten: {e}")
+                                        True
+                            
+                            # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
+                        # print(f"Full exclude list: {exclude_componentIDs}")
+                    except Exception as e:
+                        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Unhandled exception reverse mappings: {e}")
 
-                    'duplicates_in_ecl' : duplicates_in_ecl,
+                    # Get all ECL Queries - including cached snowstorm response
+                    all_results = list()
+                    query_list = list()
+                    queries = MappingEclPart.objects.filter(task=task).select_related(
+                        'task'
+                    ).order_by('id')
+                    queries_unfinished = False
+                    mapping_list_unfinished = False
+                    result_concept_ids = []
+                    i=0
+                    for query in queries:
+                        result_concept_ids += query.result.get('concepts').keys()
 
-                    'mappings' : mapping_list,
-                    'mappings_unfinished' : mapping_list_unfinished,
-                })
+                        i+=1
+                        if query.finished == False:
+                            queries_unfinished = True
+                        if query.export_finished == False:
+                            mapping_list_unfinished = True
+                        query_list.append({
+                            'id' : query.id,
+                            'description' : query.description,
+                            'query' : query.query,
+                            'finished' : query.finished,
+                            'error' : query.error,
+                            'failed' : query.failed,
+                            'numResults' : query.result.get('numResults','-'),
+                            'correlation' : query.mapcorrelation,
+                        })
+                        # Add all results to a list for easy viewing
+                        try:
+                            for key, result in query.result.get('concepts').items():
+                                excluded_ids = [ x['key'] for x in exclude_componentIDs ] 
+                                if key not in excluded_ids:
+                                    # print(result)   
+                                    _query = result
+                                    _query.update({
+                                        'queryId' : query.id,
+                                        'query' : query.query,
+                                        'description' : query.description,
+                                        'correlation' : query.mapcorrelation,
+                                    })
+                                    all_results.append(_query) 
+                                else:
+                                    exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
+                                    _query = result
+                                    _query.update({
+                                        'exclusion_reason': exclusion_reason,
+                                    })
+                                    excluded_componentIDs.append(result)
+                        except:
+                            print("Retrieve mappings: No results")
+                    query_list.append({
+                        'id' : 'extra',
+                        'description' : '',
+                        'query' : '',
+                        'finished' : False,
+                        'error' : False,
+                        'failed' : False,
+                        'result' : '',
+                        'correlation' : '447561005',
+                    })
+
+                    # Check for duplicates in ECL queries
+                    duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
+                    
+
+                    return Response({
+                        'queries': query_list, # List of ECL queries
+                        'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
+                        'allResults' : all_results, # Results of all ECL queries combined in 1 list
+
+                        # 'exclusion_list' : exclude_componentIDs,
+                        'excluded' : excluded_componentIDs,
+
+                        'duplicates_in_ecl' : duplicates_in_ecl,
+
+                        'mappings' : mapping_list,
+                        'mappings_unfinished' : mapping_list_unfinished,
+                    })
+                except Exception as e:
+                    print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} - ERROR: {e}")
 
 class MappingEclToRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
