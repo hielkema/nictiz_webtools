@@ -17,4 +17,4 @@ class StatusReport(viewsets.ViewSet):
         for key, value in request.headers.items():
             print(f"[serverStatus/StatusReport list] {key} : {value}")
         print(f"[serverStatus/StatusReport list] {request.data}")
-        return Response('All systems are go', status=status.HTTP_200_OK)
+        return Response('All systems are go', status=status.HTTP_404_NOT_FOUND)
