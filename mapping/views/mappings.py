@@ -754,7 +754,10 @@ class MappingTargets(viewsets.ViewSet):
                     result_concept_ids = []
                     i=0
                     for query in queries:
-                        result_concept_ids += query.result.get('concepts').keys()
+                        try:
+                            result_concept_ids += query.result.get('concepts',{}).keys()
+                        except Exception as e:
+                            print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} - Error adding ECL results to list (empty?): {e}")
 
                         i+=1
                         if query.finished == False:
