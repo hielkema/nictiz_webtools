@@ -48,8 +48,10 @@ def audit_async(audit_type=None, project=None, task_id=None):
             'status',
         ).filter(project_id=project, id=task_id).order_by('id')
 
+    num_tasks = tasks.count()
+
     ###### Slowly moving to separate audit QA scripts.
-    logger.info(f'Orchestrator is spawning QA processes for {tasks.count()} task(s) in project {project.id} - {project.title}')
+    logger.info(f'Orchestrator is spawning QA processes for {num_tasks} task(s) in project {project.id} - {project.title}')
     
     # Spawn QA for labcodeset<->NHG tasks
     for task in tasks:
@@ -68,7 +70,7 @@ def audit_async(audit_type=None, project=None, task_id=None):
         
         if task.project_id.project_type == '4':
             # logger.info('Spawning QA scripts for ECL-1 queries')
-            if task_id == None:
+            if num_tasks > 1:
                 print(f"Skipping [mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules] - only run this in project mode")
                 send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
             send_task('mapping.tasks.qa_ecl_duplicates.check_duplicate_rules', [], {'taskid':task.id})
@@ -76,6 +78,6 @@ def audit_async(audit_type=None, project=None, task_id=None):
         
         # logger.info('Spawning general QA scripts for SNOMED')
         # Snowstorm daily build SNOWSTORM does not like DDOS - only run on individual tasks, not on entire projects.
-        if task_id == None:
-            print(f"Skipping [mapping.tasks.qa_snomed.snomed_daily_build_active] - only run this in project mode")
+        if num_tasks == 1:
+            print(f"Skipping [mapping.tasks.qa_snomed.snomed_daily_build_active] - only run this in single task mode")
             send_task('mapping.tasks.qa_snomed.snomed_daily_build_active', [], {'taskid':task.id})
