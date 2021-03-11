@@ -928,8 +928,14 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
         ).order_by("id")
         for rule in rules:
             output_from.append({
-                'source': str(rule.source_component.component_id),
-                'target': str(rule.target_component.component_id),
+                'source': {
+                    'codesystem' : str(rule.source_component.codesystem_id.codesystem_title),
+                    'code' : str(rule.source_component.component_id),
+                },
+                'target': {
+                    'codesystem' : str(rule.target_component.codesystem_id.codesystem_title),
+                    'code' : str(rule.target_component.component_id),
+                },
             })
         # Regels náár codesysteem toe
         output_to = []
@@ -938,8 +944,14 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
         ).order_by("id")
         for rule in rules:
             output_to.append({
-                'source': str(rule.source_component.component_id),
-                'target': str(rule.target_component.component_id),
+                'source': {
+                    'codesystem' : str(rule.source_component.codesystem_id.codesystem_title),
+                    'code' : str(rule.source_component.component_id),
+                },
+                'target': {
+                    'codesystem' : str(rule.target_component.codesystem_id.codesystem_title),
+                    'code' : str(rule.target_component.component_id),
+                },
             })
         
 
