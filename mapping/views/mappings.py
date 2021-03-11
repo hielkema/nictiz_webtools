@@ -927,14 +927,20 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
             'source_component'
         ).order_by("id")
         for rule in rules:
-            output_from.append(str(rule.source_component.component_id))
+            output_from.append({
+                'source': str(rule.source_component.component_id),
+                'target': str(rule.target_component.component_id),
+            })
         # Regels náár codesysteem toe
         output_to = []
         rules = MappingRule.objects.filter(target_component__codesystem_id = codesystem).select_related(
             'target_component'
         ).order_by("id")
         for rule in rules:
-            output_to.append(str(rule.target_component.component_id))
+            output_to.append({
+                'source': str(rule.source_component.component_id),
+                'target': str(rule.target_component.component_id),
+            })
         
 
         return Response({
