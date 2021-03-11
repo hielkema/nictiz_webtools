@@ -25,7 +25,10 @@ logger = get_task_logger(__name__)
 @shared_task
 def createRulesFromEcl(taskid):
     print("Task createRulesFromEcl received by celery")
-    task = MappingTask.objects.get(id=taskid)
+    task = MappingTask.objects.select_related(
+                'project_id',
+                'source_component',
+                ).get(id=taskid)
 
     # Put the results of all ECL queries for the task in 1 list
     all_results = list()
@@ -34,170 +37,124 @@ def createRulesFromEcl(taskid):
     ).order_by('id')
     
     if queries:
-        # Create list of rules that should be present
-        # Using a dictionary means that every component can only be present in 1 rule - last one in the loop below wins.
-        # This is on purpose; duplicate rules cannot exist.
-        valid_rules = {}
-
-        # Set all relevant ECL queries to 'running'
-        eclqueries = MappingEclPart.objects.filter(task=task)
-        for query in eclqueries:
-            query.export_finished = False
-            query.save()
-        
-        # Find component ID's that should be excluded
-        exclude_componentIDs = []
-        excluded_componentIDs = []
         try:
-            obj = MappingEclPartExclusion.objects.get(task = task)
-            components = MappingCodesystemComponent.objects.filter(
-                    codesystem_id = obj.task.source_component.codesystem_id,
-                    component_id__in=list(obj.components)
-                )
-            # print(f"Will exclude ECL results from {str(components)}")
-            # Loop components
-            for component in components:
-                # print(f"Handling exclusion of {str(component)}")
-                # For each, retrieve their tasks, in this same project
-                exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
-                # print(f"Found tasks: {str(exclude_tasks)}")
-                for exclude_task in exclude_tasks:
-                    # print(f"Handling exclude_task {str(exclude_task)}")
-                    exclusion_queries = MappingEclPart.objects.filter(task=exclude_task)
-                    for exclusion_query in exclusion_queries:
-                        # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(exclusion_query.result)}] \n{list(exclusion_query.result.get('concepts'))}")
-                        try:
-                            for key, value in exclusion_query.result.get('concepts').items():
-                                exclude_componentIDs.append(key)
-                        except Exception as e:
-                            print(f"[Task createRulesFromEcl] ## Issue tijdens uitlezen resultaten: {e}")
-
-                # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
-            # print(f"Full exclude list: {exclude_componentIDs}")
-        except Exception as e:
-            print(f"[Task createRulesFromEcl] ## Unhandled exception reverse mappings: {e}")
+            error = False
+            output = True
+            print(f"Creating rules for task {taskid} from project {task.project_id}")
 
 
-        # Delete all rules related to the target component of these rules, in the project.
-        rules = MappingRule.objects.filter(
-            project_id = task.project_id,
-            target_component = task.source_component,
-        ).delete()
-
-        # Loop through queries to find individual rules, put in list
-        for query in queries:  
-            print("Found query",query.id)
-            if query.finished == False:
-                queries_unfinished = True
-            if query.finished:
-                print("Query is finished, let's go")
-                # Add all results to a list for easy viewing
-                try:
-                    for key, result in query.result.get('concepts').items():
-                        if key not in exclude_componentIDs:
-                            # print(result)   
-                            _query = result
-                            _query.update({
-                                # 'queryId' : query.id,
-                                'query' : query.query,
-                                # 'description' : query.description,
-                                'correlation' : query.mapcorrelation,
-                            })
-                            # Append to all_results for creation
-                            all_results.append(_query)
-                            
-                            # Append to valid_rules for validation after
-                            valid_rules.update({
-                                result.get('id') : {
-                                    'correlation' : query.mapcorrelation,
-                                }
-                            })
-                            # print(f"{key} mag aangemaakt worden!")
-                        else:
-                            # print(f"{key} mag NIET aangemaakt worden!")
-                            True
-                except:
-                    print(f"Retrieve mappings: No results in query {query.id}")
+            # Delete any existing conflicting rules
+            rules = MappingRule.objects.filter(
+                project_id          = task.project_id,
+                target_component    = task.source_component,
+            ).delete()
 
 
+            # Put the results of all ECL queries for the task in 1 list
+            queries = MappingEclPart.objects.filter(task=task).select_related(
+                'task'
+            ).order_by('id')
 
+            # Set queries to in progress
+            queries.export_finished = False
 
-        ## Create new rules
-        for concept in all_results:
+            # Find component ID's that should be excluded
+            exclude_componentIDs = []
+            excluded_componentIDs = []
             try:
-                # print(f"Handling rule for concept {concept.get('id')}")
-                # print("Concept",concept.get('id'))
-                # print("Correlation",concept.get('correlation'))
-
-                # If concepts from the ECL query are not present, import them and try again.
-                try:
-                    component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-                except:
-                    print(f"[@shared task - createRulesFromEcl] Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.\nError: [{str(e)}]")
-                    task = import_snomed_async(str(concept.get('id')))
-                    while task.result != 'SUCCESS':
-                        print("Waiting for data to be retrieved.....")
-                        time.sleep(1)
-                    try:
-                        print("Trying again")
-                        component = MappingCodesystemComponent.objects.get(component_id=concept.get('id'))
-                    except Exception as e:
-                        print(f"[@shared task - createRulesFromEcl] REPEATED Error while selecting SNOMED Concept {concept.get('id')} from database! Going to retrieve it, and all descendants to be sure.")
-                        print(f"Giving up. Error [{str(e)}]")
-
-                existing = MappingRule.objects.filter(
-                    project_id = task.project_id,
-                    source_component = component,
-                    target_component = task.source_component,
-                    mapcorrelation = concept.get('correlation'),
-                )
-                if existing.count() == 0:
-                    # print("Start get_or_create")
-                    rule, created = MappingRule.objects.get_or_create(
-                        project_id = task.project_id,
-                        source_component = component,
-                        target_component = task.source_component,
-                        mapcorrelation = concept.get('correlation'),
+                obj = MappingEclPartExclusion.objects.get(task = task)
+                components = MappingCodesystemComponent.objects.filter(
+                        codesystem_id = obj.task.source_component.codesystem_id,
+                        component_id__in=list(obj.components)
                     )
-                    # print("Regel in DB", rule)
-                    # print("Created?", created)
-                    print("\n\n\n")
-                else:
-                    # print(f"Already {existing.count()} rules in database - skip creating another")
-                    True
+                # Loop components
+                for component in components:
+                    # For each, retrieve their tasks, in this same project
+                    exclude_tasks = MappingTask.objects.filter(project_id = task.project_id, source_component=component)
+                    for exclude_task in exclude_tasks:
+                        exclusion_queries = MappingEclPart.objects.filter(task=exclude_task)
+                        for exclusion_query in exclusion_queries:
+                            try:
+                                for key, value in exclusion_query.result.get('concepts').items():
+                                    exclude_componentIDs.append(key)
+                            except Exception as e:
+                                print(f"[Task createRulesFromEcl] ## Issue tijdens uitlezen resultaten: {e}")
+                                error = e
+
             except Exception as e:
-                print(f"[Exception in shared task createRulesFromEcl] - intended to handle {concept.get('id')} - Error: [{str(e)}]")
-
-        # Cleanup - Remove rules that should not be there
-        # print(f"Valid rules:\n {valid_rules}")
-        ## Get all rules for this task
-        ##### Changed: Delete all rules before export.
-        # rules = MappingRule.objects.filter(
-        #     project_id = task.project_id,
-        #     target_component = task.source_component,
-        # ).select_related(
-        #     'source_component'
-        # )
-        # for rule in rules:
-        #     # print(f"Checking {str(rule)}")
-        #     if valid_rules.get(rule.source_component.component_id):
-        #         if rule.mapcorrelation == valid_rules.get(rule.source_component.component_id).get('correlation'):
-        #             # Correct ID and correlation; can stay
-        #             True
-        #         else:
-        #             # Correct ID, wrong correlation; Make it gone
-        #             rule.delete()
-        #     else:
-        #         # Not present in valid_rules at all - delete
-        #         rule.delete()
+                print(f"[Task createRulesFromEcl] ## Unhandled exception reverse mappings: {e}")
+                error = e
 
 
-        # Set all relevant ECL queries to 'done'
-        eclqueries = MappingEclPart.objects.filter(task=task)
-        for query in eclqueries:
+            # For each ECL query:
+            all_queries = queries.values()
+            print("Start export for queries")
+            i=0
+            rules_to_create = list()
+            for query in all_queries:
+                if query['finished'] == True:
+                    try:
+                        i+=1
+                        print(f"Handling query {i}")
+                        # Collect all SNOMED concepts we need
+                        snomed_ids = query['result']['concepts'].keys()
+                        snomed_concepts = list(MappingCodesystemComponent.objects.filter(component_id__in = snomed_ids).values(
+                            'id',
+                            'component_id'
+                        ))
+
+                        target_component_id = task.source_component_id
+                        for snomed_concept in snomed_concepts:
+                            if snomed_concept['component_id'] not in exclude_componentIDs:
+
+                                rules_to_create.append(MappingRule(
+                                    project_id_id = task.project_id_id,
+                                    source_component_id = snomed_concept['id'],
+                                    target_component_id = target_component_id,
+                                    mapgroup = 1,
+                                    mappriority = 1,
+                                    mapcorrelation = query['mapcorrelation'],
+                                    active = True
+                                ))
+                            else:
+                                exclude_componentIDs.append(snomed_concept['component_id'])
+
+                        print(f"Finished handling query {i}")
+                    except Exception as e:
+                        print(f"[Task createRulesFromEcl] Error creating bulk task list for query #{i}: {str(e)}")
+                        output = False
+                        error = e
+                else:
+                    print("Trying to export unfinished query, skipping.")
+                
+            # Bulk create these rules
+            print(f"Bulk create all {len(rules_to_create)} rules.")
+            MappingRule.objects.bulk_create(rules_to_create, batch_size=5000)
+            print("Finished creating rules.")
+
+            rules = MappingRule.objects.filter(
+                project_id          = task.project_id,
+                target_component    = task.source_component,
+            )
+            print(f"Double check: {len(rules)} rules created.")
+
+        except Exception as e:
+            print("[Task createRulesFromEcl] Unhandled exception",str(e))
+            error = e
+            output = False
+        
+        for query in queries:
             query.export_finished = True
+            query.failed = False
+            query.error = None
             query.save()
-        # send_task('mapping.tasks.qa_ecl_vs_rules.ecl_vs_rules', [], {'taskid':task.id})
+        if output == False:
+            print("Er is iets niet in orde met deze export.")
+            for query in queries:
+                query.failed = True
+                query.error = f"Tijdens het aanmaken van de regels is voor deze queries iets mis gegaan. Zie server logs voor details. Hint (indien beschikbaar): {error}"
+                query.save()
+
     else:
         # No queries - remove all relevant mapping rules
         rules = MappingRule.objects.filter(

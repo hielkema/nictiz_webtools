@@ -96,6 +96,7 @@ class MappingCodesystemComponent(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['codesystem_id']),
+            models.Index(fields=['component_id']),
         ]
 
     def __str__(self):
