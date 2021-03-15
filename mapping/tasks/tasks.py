@@ -1148,7 +1148,10 @@ def exportCodesystemToRCRules(rc_id, user_id):
         return output
 
     # Select RC
-    rc = MappingReleaseCandidate.objects.get(id = rc_id)
+    rc = MappingReleaseCandidate.objects.select_related(
+        'codesystem',
+        'target_codesystem',
+    ).get(id = rc_id)
     if rc.status != 3: # 3=production
         rc.finished = False
         rc.save()
@@ -1181,7 +1184,15 @@ def exportCodesystemToRCRules(rc_id, user_id):
         # Only include tasks included in the RC spec
         project_list = rc.export_project.values_list('id')
         print("Only include project ID's: ",project_list)
-        tasks = MappingTask.objects.all().filter(project_id__id__in = project_list)
+        tasks = MappingTask.objects.all().filter(project_id__id__in = project_list).select_related(
+            'project_id',
+            'source_component',
+            'source_component__codesystem_id',
+            'source_codesystem',
+            'target_codesystem',
+            'user',
+            'status',
+        )
 
         print('Found',tasks.count(),'tasks.')
         
@@ -1189,7 +1200,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
         valid_rules = []
         # Loop through tasks
         for task in tasks:
-            if task.status != task.project_id.status_complete:
+            if (task.status != task.project_id.status_complete) and (rc.import_all == False):
                 print(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 debug_list.append(f"Ignored a task [{task.project_id.id} / {str(task.id)} / {task.source_component.component_id}] with a status [{task.status.id} {task.status.status_title}] other than completed [{task.project_id.status_complete.id} {task.project_id.status_complete.status_title}] - should probably be removed from the dev database, Ok ok ill do this now... Task ID: {str(task.id)}")
                 # Remove all rules in the RC database originating from this task, since it is rejected.
@@ -1210,7 +1221,7 @@ def exportCodesystemToRCRules(rc_id, user_id):
                 
                 rc_rules.delete()
 
-            else:
+            elif (task.status == task.project_id.status_complete) or (rc.import_all == True):
                 print(f"Handle task {task.id}")
                 if task.project_id.project_type == '1':
                     # In type 1 - source_component is used as SOURCE for all related rules

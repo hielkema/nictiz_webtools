@@ -260,7 +260,10 @@ class MappingReleaseCandidate(models.Model):
     
     # If True: export ALL rules, regardless of fiat/veto
     export_all = models.BooleanField(default=False) 
-    
+
+    # If True: export ALL tasks, regardless of task status
+    import_all = models.BooleanField(default=False)
+
     # Status of exporet
     finished = models.BooleanField(default=False)
     

@@ -23,6 +23,8 @@ router_1_0.register(r'create_tasks', views.CreateTasks, basename="Create_Mapping
 
 router_1_0.register(r'progress', views.progressReturnAll, basename="progress_reports_Return_All")
 
+router_1_0.register(r'test', views.optimizedCreateRules, basename="optimizedCreateRules")
+
 router_1_0.register(r'audits', views.MappingAudits, basename="Audits")
 router_1_0.register(r'audits_per_project', views.MappingAuditsPerProject, basename="Audits per project")
 router_1_0.register(r'audit_whitelist', views.MappingAuditWhitelist, basename="Audits whitelist")
