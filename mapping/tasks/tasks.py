@@ -1469,7 +1469,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             # Translate the map correlation
                             equivalence = single_rule.mapcorrelation
                             for code, readable in correlation_options:
-                                equivalence = equivalence.replace(code, readable)
+                                try:
+                                    equivalence = equivalence.replace(code, readable)
+                                except:
+                                    continue
                             
                             # Create output dict
                             output = {
@@ -1534,7 +1537,10 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
             ]
         status = rc.status
         for code, readable in status_options:
-            status = status.replace(code, readable)
+            try:
+                status = status.replace(code, readable)
+            except:
+                continue
 
         contact = [{
             "telecom": [
