@@ -488,7 +488,10 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     ]
                     correlation = rule.get('mapcorrelation')
                     for code, readable in correlation_options:
-                        correlation = correlation.replace(code, readable)
+                        try:
+                            correlation = correlation.replace(code, readable)
+                        except:
+                            continue
                     
                     # Handle foreign keys that could have been removed
                     try:
@@ -632,7 +635,10 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             ]
             status = rc.status
             for code, readable in status_options:
-                status = status.replace(code, readable)
+                try:
+                    status = status.replace(code, readable)
+                except:
+                    continue
 
             return Response({
                 'message' : 'Lijst met alle items voor RC',
