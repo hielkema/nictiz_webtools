@@ -230,14 +230,25 @@ class MappingDialog(viewsets.ViewSet):
                         ).order_by('mapgroup','mappriority')
 
                         new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
-                        mapping = MappingRule.objects.create(
-                            project_id = task.project_id,
-                            source_component = task.source_component,
-                            target_component = new_target,
-                            mapgroup = (existing_rules.last().mapgroup),            # Prefill the group with highest existing group
-                            mappriority = (existing_rules.last().mappriority + 1),  # Prefill the priority with highest existing priority + 1
-                            active = True,
-                        )
+
+                        if existing_rules.exists():
+                            mapping = MappingRule.objects.create(
+                                project_id = task.project_id,
+                                source_component = task.source_component,
+                                target_component = new_target,
+                                mapgroup = (existing_rules.last().mapgroup),            # Prefill the group with highest existing group
+                                mappriority = (existing_rules.last().mappriority + 1),  # Prefill the priority with highest existing priority + 1
+                                active = True,
+                            )
+                        else:
+                            mapping = MappingRule.objects.create(
+                                project_id = task.project_id,
+                                source_component = task.source_component,
+                                target_component = new_target,
+                                mapgroup = 1,   
+                                mappriority = 1,
+                                active = True,
+                            )
                         mapping.save()
                     else:
                         print('Betreft bestaande mapping.')
