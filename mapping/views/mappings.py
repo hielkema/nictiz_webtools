@@ -222,11 +222,20 @@ class MappingDialog(viewsets.ViewSet):
                         print('ID=extra -> Zou een nieuwe mapping moeten worden.')
                         print('Task',request.data.get('task'))
                         print('Creating new mapping to component',request.data.get('new').get('component').get('id'))
+
+                        # Fetch the existing rules, ordered by group > priority
+                        existing_rules = MappingRule.objects.filter(
+                            project_id = task.project_id,
+                            source_component = task.source_component,
+                        ).order_by('mapgroup','mappriority')
+
                         new_target = MappingCodesystemComponent.objects.get(id=request.data.get('new').get('component').get('id'))
                         mapping = MappingRule.objects.create(
                             project_id = task.project_id,
                             source_component = task.source_component,
                             target_component = new_target,
+                            mapgroup = (existing_rules.last().mapgroup),            # Prefill the group with highest existing group
+                            mappriority = (existing_rules.last().mappriority + 1),  # Prefill the priority with highest existing priority + 1
                             active = True,
                         )
                         mapping.save()
