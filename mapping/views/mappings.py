@@ -828,8 +828,21 @@ class MappingTargets(viewsets.ViewSet):
                         'correlation' : '447561005',
                     })
 
+
+
                     # Check for duplicates in ECL queries
-                    duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
+                    #region
+                    #### Method 1 : works, but slow
+                    # duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
+                    
+                    #### Method 2 : seems to provide the same result, testing in production commences.
+                    deduped_ecl = set(result_concept_ids)
+                    ecl_dupes = []
+                    for sctid in deduped_ecl:
+                        if result_concept_ids.count(sctid) > 1:
+                            ecl_dupes.append(sctid)
+                    duplicates_in_ecl = ecl_dupes
+                    #endregion
                     
 
                     return Response({
