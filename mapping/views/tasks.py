@@ -342,6 +342,7 @@ class RelatedTasks(viewsets.ViewSet):
                 'source_component' : {
                     'component_id' : task.source_component.component_id,
                     'component_title' : task.source_component.component_title,
+                    'codesystem_title' : task.source_component.codesystem_id.codesystem_title,
                 },
                 'project' : {
                     'id' : task.project_id.id,
