@@ -835,7 +835,7 @@ class MappingTargets(viewsets.ViewSet):
                     #### Method 1 : works, but slow
                     # duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
                     
-                    #### Method 2 : seems to provide the same result, testing in production commences.
+                    #### Method 2 : seems to provide the same result, in about 1/5th of the time.
                     deduped_ecl = set(result_concept_ids)
                     ecl_dupes = []
                     for sctid in deduped_ecl:

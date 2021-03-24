@@ -640,20 +640,20 @@ def import_nhgverrichtingen_task():
 
 @shared_task
 def import_apache_async():
-    df = read_excel('/webserver/mapping/resources/apache/20171120_apache-snomed_eerstetab_Basislijst.xlsx')
+    df = read_excel('/webserver/mapping/resources/apache/extractie_20171120.xlsx')
     # Vervang lege cellen door False
     df=df.fillna(value=False)
     for index, row in df.iterrows():
         codesystem = MappingCodesystem.objects.get(id='10') #10 = apache
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
-            component_id=row['ID'],
+            component_id=row['id'],
         )
         # Add data not used for matching
 
         #### Add sticky audit hit if concept was already in database and title changed
-        if (obj.component_title != None) and (obj.component_title != row['APACHE IV TERM']):
-            print(f"{obj.component_title} in database != {row['APACHE IV TERM']} - sticky audit hit maken")
+        if (obj.component_title != None) and (obj.component_title != '') and (obj.component_title != row['description']):
+            print(f"{obj.component_title} in database != {row['description']} - sticky audit hit maken")
             # Find tasks using this component
             tasks = MappingTask.objects.filter(source_component = obj)
             for task in tasks:
@@ -661,19 +661,20 @@ def import_apache_async():
                         task=task,
                         audit_type="IMPORT",
                         sticky=True,
-                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. [{obj.component_title} => {row['description']}] Controleer of de betekenis nog gelijk is.",
                     )
         else:
-            print(f"{obj.component_title} in database == {row['APACHE IV TERM']} - geen hits")
+            print(f"{obj.component_title} in database == {row['description']} - geen hits")
 
-        obj.component_title     = row['APACHE IV TERM']
+        obj.component_title     = row['description']
 
-        legacy_map = ''
-        for item in df[df['ID'] == row['ID']].values:
-            legacy_map += f"{item[2]} |{item[3]}|\n"
+        ##### Legacy map not available for current extraction
+        # legacy_map = ''
+        # for item in df[df['id'] == row['id']].values:
+        #     legacy_map += f"{item[2]} |{item[3]}|\n"
 
         extra = {
-            'Legacy map' : legacy_map,
+            # 'Legacy map' : legacy_map,
             'Actief' : 'True', # Deze tabel heeft geen aanduiding voor actief/inactief - hardcoded actief.
         }
         obj.component_extra_dict = extra
