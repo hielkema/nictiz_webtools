@@ -212,6 +212,7 @@ class Tasklist(viewsets.ViewSet):
                 'category' : task.category,
             })
 
+        # Sort alphabetically for these specific project ids. All others: sort on component id.
         sort_alphab = [3,13]
         if project.id in sort_alphab:
             task_list = natsort.natsorted(task_list, key=lambda k: k['component']['title'])
