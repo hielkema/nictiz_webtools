@@ -22,7 +22,6 @@ import json
 import urllib.request
 import re
 import natsort
-import uuid
 
 from rest_framework import viewsets
 from ..serializers import *
@@ -576,9 +575,7 @@ class MappingTargets(viewsets.ViewSet):
 
 
     def retrieve(self, request, pk=None):
-        request_uuid = str(uuid.uuid4())
-        print(f"[mappings/MappingTargets retrieve] {request_uuid} | requested by {request.user} - {pk}")
-        requestStart = time.time()
+        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk}")
         task = MappingTask.objects.get(id=pk)
         current_user = User.objects.get(id=request.user.id)
         
@@ -724,13 +721,11 @@ class MappingTargets(viewsets.ViewSet):
                             },
                             'correlation' : mapping.mapcorrelation,
                         })
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Fetched all mapping rules at {time.time()-requestStart}.")
                     
 
                     # Retrieve results from components that should be excluded
                     exclude_componentIDs = []
                     excluded_componentIDs = []
-                    exclusion_plus_reason = []
                     try:
                         obj = MappingEclPartExclusion.objects.select_related(
                             'task',
@@ -743,7 +738,7 @@ class MappingTargets(viewsets.ViewSet):
                             )
                         # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Will exclude ECL results from {str(components)}")
                         # Loop components
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Found {components.count()} components in exclusions.")
+                        print(f"Found {components.count()} components in exclusions.")
                         for component in components:
                             # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Handling exclusion of {str(component)}")
                             # For each, retrieve their tasks, in this same project
@@ -758,15 +753,12 @@ class MappingTargets(viewsets.ViewSet):
                                     # print(f"Found query result for {exclude_task.source_component.component_title}: [{str(query.result)}] \n{list(query.result.get('concepts'))}")
                                     try:
                                         for key, value in query.result.get('concepts').items():
-                                            exclusion_plus_reason.append({
-                                                'reason' : {
+                                            exclude_componentIDs.append({
+                                                'key' : key,
+                                                'component' : {
                                                     'component_id': exclude_task.source_component.component_id,
                                                     'title': exclude_task.source_component.component_title,
-                                                },
-                                                'component' : {
-                                                    'id': key,
-                                                    'fsn': value['fsn']['term']
-                                                },
+                                                }
                                             })
                                     except Exception as e:
                                         # print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Issue tijdens uitlezen resultaten: {e}")
@@ -775,16 +767,12 @@ class MappingTargets(viewsets.ViewSet):
                             # print(f"Next component - list is now: {exclude_componentIDs}\n\n")
                         # print(f"Full exclude list: {exclude_componentIDs}")
                     except Exception as e:
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | requested by {request.user} - {pk} ## Unhandled exception reverse mappings: {e}")
-
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Determined all exclusions at {time.time()-requestStart}.")
-
+                        print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} ## Unhandled exception reverse mappings: {e}")
 
                     # Get all ECL Queries - including cached snowstorm response
                     all_results = list()
                     query_list = list()
-                    filter_time = 0
-                    excluded_ids = [ x['component'] for x in exclusion_plus_reason ] 
+                    excluded_ids = [ x['key'] for x in exclude_componentIDs ] 
                     queries = MappingEclPart.objects.filter(task=task).select_related(
                         'task'
                     ).order_by('id')
@@ -792,16 +780,16 @@ class MappingTargets(viewsets.ViewSet):
                     mapping_list_unfinished = False
                     result_concept_ids = []
                     i=0
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Handling {len(queries)} queries. Started at {time.time()-requestStart}")
+                    print(f"Handling {len(queries)} queries.")
                     for query in queries:
                         i+=1
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding keys to list: result_concept_ids")
+                        print(f"Query {i} - adding keys to list: result_concept_ids")
                         try:
                             result_concept_ids += query.result.get('concepts',{}).keys()
                         except Exception as e:
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | requested by {request.user} - {pk} - Error adding ECL results to list (empty?): {e}")
+                            print(f"[mappings/MappingTargets retrieve] requested by {request.user} - {pk} - Error adding ECL results to list (empty?): {e}")
 
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding query details to list: query_list")
+                        print(f"Query {i} - adding query details to list: query_list")
                         if query.finished == False:
                             queries_unfinished = True
                         if query.export_finished == False:
@@ -817,9 +805,11 @@ class MappingTargets(viewsets.ViewSet):
                             'correlation' : query.mapcorrelation,
                         })
                         # Add all results to a list for easy viewing
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding results of query to list: all_results + handling list excluded_componentIDs")
+                        print(f"Query {i} - adding results of query to list: all_results + handling list excluded_componentIDs")
                         try:
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Start looping all concepts in ECL query at {time.time()-requestStart}.")
+                            # total time spent filtering
+                            filter_time = 0
+                            print(f"Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query.")
                             for key, result in query.result.get('concepts').items():
                                 if key not in excluded_ids:
                                     # print(result)   
@@ -830,17 +820,40 @@ class MappingTargets(viewsets.ViewSet):
                                         'description' : query.description,
                                         'correlation' : query.mapcorrelation,
                                     })
-                                    all_results.append(_query)
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Finished looping all concepts in ECL query at {time.time()-requestStart}.")
+                                    all_results.append(_query) 
+                                else:
+                                    if int(query.result.get('numResults',0)) > 6000:
+                                        # exclusion_reason = "Inactief ivm performance"
+                                        _query = result
+                                        _query.update({
+                                            'exclusion_reason': [{
+                                                'key' : 0,
+                                                'component' : {
+                                                    'component_id': 0,
+                                                    'title': 'Inactief voor performance',
+                                                }
+                                            }],
+                                        })
+                                    else:
+                                        start = time.time()
+                                        exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
+                                        end = time.time()
+                                        filter_time += (end-start)
 
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - Appended allResults")
+                                        # start = time.time()
+                                        # exclusion_reason = [x['key'] for x in exclude_componentIDs if x['key'] in exclude_componentIDs]
+                                        # end = time.time()
+                                        # filter_time += (end-start)
+                                        
+                                        _query = result
+                                        _query.update({
+                                            'exclusion_reason': exclusion_reason,
+                                        })
+                                    excluded_componentIDs.append(result)
+                            print(f"Query {i} - End timing exclusion reason: {filter_time}")
                             
                         except:
-                            print("[mappings/MappingTargets retrieve] {request_uuid} | Retrieve mappings: Exception. No results?")
-
-                        # Create a list of excluded components, with reasons
-                        
-
+                            print("Retrieve mappings: No results")
                     query_list.append({
                         'id' : 'extra',
                         'description' : '',
@@ -852,37 +865,32 @@ class MappingTargets(viewsets.ViewSet):
                         'correlation' : '447561005',
                     })
 
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Start determining the list of excluded concepts in ECL query at {time.time()-requestStart}.")
-                    included_ids = [ x['conceptId'] for x in all_results ] 
-                    exclude_tab_data = [x for x in exclusion_plus_reason if x['component'] not in included_ids]
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Finished determining the list of excluded concepts in ECL query at {time.time()-requestStart}.")
-                    
+
 
                     # Check for duplicates in ECL queries
                     #region
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Start checking for duplicates in ECL queries at {time.time()-requestStart}.")
                     #### Method 1 : works, but slow
                     # duplicates_in_ecl = [x for i, x in enumerate(result_concept_ids) if i != result_concept_ids.index(x)]
                     
                     #### Method 2 : seems to provide the same result, in about 1/5th of the time.
-                    deduped_ecl = set(result_concept_ids)
-                    ecl_dupes = []
-                    for sctid in deduped_ecl:
-                        if result_concept_ids.count(sctid) > 1:
-                            ecl_dupes.append(sctid)
-                    duplicates_in_ecl = ecl_dupes
-                    # duplicates_in_ecl = []
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Finished checking for duplicates in ECL queries at {time.time()-requestStart}.")
+                    # deduped_ecl = set(result_concept_ids)
+                    # ecl_dupes = []
+                    # for sctid in deduped_ecl:
+                    #     if result_concept_ids.count(sctid) > 1:
+                    #         ecl_dupes.append(sctid)
+                    # duplicates_in_ecl = ecl_dupes
+                    duplicates_in_ecl = []
                     #endregion
                     
-                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Preparing Response at {time.time()-requestStart}.\n")
+                    print("Preparing Response.")
 
                     return Response({
                         'queries': query_list, # List of ECL queries
                         'queries_unfinished' : queries_unfinished, # True if any queries have not returned from Snowstorm
                         'allResults' : all_results, # Results of all ECL queries combined in 1 list
 
-                        'excluded' : exclude_tab_data,
+                        # 'exclusion_list' : exclude_componentIDs,
+                        'excluded' : excluded_componentIDs,
 
                         'duplicates_in_ecl' : duplicates_in_ecl,
 
