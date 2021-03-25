@@ -822,7 +822,7 @@ class MappingTargets(viewsets.ViewSet):
                                     })
                                     all_results.append(_query) 
                                 else:
-                                    if int(query.result.get('numResults',0)) > 6000:
+                                    if int(query.result.get('numResults',0)) > 4000:
                                         # exclusion_reason = "Inactief ivm performance"
                                         _query = result
                                         _query.update({
