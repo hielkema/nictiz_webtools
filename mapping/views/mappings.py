@@ -826,13 +826,13 @@ class MappingTargets(viewsets.ViewSet):
                                         # exclusion_reason = "Inactief ivm performance"
                                         _query = result
                                         _query.update({
-                                            'exclusion_reason': {
+                                            'exclusion_reason': [{
                                                 'key' : 0,
                                                 'component' : {
                                                     'component_id': 0,
                                                     'title': 'Inactief voor performance',
                                                 }
-                                            },
+                                            }],
                                         })
                                     else:
                                         start = time.time()
