@@ -807,6 +807,9 @@ class MappingTargets(viewsets.ViewSet):
                         # Add all results to a list for easy viewing
                         print(f"Query {i} - adding results of query to list: all_results + handling list excluded_componentIDs")
                         try:
+                            # total time spent filtering
+                            filter_time = 0
+                            print(f"Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query.")
                             for key, result in query.result.get('concepts').items():
                                 if key not in excluded_ids:
                                     # print(result)   
@@ -819,13 +822,31 @@ class MappingTargets(viewsets.ViewSet):
                                     })
                                     all_results.append(_query) 
                                 else:
-                                    exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
-                                    # exclusion_reason = "Inactief ivm performance"
-                                    _query = result
-                                    _query.update({
-                                        'exclusion_reason': exclusion_reason,
-                                    })
+                                    if int(query.result.get('numResults',0)) > 6000:
+                                        # exclusion_reason = "Inactief ivm performance"
+                                        print(f"Query {i} - Skipped checking for exclusion reason for performance.")
+                                        _query = result
+                                        _query.update({
+                                            'exclusion_reason': 'disabled for performance',
+                                        })
+                                    else:
+                                        start = time.time()
+                                        exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
+                                        end = time.time()
+                                        filter_time += (end-start)
+
+                                        # start = time.time()
+                                        # exclusion_reason = [x['key'] for x in exclude_componentIDs if x['key'] in exclude_componentIDs]
+                                        # end = time.time()
+                                        # filter_time += (end-start)
+                                        
+                                        _query = result
+                                        _query.update({
+                                            'exclusion_reason': exclusion_reason,
+                                        })
                                     excluded_componentIDs.append(result)
+                            print(f"Query {i} - End timing exclusion reason: {filter_time}")
+                            
                         except:
                             print("Retrieve mappings: No results")
                     query_list.append({
