@@ -824,7 +824,6 @@ class MappingTargets(viewsets.ViewSet):
                                 else:
                                     if int(query.result.get('numResults',0)) > 6000:
                                         # exclusion_reason = "Inactief ivm performance"
-                                        print(f"Query {i} - Skipped checking for exclusion reason for performance.")
                                         _query = result
                                         _query.update({
                                             'exclusion_reason': 'disabled for performance',
