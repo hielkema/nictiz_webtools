@@ -784,7 +784,7 @@ class MappingTargets(viewsets.ViewSet):
                     all_results = list()
                     query_list = list()
                     filter_time = 0
-                    excluded_ids = [ x['component']['id'] for x in exclusion_plus_reason ] 
+                    excluded_ids = [ x['component'] for x in exclusion_plus_reason ] 
                     queries = MappingEclPart.objects.filter(task=task).select_related(
                         'task'
                     ).order_by('id')
@@ -854,7 +854,7 @@ class MappingTargets(viewsets.ViewSet):
 
                     print(f"[mappings/MappingTargets retrieve] {request_uuid} | Start determining the list of excluded concepts in ECL query at {time.time()-requestStart}.")
                     included_ids = [ x['conceptId'] for x in all_results ] 
-                    exclude_tab_data = [x for x in exclusion_plus_reason if x['component']['id'] not in included_ids]
+                    exclude_tab_data = [x for x in exclusion_plus_reason if x['component'] not in included_ids]
                     print(f"[mappings/MappingTargets retrieve] {request_uuid} | Finished determining the list of excluded concepts in ECL query at {time.time()-requestStart}.")
                     
 
