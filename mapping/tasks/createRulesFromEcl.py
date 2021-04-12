@@ -164,3 +164,41 @@ def createRulesFromEcl(taskid):
         celery = "No queries, no celery"
 
     return True
+
+
+
+@shared_task
+def createRulesForAllTasks():
+    '''
+    Function that recreates all rules for all ECL-1 tasks that already have at least 1 rule present.
+    Fire after updating SNOMED.
+    '''
+    print("Task createRulesForAllTasks received by celery")
+
+    # Select all ECL-1 tasks
+    tasks = MappingTask.objects.filter(
+            project_id__project_type = '4'
+        ).select_related(
+            'project_id',
+            'source_component',
+        )
+
+    # Check if there are rules present
+    for task in tasks:
+        rules = MappingRule.objects.filter(
+            project_id          = task.project_id,
+            target_component    = task.source_component,
+        ).count()
+
+        # If rules present, run createRulesFromEcl
+        if rules > 0:
+            # logger.info(f"[{task.id}] Found {rules} rules for task {task.id}. -> Creating rules")
+            send_task('mapping.tasks.createRulesFromEcl.createRulesFromEcl', [task.id])
+            # logger.info(f"[{task.id}] Finished creating {rules} rules for task {task.id}.")
+        else:
+            # logger.info(f"Found {rules} rules for task {task.id}. -> Not creating rules")
+            continue
+
+    print("Task createRulesForAllTasks finished by celery")
+
+    return None
