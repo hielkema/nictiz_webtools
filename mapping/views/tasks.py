@@ -327,7 +327,7 @@ class RelatedTasks(viewsets.ViewSet):
 
             comments = MappingComment.objects.filter(
                 comment_task = task,
-            ).select_related()
+            ).order_by('-comment_created').select_related()
 
             comment_list = []
             for comment in comments:
