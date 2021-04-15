@@ -277,11 +277,20 @@ class MappingExclusions(viewsets.ViewSet):
     def create(self, request):
         print(f"[mappings/MappingExclusions create] requested by {request.user} - data: {str(request.data)[:500]}")
         print(f"[MappingExclusions/create] @ {request.user.username} - {request.data}")
+        output = True
         try:
             if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
                 print(f"[MappingExclusions/create] @ {request.user.username} => Go")
                 task = MappingTask.objects.get(id=request.data.get('payload').get('id'))
+
+                # Edgecase check: check if there are multiple exclusion records for this task
+                exclusions = MappingEclPartExclusion.objects.filter(task = task)
+                if exclusions.count() > 1:
+                    # if so: delete
+                    exclusions.delete()
+                # Select or create a new one
                 obj, created = MappingEclPartExclusion.objects.get_or_create(task = task)
+
                 exclusion_list = list(request.data.get('payload').get('exclusions',{}).get('string').split('\n'))
                 obj.components = sorted(exclusion_list)
                 obj.save()
@@ -289,9 +298,11 @@ class MappingExclusions(viewsets.ViewSet):
             else:
                 print(f"[MappingExclusions/create] @ {request.user.username} => No permission")
         except Exception as e:
-            print(f"[MappingExclusions/create] @ {request.user.username} => error ({e})")
+            error = f"[MappingExclusions/create] @ {request.user.username} => error ({e})"
+            print(error)
+            output = error
             
-        return Response(True)
+        return Response(output)
 
 class ReverseMappingExclusions(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
