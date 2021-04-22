@@ -34,6 +34,11 @@ from ..tasks import *
 from ..forms import *
 from ..models import *
 
+# Import environment variables
+env = environ.Env(DEBUG=(bool, False))
+# reading .env file
+environ.Env.read_env(env.str('ENV_PATH', '.env'))
+
 from snowstorm_client import Snowstorm
 
 class Permission_MappingProject_Access(permissions.BasePermission):
@@ -1112,3 +1117,84 @@ class MappingListLookup(viewsets.ViewSet):
                         handled.append(task.id)
 
         return Response(list_source)
+
+
+class MappingAutoMapNTS(viewsets.ViewSet):
+    """
+    Stuurt obv een taak ID een automap verzoek naar Ontoserver.
+    """
+    permission_classes = [Permission_MappingProject_Access]
+    def retrieve(self, request, pk=None):
+        timestamp = time.time()
+        request_uuid = uuid.uuid4()
+        print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] requested by {request.user} - {pk}")
+
+        print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Fetch task data")
+        task = MappingTask.objects.get(id=pk)
+        search_string = task.source_component.component_title
+
+        target_valueset = task.project_id.automap_valueset
+        if target_valueset == None:
+            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Geen valueset bekend voor dit project - afbreken")
+            return Response("Geen valueset bekend voor dit project", status=status.HTTP_204_NO_CONTENT)
+        else:
+
+            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Get access token")
+
+            data = data = {
+                "grant_type"    : "client_credentials",
+                "client_id"     : env('nts_client'),
+                "client_secret" : env('nts_apikey'),
+            }
+            token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
+
+            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Perform automap on [{search_string}] to [{target_valueset}]")
+
+            data = {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "codeableConcept",
+                        "valueCodeableConcept": {
+                            "text": search_string,
+                            "coding": []
+                        }
+                    },
+                    {
+                        "name": "target",
+                        "valueUri": target_valueset
+                    },
+                    {
+                        "name": "url",
+                        "valueUri": "http://ontoserver.csiro.au/fhir/ConceptMap/automapstrategy-MML"
+                    }
+                ]
+            }
+            headers = {
+                "Content-Type" : "application/json",
+                "Authorization": f"Bearer {token['access_token']}"
+            }
+            automap = requests.post("https://terminologieserver.nl/fhir/ConceptMap/$translate", headers=headers, data=json.dumps(data)).json()
+
+            # Handle output
+            output = []
+            for match in automap.get('parameter',[]):
+                if match.get('name') == "match":
+                    single_match = {
+                        "concept" : {},
+                        "equivalence" : None,
+                    }
+                    for part in match.get('part'):
+                        if part['name'] == "concept":
+                            single_match['concept'] = part['valueCoding']
+                        if part['name'] == "equivalence":
+                            single_match['equivalence'] = part['valueCode']
+
+                    output.append(single_match)
+
+
+            print(f"mappings/MappingAutoMapNTS retrieve] [{request_uuid}] {output}")
+
+
+            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Return response after {time.time() - timestamp}")
+            return Response(output)
