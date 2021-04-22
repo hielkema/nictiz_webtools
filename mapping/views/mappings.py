@@ -1188,6 +1188,13 @@ class MappingAutoMapNTS(viewsets.ViewSet):
                         for part in match.get('part'):
                             if part['name'] == "concept":
                                 single_match['concept'] = part['valueCoding']
+                                
+                                semantic_tag = part['valueCoding'].get('extension',[{}])[0].get('valueString',None)
+                                if semantic_tag == None:
+                                    single_match['concept']['semantic_tag'] = ""
+                                else:
+                                    single_match['concept']['semantic_tag'] = f" ({semantic_tag})"
+
                             if part['name'] == "equivalence":
                                 single_match['equivalence'] = part['valueCode']
 
