@@ -1134,67 +1134,70 @@ class MappingAutoMapNTS(viewsets.ViewSet):
         search_string = task.source_component.component_title
 
         target_valueset = task.project_id.automap_valueset
+        automap_method = task.project_id.automap_method
         if target_valueset == None:
             print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Geen valueset bekend voor dit project - afbreken")
             return Response("Geen valueset bekend voor dit project", status=status.HTTP_204_NO_CONTENT)
         else:
+            try:
+                print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Get access token")
 
-            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Get access token")
+                data = data = {
+                    "grant_type"    : "client_credentials",
+                    "client_id"     : env('nts_client'),
+                    "client_secret" : env('nts_apikey'),
+                }
+                token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
 
-            data = data = {
-                "grant_type"    : "client_credentials",
-                "client_id"     : env('nts_client'),
-                "client_secret" : env('nts_apikey'),
-            }
-            token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
+                print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Perform automap on [{search_string}] to [{target_valueset}]")
 
-            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Perform automap on [{search_string}] to [{target_valueset}]")
-
-            data = {
-                "resourceType": "Parameters",
-                "parameter": [
-                    {
-                        "name": "codeableConcept",
-                        "valueCodeableConcept": {
-                            "text": search_string,
-                            "coding": []
+                data = {
+                    "resourceType": "Parameters",
+                    "parameter": [
+                        {
+                            "name": "codeableConcept",
+                            "valueCodeableConcept": {
+                                "text": search_string,
+                                "coding": []
+                            }
+                        },
+                        {
+                            "name": "target",
+                            "valueUri": target_valueset
+                        },
+                        {
+                            "name": "url",
+                            "valueUri": f"http://ontoserver.csiro.au/fhir/ConceptMap/automapstrategy-{automap_method}"
                         }
-                    },
-                    {
-                        "name": "target",
-                        "valueUri": target_valueset
-                    },
-                    {
-                        "name": "url",
-                        "valueUri": "http://ontoserver.csiro.au/fhir/ConceptMap/automapstrategy-MML"
-                    }
-                ]
-            }
-            headers = {
-                "Content-Type" : "application/json",
-                "Authorization": f"Bearer {token['access_token']}"
-            }
-            automap = requests.post("https://terminologieserver.nl/fhir/ConceptMap/$translate", headers=headers, data=json.dumps(data)).json()
+                    ]
+                }
+                headers = {
+                    "Content-Type" : "application/json",
+                    "Authorization": f"Bearer {token['access_token']}"
+                }
+                automap = requests.post("https://terminologieserver.nl/fhir/ConceptMap/$translate", headers=headers, data=json.dumps(data)).json()
 
-            # Handle output
-            output = []
-            for match in automap.get('parameter',[]):
-                if match.get('name') == "match":
-                    single_match = {
-                        "concept" : {},
-                        "equivalence" : None,
-                    }
-                    for part in match.get('part'):
-                        if part['name'] == "concept":
-                            single_match['concept'] = part['valueCoding']
-                        if part['name'] == "equivalence":
-                            single_match['equivalence'] = part['valueCode']
+                # Handle output
+                output = []
+                for match in automap.get('parameter',[]):
+                    if match.get('name') == "match":
+                        single_match = {
+                            "concept" : {},
+                            "equivalence" : None,
+                        }
+                        for part in match.get('part'):
+                            if part['name'] == "concept":
+                                single_match['concept'] = part['valueCoding']
+                            if part['name'] == "equivalence":
+                                single_match['equivalence'] = part['valueCode']
 
-                    output.append(single_match)
+                        output.append(single_match)
 
 
-            print(f"mappings/MappingAutoMapNTS retrieve] [{request_uuid}] {output}")
+                print(f"mappings/MappingAutoMapNTS retrieve] [{request_uuid}] {output}")
 
 
-            print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Return response after {time.time() - timestamp}")
-            return Response(output)
+                print(f"[mappings/MappingAutoMapNTS retrieve] [{request_uuid}] Return response after {time.time() - timestamp}")
+                return Response(output)
+            except Exception as e:
+                return Response(str(e))
