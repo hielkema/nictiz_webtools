@@ -42,31 +42,57 @@ class ChangeMappingTasks(viewsets.ViewSet):
 
     def create(self, request):
         print(f"[status/MappingStatuses create] requested by {request.user} - data: {str(request.data)[:500]}")
+        current_user = User.objects.get(id=request.user.id)
 
         payload = request.data
         
         if payload.get('tasks'):
             tasks = MappingTask.objects.filter(id__in = payload.get('tasks'))
             
+            changed_data = []
+
             if payload.get('action').get('changeUser') and payload.get('value').get('changeUser'):
                 new_user = User.objects.get(id=payload.get('value').get('changeUser'))
                 tasks.update(user = new_user)
+                changed_data.append(f"User: {str(new_user)}")
                 print('Gebruiker wijzigen voor ',tasks.count(),'naar',str(new_user))
 
             if payload.get('action').get('changeStatus') and payload.get('value').get('changeStatus'):
                 new_status = MappingTaskStatus.objects.get(id=payload.get('value').get('changeStatus'))
                 tasks.update(status = new_status)
+                changed_data.append(f"Status: {str(new_status.status_title)}")
                 print('Status wijzigen voor ',tasks.count(),'naar',str(new_status))
 
             if payload.get('action').get('changeProject') and payload.get('value').get('changeProject'):
                 new_project = MappingProject.objects.get(id=payload.get('value').get('changeProject'))
                 tasks.update(project_id = new_project)
+                changed_data.append(f"Project: {str(new_project)}")
                 print('Project wijzigen voor ',tasks.count(),'naar',str(new_project))
 
             if payload.get('action').get('changeCategory') and payload.get('value').get('changeCategory'):
                 new_category = str(payload.get('value').get('changeCategory'))
                 tasks.update(category = new_category)
+                changed_data.append(f"Categorie: {str(new_category)}")
                 print('Categorie wijzigen voor',tasks.count(),'naar', new_category)
+
+            try:
+                # Log events
+                bulk_create_list = []
+                for task in tasks:
+                    bulk_create_list.append(MappingEventLog(
+                        task=task,
+                        action='task_manager',
+                        action_user=current_user,
+                        action_description='Task Manager:',
+                        old_data='',
+                        new_data='',
+                        old='',
+                        new=", ".join(changed_data),
+                        user_source=current_user,
+                    ))
+                MappingEventLog.objects.bulk_create(bulk_create_list)
+            except Exception as e:
+                print(f"Fout bij aanmaken log events: {e}")
 
             output = payload
         else:
