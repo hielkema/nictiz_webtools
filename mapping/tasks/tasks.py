@@ -1078,7 +1078,6 @@ def import_icpc_task():
 
         extra = {
             'ICPC code' : row['ICPC Code'],
-            'NHG ID'    : row['ID'],
             'Actief'    : actief_concept,
         }
         # print(extra)
