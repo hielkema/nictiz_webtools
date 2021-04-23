@@ -1040,7 +1040,7 @@ def import_nhgbepalingen_task():
 @shared_task
 def import_icpc_task():
     df = read_csv(
-        '/webserver/mapping/resources/nhg/NHG-ICPC.txt',
+        '/webserver/mapping/resources/nhg/NHG-ICPC-versie-9.txt',
         sep='\t',
         header = 1,
         )
