@@ -25,7 +25,7 @@ class MappingProject(models.Model):
     categories = models.JSONField(default=list, null=True, blank=True)
     tags = models.JSONField(default=None, null=True, blank=True)
 
-    automap_valueset = models.CharField(max_length=50, default=None, blank=True, null=True)
+    automap_valueset = models.CharField(max_length=500, default=None, blank=True, null=True)
     automap_method = models.CharField(max_length=50, default="MML", blank=True, null=True)
 
     source_codesystem = models.ForeignKey('MappingCodesystem', on_delete=models.PROTECT, related_name = 'project_source', default=None, blank=True, null=True)
