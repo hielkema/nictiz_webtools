@@ -1039,26 +1039,103 @@ def import_nhgbepalingen_task():
 
 @shared_task
 def import_icpc_task():
-    df = read_csv(
-        '/webserver/mapping/resources/nhg/NHG-ICPC-versie-9.txt',
-        sep='\t',
-        header = 1,
-        )
-    i=0
-    # Vervang lege cellen door False
-    df=df.fillna(value=False)
+    print(f"[tasks/import_icpc_task]")
+        
+    print(f"[tasks/import_icpc_task] Get token")
+    data = data = {
+        "grant_type"    : "client_credentials",
+        "client_id"     : env('nts_client'),
+        "client_secret" : env('nts_apikey'),
+    }
+    token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
 
-    # Verwerk dataset -> database
-    for index, row in df.iterrows():
-        codesystem = MappingCodesystem.objects.get(id='5')
+    url_cs = 'http://hl7.org/fhir/sid/icpc-1-nl'
+    url_vs = 'http://hl7.org/fhir/sid/icpc-1-nl?vs'
+    headers = {
+        "Content-Type" : "application/json",
+        "Authorization": f"Bearer {token['access_token']}"
+    }
+
+    # Fetch ValueSet
+    valueset = requests.get(f"https://terminologieserver.nl/fhir/ValueSet/$expand?url={url_vs}&property=*", headers=headers).json()
+    print(f"[tasks/import_icpc_task] Expansion of ValueSet [{url_vs}]:")
+    print(f"[tasks/import_icpc_task] Total code count: \t{valueset['expansion']['total']}")
+
+    for parameter in valueset['expansion']['parameter']:
+        if parameter['name'] == 'version':
+            version_major = parameter['valueUri'].split('|')[1].split('.')[0]
+            version_cs = parameter['valueUri'].split('|')[1]
+            print(f"[tasks/import_icpc_task] Version: \t\t{version_major}")
+    
+    # Fetch CodeSystem details
+    codesystem = requests.get(f"https://terminologieserver.nl/fhir/CodeSystem?url={url_cs}&version={version_cs}", headers=headers).json()
+    datum = codesystem['entry'][0]['resource']['date']
+    print(f"[tasks/import_icpc_task] Datum: \t\t{datum}")
+
+    # Recognized extensions
+    recognized_extensions = [
+        "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property",
+        "http://ontoserver.csiro.au/profiles/expansion"
+    ]
+
+    # Codes
+    concepts = list()    
+    for concept in valueset['expansion']['contains']:
+        concept_properties = {}
+        children = []
+
+        for extension in concept['extension']:
+            if extension['url'] not in recognized_extensions:
+                raise Exception(f"Unrecognized extension: {extension['url']}")
+            else:
+                code = None
+                value = None
+                for concept_property in extension['extension']:
+                    if (concept_property['url'] == 'code'):
+                        code = concept_property['valueCode']
+                    elif (concept_property['url'] == 'value_x_'):
+                        keys = concept_property.keys()
+                        if 'valueCode' in keys:
+                            value = concept_property['valueCode']
+                        elif 'valueBoolean' in keys:
+                            value = concept_property['valueBoolean']
+                        elif 'valueString' in keys:
+                            value = concept_property['valueString']
+                        elif 'valueInteger' in keys:
+                            value = concept_property['valueInteger']
+                        elif 'valueDecimal' in keys:
+                            value = concept_property['valueDecimal']
+                        elif 'valueCoding' in keys:
+                            value = concept_property['valueCoding']
+                        else:
+                            raise Exception(f"Unrecognized property type: {concept_property}")
+                        if code == 'child':
+                            children.append(value)
+                if code != 'child':
+                    concept_properties[code] = value
+        if len(children) > 0:
+            concept_properties['children'] = children
+        concepts.append({
+            'code'      : concept['code'],
+            'display'   : concept['display'],
+            'properties': concept_properties,
+        })
+
+    # Update codesystem metadata
+    codesystem = MappingCodesystem.objects.get(id='5')
+    codesystem.codesystem_version = version_cs
+    codesystem.save()
+
+    for concept in concepts:
+
         obj, created = MappingCodesystemComponent.objects.get_or_create(
             codesystem_id=codesystem,
-            component_id=str(row['ICPC Code']),
+            component_id=str(concept['code']),
         )
-        
+
         #### Sticky audit hit if concept was already in database and title changed
-        if (obj.component_title != None) and (obj.component_title != row['ICPC Titel']):
-            print(f"{obj.component_title} in database != {row['ICPC Titel']} - audit hit maken")
+        if (obj.component_title != None) and (obj.component_title != concept['display']):
+            print(f"{obj.component_title} in database != {concept['display']} - audit hit maken")
             # Find tasks using this component
             tasks = MappingTask.objects.filter(source_component = obj)
             for task in tasks:
@@ -1066,23 +1143,22 @@ def import_icpc_task():
                         task=task,
                         audit_type="IMPORT",
                         sticky=True,
-                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+                        hit_reason=f"Let op: de bronterm/FSN is gewijzigd [{obj.component_title} -> {concept['display']}] bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
                     )
         else:
-            print(f"{obj.component_title} in database == {row['ICPC Titel']} - geen hits")
+            print(f"{obj.component_title} in database == {concept['display']} - geen hits")
 
-        obj.component_title = row['ICPC Titel']
-
-        actief_concept = 'True'
-        if row['Versie vervallen'] != False: actief_concept = 'False'
+        obj.component_title = concept['display']
 
         extra = {
-            'ICPC code' : row['ICPC Code'],
-            'Actief'    : actief_concept,
+            'Actief' : str((not concept['properties']['inactive'])).capitalize()
         }
-        # print(extra)
+        extra.update(concept['properties'])
+
         obj.component_extra_dict = extra
         obj.save()
+
+    print(f"[tasks/import_icpc_task] Voltooid")
 
 @shared_task
 def import_gstandaardDiagnoses_task():
