@@ -831,7 +831,7 @@ class MappingTargets(viewsets.ViewSet):
                             max_results = 4000
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query at {time.time()-requestStart}.")
                             if int(query.result.get('numResults',0)) > max_results:
-                                print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - {query.result.get('numResults','-')} results found. This is more than {max_results}: will skip checking the reason for exclusion. Time: {time.time()-requestStart}.")
+                                print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - {query.result.get('numResults','-')} results found. This is more than {max_results}: will skip checking the reason for exclusion and generate empty exclusion explanations. Time: {time.time()-requestStart}.")
 
                             for key, result in query.result.get('concepts').items():
                                 if key not in excluded_ids:
@@ -845,6 +845,7 @@ class MappingTargets(viewsets.ViewSet):
                                     })
                                     all_results.append(_query) 
                                 else:
+                                    start = time.time()
                                     if int(query.result.get('numResults',0)) > max_results:
                                         # exclusion_reason = "Inactief ivm performance"
                                         _query = result
@@ -858,10 +859,7 @@ class MappingTargets(viewsets.ViewSet):
                                             }],
                                         })
                                     else:
-                                        start = time.time()
                                         exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
-                                        end = time.time()
-                                        filter_time += (end-start)
 
                                         # start = time.time()
                                         # exclusion_reason = [x['key'] for x in exclude_componentIDs if x['key'] in exclude_componentIDs]
@@ -872,7 +870,11 @@ class MappingTargets(viewsets.ViewSet):
                                         _query.update({
                                             'exclusion_reason': exclusion_reason,
                                         })
+                                    end = time.time()
+                                    filter_time += (end-start)
+
                                     excluded_componentIDs.append(result)
+
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - End timing exclusion at {time.time()-requestStart}. Spent a total of {filter_time} on this step.")
                             
                         except:
