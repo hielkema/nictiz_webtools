@@ -715,6 +715,7 @@ class MappingTargets(viewsets.ViewSet):
                     print(f"[mappings/MappingTargets retrieve] {request_uuid} | Found {mappings.count()} mapping rules at {time.time()-requestStart}.")
                     mapping_list = []
                     dependency_list = []
+                    general_errors = []
                     try:
                         extra = mapping.target_component.component_extra_dict
                     except:
@@ -820,7 +821,7 @@ class MappingTargets(viewsets.ViewSet):
                             filter_time = 0
                             appending_time = 0
                             max_results = 4000
-                            max_export = 30_000
+                            max_export = 20_000
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query at {time.time()-requestStart}.")
                             if int(query.result.get('numResults',0)) > max_results:
                                 print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - {query.result.get('numResults','-')} results found. This is more than {max_results}: will skip checking the reason for exclusion and generate empty exclusion explanations. Time: {time.time()-requestStart}.")
@@ -895,7 +896,8 @@ class MappingTargets(viewsets.ViewSet):
                                 'failed' : True,
                                 'numResults' : query.result.get('numResults','-'),
                                 'correlation' : query.mapcorrelation,
-                            })    
+                            })
+                            general_errors.append(f"De resultaten van query {query.id} [{query.description}] kunnen niet getoond worden door het grote aantal [>{max_export}] concepten. Als de query echt klopt - mail Sander. Het is wel mogelijk om regels aan te maken.")
                         else:
                             query_list.append({
                                 'id' : query.id,
@@ -947,6 +949,8 @@ class MappingTargets(viewsets.ViewSet):
                         'excluded' : excluded_componentIDs,
 
                         'duplicates_in_ecl' : duplicates_in_ecl,
+
+                        'errors' : general_errors,
 
                         'mappings' : mapping_list,
                         'mappings_unfinished' : mapping_list_unfinished,
