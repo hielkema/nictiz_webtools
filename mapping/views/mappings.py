@@ -812,21 +812,7 @@ class MappingTargets(viewsets.ViewSet):
                         except Exception as e:
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | requested by {request.user} - {pk} - at {time.time()-requestStart}: Error adding ECL results to list (empty?): {e}")
 
-                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding query details to list: query_list at {time.time()-requestStart}")
-                        if query.finished == False:
-                            queries_unfinished = True
-                        if query.export_finished == False:
-                            mapping_list_unfinished = True
-                        query_list.append({
-                            'id' : query.id,
-                            'description' : query.description,
-                            'query' : query.query,
-                            'finished' : query.finished,
-                            'error' : query.error,
-                            'failed' : query.failed,
-                            'numResults' : query.result.get('numResults','-'),
-                            'correlation' : query.mapcorrelation,
-                        })
+                        
                         # Add all results to a list for easy viewing
                         print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding results of query to list: all_results + handling list excluded_componentIDs at {time.time()-requestStart}")
                         try:
@@ -834,60 +820,94 @@ class MappingTargets(viewsets.ViewSet):
                             filter_time = 0
                             appending_time = 0
                             max_results = 4000
+                            max_export = 30_000
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query at {time.time()-requestStart}.")
                             if int(query.result.get('numResults',0)) > max_results:
                                 print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - {query.result.get('numResults','-')} results found. This is more than {max_results}: will skip checking the reason for exclusion and generate empty exclusion explanations. Time: {time.time()-requestStart}.")
 
-                            for key, result in query.result.get('concepts').items():
-                                if key not in excluded_ids:
-                                    _start = time.time()
-                                    all_results.append(result | {
-                                        'queryId' : query.id,
-                                        'query' : query.query,
-                                        'description' : query.description,
-                                        'correlation' : query.mapcorrelation,
-                                        }) 
-                                    _end = time.time()
-                                    appending_time += (_end-_start)
+                            if int(query.result.get('numResults',0)) > max_export:
+                                print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - {query.result.get('numResults','-')} results found. This is more than the acceptable max_export {max_export}: this query will not be exported to the frontend. Time: {time.time()-requestStart}.")
+                            else:
+                                for key, result in query.result.get('concepts').items():
+                                    if key not in excluded_ids:
+                                        _start = time.time()
+                                        all_results.append(result | {
+                                            'queryId' : query.id,
+                                            'query' : query.query,
+                                            'description' : query.description,
+                                            'correlation' : query.mapcorrelation,
+                                            }) 
+                                        _end = time.time()
+                                        appending_time += (_end-_start)
 
-                                else:
-                                    start = time.time()
-                                    if int(query.result.get('numResults',0)) > max_results:
-                                        # exclusion_reason = "Inactief ivm performance"
-                                        result = result | {
-                                            'exclusion_reason': [{
-                                                'key' : 0,
-                                                'component' : {
-                                                    'component_id': 0,
-                                                    'title': 'Inactief voor performance',
-                                                }
-                                            }],
-                                        }
                                     else:
-                                        exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
+                                        start = time.time()
+                                        if int(query.result.get('numResults',0)) > max_results:
+                                            # exclusion_reason = "Inactief ivm performance"
+                                            result = result | {
+                                                'exclusion_reason': [{
+                                                    'key' : 0,
+                                                    'component' : {
+                                                        'component_id': 0,
+                                                        'title': 'Inactief voor performance',
+                                                    }
+                                                }],
+                                            }
+                                        else:
+                                            exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
 
-                                        # start = time.time()
-                                        # exclusion_reason = [x['key'] for x in exclude_componentIDs if x['key'] in exclude_componentIDs]
-                                        # end = time.time()
-                                        # filter_time += (end-start)
-                                        
-                                        # _query = result
-                                        # _query.update({
-                                        #     'exclusion_reason': exclusion_reason,
-                                        # })
-                                        result = result | {
-                                            'exclusion_reason': exclusion_reason,
-                                        }
+                                            # start = time.time()
+                                            # exclusion_reason = [x['key'] for x in exclude_componentIDs if x['key'] in exclude_componentIDs]
+                                            # end = time.time()
+                                            # filter_time += (end-start)
+                                            
+                                            # _query = result
+                                            # _query.update({
+                                            #     'exclusion_reason': exclusion_reason,
+                                            # })
+                                            result = result | {
+                                                'exclusion_reason': exclusion_reason,
+                                            }
 
-                                    end = time.time()
-                                    filter_time += (end-start)
+                                        end = time.time()
+                                        filter_time += (end-start)
 
-                                    excluded_componentIDs.append(result)
+                                        excluded_componentIDs.append(result)
 
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - End exclusion handling at {time.time()-requestStart}. Spent a total of {filter_time} on filtering and {appending_time} on appending included concepts.")
+                                print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - End exclusion handling at {time.time()-requestStart}. Spent a total of {filter_time} on filtering and {appending_time} on appending included concepts.")
                             
                         except:
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Exception at {time.time()-requestStart} while retrieve mappings: No results?")
+
+                        print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - adding query details to list: query_list at {time.time()-requestStart}")
+                        if query.finished == False:
+                            queries_unfinished = True
+                        if query.export_finished == False:
+                            mapping_list_unfinished = True
+
+                        if int(query.result.get('numResults',0)) > max_export:
+                            query_list.append({
+                                'id' : query.id,
+                                'description' : query.description,
+                                'query' : query.query,
+                                'finished' : query.finished,
+                                'error' : f"De resultaten van deze query kunnen niet getoond worden door het grote aantal [>{max_export}] concepten. Als de query echt klopt - mail Sander.",
+                                'failed' : True,
+                                'numResults' : query.result.get('numResults','-'),
+                                'correlation' : query.mapcorrelation,
+                            })    
+                        else:
+                            query_list.append({
+                                'id' : query.id,
+                                'description' : query.description,
+                                'query' : query.query,
+                                'finished' : query.finished,
+                                'error' : query.error,
+                                'failed' : query.failed,
+                                'numResults' : query.result.get('numResults','-'),
+                                'correlation' : query.mapcorrelation,
+                            })
+                        
                     query_list.append({
                         'id' : 'extra',
                         'description' : '',
