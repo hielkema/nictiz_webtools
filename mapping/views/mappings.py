@@ -891,7 +891,7 @@ class MappingTargets(viewsets.ViewSet):
                                 'description' : query.description,
                                 'query' : query.query,
                                 'finished' : query.finished,
-                                'error' : f"De resultaten van deze query kunnen niet getoond worden door het grote aantal [>{max_export}] concepten. Als de query echt klopt - mail Sander.",
+                                'error' : f"De resultaten van deze query kunnen niet getoond worden door het grote aantal [>{max_export}] concepten. Als de query echt klopt - mail Sander. Het is wel mogelijk om regels aan te maken.",
                                 'failed' : True,
                                 'numResults' : query.result.get('numResults','-'),
                                 'correlation' : query.mapcorrelation,
