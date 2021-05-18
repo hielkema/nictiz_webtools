@@ -791,10 +791,14 @@ class MappingTargets(viewsets.ViewSet):
                     # Get all ECL Queries - including cached snowstorm response
                     all_results = list()
                     query_list = list()
+                    _start = time.time()
                     excluded_ids = [ x['key'] for x in exclude_componentIDs ] 
                     queries = MappingEclPart.objects.filter(task=task).select_related(
                         'task'
                     ).order_by('id')
+                    _end = time.time()
+                    print(f"[mappings/MappingTargets retrieve] {request_uuid} | Finished retrieving queries at {time.time()-requestStart} in {_end-_start}.")
+
                     queries_unfinished = False
                     mapping_list_unfinished = False
                     result_concept_ids = []
@@ -828,6 +832,7 @@ class MappingTargets(viewsets.ViewSet):
                         try:
                             # total time spent filtering
                             filter_time = 0
+                            appending_time = 0
                             max_results = 4000
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - Fetching reason for exclusion for each excluded result. {query.result.get('numResults','-')} results found in current ECL query at {time.time()-requestStart}.")
                             if int(query.result.get('numResults',0)) > max_results:
@@ -835,21 +840,21 @@ class MappingTargets(viewsets.ViewSet):
 
                             for key, result in query.result.get('concepts').items():
                                 if key not in excluded_ids:
-                                    # print(result)   
-                                    _query = result
-                                    _query.update({
+                                    _start = time.time()
+                                    all_results.append(result | {
                                         'queryId' : query.id,
                                         'query' : query.query,
                                         'description' : query.description,
                                         'correlation' : query.mapcorrelation,
-                                    })
-                                    all_results.append(_query) 
+                                        }) 
+                                    _end = time.time()
+                                    appending_time += (_end-_start)
+
                                 else:
                                     start = time.time()
                                     if int(query.result.get('numResults',0)) > max_results:
                                         # exclusion_reason = "Inactief ivm performance"
-                                        _query = result
-                                        _query.update({
+                                        result = result | {
                                             'exclusion_reason': [{
                                                 'key' : 0,
                                                 'component' : {
@@ -857,7 +862,7 @@ class MappingTargets(viewsets.ViewSet):
                                                     'title': 'Inactief voor performance',
                                                 }
                                             }],
-                                        })
+                                        }
                                     else:
                                         exclusion_reason = list(filter(lambda x: (x['key'] == key), exclude_componentIDs))
 
@@ -866,16 +871,20 @@ class MappingTargets(viewsets.ViewSet):
                                         # end = time.time()
                                         # filter_time += (end-start)
                                         
-                                        _query = result
-                                        _query.update({
+                                        # _query = result
+                                        # _query.update({
+                                        #     'exclusion_reason': exclusion_reason,
+                                        # })
+                                        result = result | {
                                             'exclusion_reason': exclusion_reason,
-                                        })
+                                        }
+
                                     end = time.time()
                                     filter_time += (end-start)
 
                                     excluded_componentIDs.append(result)
 
-                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - End timing exclusion at {time.time()-requestStart}. Spent a total of {filter_time} on this step.")
+                            print(f"[mappings/MappingTargets retrieve] {request_uuid} | Query {i} - End exclusion handling at {time.time()-requestStart}. Spent a total of {filter_time} on filtering and {appending_time} on appending included concepts.")
                             
                         except:
                             print(f"[mappings/MappingTargets retrieve] {request_uuid} | Exception at {time.time()-requestStart} while retrieve mappings: No results?")
