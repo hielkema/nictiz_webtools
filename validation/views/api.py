@@ -54,7 +54,10 @@ class export_answers(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def list(self, request):
   
-        answers = Answer.objects.all()
+        answers = Answer.objects.all().prefetch_related(
+            'user',
+            'task'
+        )
 
         output = []
 
