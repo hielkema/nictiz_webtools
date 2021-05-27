@@ -56,15 +56,18 @@ class export_answers(viewsets.ViewSet):
   
         answers = Answer.objects.all().prefetch_related(
             'user',
-            'task'
+            'task',
+            'task__project'
         )
 
         output = []
 
         # Add one row with column names for use with power query
         output.append({
-            'date' : 'Datum',
-            'task' : 'Taak ID (tool intern)',
+            'date'      : 'Datum',
+            'project'   : 'Project',
+            'task_data' : 'Task Data',
+            'task'      : 'Taak ID (tool intern)',
             'participantId'     : 'ParticipantId',
             'sortIndex'         : 'SortIndex',
             'SctConceptId'      : 'SctConceptId',
@@ -91,6 +94,8 @@ class export_answers(viewsets.ViewSet):
             # Add answer to output list
             output.append({
                 'date' : answer.created,
+                'project' : answer.task.project.title,
+                'task_data' : answer.task.data,
                 'task' : answer.task.id,
                 'participantId' : answer.user.username,
                 'sortIndex'  : task.get('sortIndex'),
