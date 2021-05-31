@@ -1062,6 +1062,7 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
             'id',
             'project_id__id',
             'project_id__title',
+            'project_id__project_type',
             'source_component__id',
             'source_component__codesystem_id__codesystem_title',
             'source_component__component_id',
@@ -1092,7 +1093,11 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
         # Compose output
         output = []
         for task in tasks:
-            _rules = [x for x in rules if x['source_component__component_id'] == task['source_component__component_id']]
+            if task['project_id__project_type'] == '1':
+                _rules = [x for x in rules if x['source_component__component_id'] == task['source_component__component_id']]
+            elif task['project_id__project_type'] == '4':
+                _rules = [x for x in rules if x['target_component__component_id'] == task['source_component__component_id']]
+
             # Translate the map correlation
             for _rule in _rules:
                 correlation_options = [
