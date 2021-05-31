@@ -1118,57 +1118,18 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
 
             output.append({
                 'task_id' : task['id'],
-                'project_id__id' : task['project_id__id'],
-                'project_id__title' : task['project_id__title'],
-                'source_component__codesystem_id__codesystem_title' : task['source_component__codesystem_id__codesystem_title'],
-                'source_component__component_id' : task['source_component__component_id'],
-                'source_component__component_title' : task['source_component__component_title'],
                 'status'  : task['status__status_title'],
+                'project_id' : task['project_id__id'],
+                'project_title' : task['project_id__title'],
+                'component' : {
+                    'codesystem_title' : task['source_component__codesystem_id__codesystem_title'],
+                    'component_id' : task['source_component__component_id'],
+                    'component_title' : task['source_component__component_title'],
+                },
                 'rules' : _rules
             })
 
         return Response(output)
-
-
-
-        # Regels ván codesysteem af
-        output_from = []
-        rules = MappingRule.objects.filter(source_component__codesystem_id = codesystem).select_related(
-            'source_component'
-        ).order_by("id")
-        for rule in rules:
-            output_from.append({
-                'source': {
-                    'codesystem' : str(rule.source_component.codesystem_id.codesystem_title),
-                    'code' : str(rule.source_component.component_id),
-                },
-                'target': {
-                    'codesystem' : str(rule.target_component.codesystem_id.codesystem_title),
-                    'code' : str(rule.target_component.component_id),
-                },
-            })
-        # Regels náár codesysteem toe
-        output_to = []
-        rules = MappingRule.objects.filter(target_component__codesystem_id = codesystem).select_related(
-            'target_component'
-        ).order_by("id")
-        for rule in rules:
-            output_to.append({
-                'source': {
-                    'codesystem' : str(rule.source_component.codesystem_id.codesystem_title),
-                    'code' : str(rule.source_component.component_id),
-                },
-                'target': {
-                    'codesystem' : str(rule.target_component.codesystem_id.codesystem_title),
-                    'code' : str(rule.target_component.component_id),
-                },
-            })
-        
-
-        return Response({
-            'source' : output_from,
-            'target' : output_to,
-        })
 
 
 class MappingListLookup(viewsets.ViewSet):
