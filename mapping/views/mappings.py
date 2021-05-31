@@ -57,6 +57,17 @@ class Permission_MappingProject_ChangeMappings(permissions.BasePermission):
         if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
             return True
 
+class Permission_Secret(permissions.BasePermission):
+    """
+    Global permission check rights to use the taskmanager.
+    """
+    def has_permission(self, request, view):
+        if str(request.GET.get('secret')) != str(env('mapping_api_secret')):
+            print('Incorrect or absent secret')
+            return False
+        else:
+            return True
+
 class MappingTargetSearch(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 
@@ -1045,7 +1056,7 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
     De status wordt in de export meegeleverd.
     Bedoeld om een overzicht te krijgen van alle gebruikte codes uit een stelsel.
     """
-    permission_classes = [Permission_MappingProject_Access]
+    permission_classes = [Permission_Secret]
     def retrieve(self, request, pk=None):
 
         print(f"[mappings/MappingRulesInvolvingCodesystem retrieve] requested by {request.user} - {pk}")
