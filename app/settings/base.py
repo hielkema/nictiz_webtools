@@ -37,6 +37,8 @@ LOGIN_REDIRECT_URL = '/'
 
 # AUTH_USER_MODEL = 'users.CustomUser'
 
+DEFAULT_AUTO_FIELD='django.db.models.AutoField'
+
 # Application definition
 
 INSTALLED_APPS = (

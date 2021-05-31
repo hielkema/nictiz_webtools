@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class HowdyConfig(AppConfig):
-    name = 'howdy'
+    name = 'snomed_list_generator'
