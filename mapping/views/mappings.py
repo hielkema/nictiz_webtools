@@ -1042,6 +1042,7 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
     """
     Exporteert een lijst van alle componenten uit 1 codesysteem die gebruikt worden in een mapping rule.
     Er wordt hierbij geen rekening gehouden met de status van de betreffende taak; het kan ook een afgewezen taak zijn met een foutieve mapping.
+    De status wordt in de export meegeleverd.
     Bedoeld om een overzicht te krijgen van alle gebruikte codes uit een stelsel.
     """
     permission_classes = [Permission_MappingProject_Access]
@@ -1049,6 +1050,80 @@ class MappingRulesInvolvingCodesystem(viewsets.ViewSet):
 
         print(f"[mappings/MappingRulesInvolvingCodesystem retrieve] requested by {request.user} - {pk}")
         codesystem = MappingCodesystem.objects.get(id = pk)
+
+        # Ophalen alle taken die dit codesystem gebruiken
+        tasks = MappingTask.objects.filter(source_codesystem__id = pk).select_related(
+            'user',
+            'status',
+            'project',
+            'source_component',
+            'source_component__codesystem_id'
+        ).values(
+            'id',
+            'project_id__id',
+            'project_id__title',
+            'source_component__id',
+            'source_component__codesystem_id__codesystem_title',
+            'source_component__component_id',
+            'source_component__component_title',
+            'status__status_title',
+        )
+
+        components = [x['source_component__id'] for x in tasks]
+
+        # Source
+        rules = MappingRule.objects.filter(source_component__id__in = components) | MappingRule.objects.filter(target_component__id__in = components)
+        # Target
+        rules = rules.select_related(
+            'source_component',
+            'source_component__codesystem_id',
+            'target_component'
+            'target_component__codesystem_id'
+        ).values(
+            'source_component__codesystem_id__codesystem_title',
+            'source_component__component_id',
+            'source_component__component_title',
+            'target_component__codesystem_id__codesystem_title',
+            'target_component__component_id',
+            'target_component__component_title',
+            'mapcorrelation'
+        )
+
+        # Compose output
+        output = []
+        for task in tasks:
+            _rules = [x for x in rules if x['source_component__component_id'] == task['source_component__component_id']]
+            # Translate the map correlation
+            for _rule in _rules:
+                correlation_options = [
+                    ['447559001', 'narrower'],
+                    ['447557004', 'equal'],
+                    ['447558009', 'wider'],
+                    ['447560006', 'inexact'],
+                    ['447556008', 'unmatched'],
+                    ['447561005', 'unmatched'],
+                ]
+                equivalence = _rule['mapcorrelation']
+                for code, readable in correlation_options:
+                    try:
+                        equivalence = equivalence.replace(code, readable)
+                    except:
+                        continue
+                _rule.update({'mapcorrelation' : equivalence})
+
+            output.append({
+                'task_id' : task['id'],
+                'project_id__id' : task['project_id__id'],
+                'project_id__title' : task['project_id__title'],
+                'source_component__codesystem_id__codesystem_title' : task['source_component__codesystem_id__codesystem_title'],
+                'source_component__component_id' : task['source_component__component_id'],
+                'source_component__component_title' : task['source_component__component_title'],
+                'status'  : task['status__status_title'],
+                'rules' : _rules
+            })
+
+        return Response(output)
+
 
 
         # Regels ván codesysteem af
