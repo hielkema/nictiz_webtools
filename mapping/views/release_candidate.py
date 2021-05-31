@@ -401,6 +401,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             rules = all_rules.order_by('mapgroup', 'mappriority').values(
                 'export_rc', 
                 'export_user__id', 
+                'export_task__category', 
                 'export_task__source_component', 
                 'export_task__source_codesystem', 
                 'export_rule',
@@ -508,6 +509,12 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     except:
                         export_task_id = '[deleted]'
 
+                    try:
+                        export_task_category = rule.get('export_task__category')
+                    except:
+                        export_task_category = '[deleted]'
+
+
                     rule_list.append({
                         'from_project' : from_project,
                         'rule_id' : rule_id,
@@ -602,6 +609,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     'status' : rule.get('task_status'),
                     'source' : static_source_component,
                     'task_id': export_task_id,
+                    'task_category' : export_task_category,
                     'project' : project_title,
                     'project_id' : project_id,
                     'group' : static_source_component.get('extra',{}).get('Groep',''),
