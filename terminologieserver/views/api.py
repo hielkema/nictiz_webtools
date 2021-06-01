@@ -51,7 +51,7 @@ class ingestAuditEvent(viewsets.ViewSet):
 
         try:
             message_bytes = base64.b64decode(request.body)
-            message = message_bytes.decode('ascii')
+            message = message_bytes.decode('utf-8')
             print(f"{message}")
         except Exception as e:
             print(e)
@@ -65,7 +65,7 @@ class ingestAuditEvent(viewsets.ViewSet):
 
         try:
             message_bytes = base64.b64decode(request.body)
-            message = message_bytes.decode('ascii')
+            message = message_bytes.decode('utf-8')
             print(f"{message}")
         except Exception as e:
             print(e)
@@ -79,7 +79,7 @@ class ingestAuditEvent(viewsets.ViewSet):
 
         try:
             message_bytes = base64.b64decode(request.body)
-            message = message_bytes.decode('ascii')
+            message = message_bytes.decode('utf-8')
             print(f"{message}")
         except Exception as e:
             print(e)
@@ -93,7 +93,7 @@ class ingestAuditEvent(viewsets.ViewSet):
         
         try:
             message_bytes = base64.b64decode(request.body)
-            message = message_bytes.decode('ascii')
+            message = message_bytes.decode('utf-8')
             print(f"{message}")
         except Exception as e:
             print(e)
