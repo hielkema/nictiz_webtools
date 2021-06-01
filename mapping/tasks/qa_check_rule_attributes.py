@@ -184,6 +184,9 @@ def check_rule_attributes(taskid):
                 elif (rule.project_id.id == 7) and (other_rule.target_component.component_id in json.loads(MappingCodesystemComponent.objects.get(component_id='118718002').descendants)):
                     # logger.info('Project 7 -> negeer <<procedure op huid voor dubbele mappings')
                     True
+                elif (rule.project_id.id == 13):
+                    # Ignore in project 13 - duplicate mappings will almost always happen there
+                    True
                 else:
                     if (other_rule.source_component != task.source_component) and (task.source_component.codesystem_id == other_rule.source_component.codesystem_id):
                         
