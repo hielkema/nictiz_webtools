@@ -608,6 +608,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 task_list.append({
                     'status' : rule.get('task_status'),
                     'source' : static_source_component,
+                    'source_title' : static_source_component.get('title',None),
                     'task_id': export_task_id,
                     'task_category' : export_task_category,
                     'project' : project_title,
