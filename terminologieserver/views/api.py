@@ -27,6 +27,7 @@ from rest_framework import permissions
 from celery import shared_task
 from celery.execute import send_task
 
+import base64
 
 # Import environment variables
 env = environ.Env(DEBUG=(bool, False))
@@ -48,12 +49,30 @@ class ingestAuditEvent(viewsets.ViewSet):
     def create(self, request):
         print(f"#### NTS #### POST request received\n#### NTS #### {request.body}")
 
+        try:
+            base64_message = request.body
+            base64_bytes = base64_message.encode('ascii')
+            message_bytes = base64.b64decode(base64_bytes)
+            message = message_bytes.decode('ascii')
+            print(f"{message}")
+        except Exception as e:
+            print(e)
+
         return Response({
             'success' : True
         })
         
     def retrieve(self, request, pk=None):
         print(f"#### NTS #### RETRIEVE request received\n#### NTS #### {pk} / {request.body}")
+
+        try:
+            base64_message = request.body
+            base64_bytes = base64_message.encode('ascii')
+            message_bytes = base64.b64decode(base64_bytes)
+            message = message_bytes.decode('ascii')
+            print(f"{message}")
+        except Exception as e:
+            print(e)
 
         return Response({
             'success' : True
@@ -62,6 +81,15 @@ class ingestAuditEvent(viewsets.ViewSet):
     def put(self, request):
         print(f"#### NTS #### PUT request received\n#### NTS #### {request.body}")
 
+        try:
+            base64_message = request.body
+            base64_bytes = base64_message.encode('ascii')
+            message_bytes = base64.b64decode(base64_bytes)
+            message = message_bytes.decode('ascii')
+            print(f"{message}")
+        except Exception as e:
+            print(e)
+
         return Response({
             'success' : True
         })
@@ -69,6 +97,15 @@ class ingestAuditEvent(viewsets.ViewSet):
     def list(self, request):
         print(f"#### NTS #### LIST request received\n#### NTS #### {request.body}")
         
+        try:
+            base64_message = request.body
+            base64_bytes = base64_message.encode('ascii')
+            message_bytes = base64.b64decode(base64_bytes)
+            message = message_bytes.decode('ascii')
+            print(f"{message}")
+        except Exception as e:
+            print(e)
+            
         return Response({
             'success' : True
         })
