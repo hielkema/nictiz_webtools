@@ -612,7 +612,11 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                     'task_category' : export_task_category,
                     'project' : project_title,
                     'project_id' : project_id,
+
+                    # Extra data for filtering
                     'group' : static_source_component.get('extra',{}).get('Groep',''),
+                    'class' : static_source_component.get('extra',{}).get('Klasse',''),
+
                     'rules' : filtered_rule_list,
 
                     'audit' : audits,
