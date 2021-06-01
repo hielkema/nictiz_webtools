@@ -50,9 +50,7 @@ class ingestAuditEvent(viewsets.ViewSet):
         print(f"#### NTS #### POST request received\n#### NTS #### {request.body}")
 
         try:
-            base64_message = request.body
-            base64_bytes = base64_message.encode('ascii')
-            message_bytes = base64.b64decode(base64_bytes)
+            message_bytes = base64.b64decode(request.body)
             message = message_bytes.decode('ascii')
             print(f"{message}")
         except Exception as e:
@@ -66,9 +64,7 @@ class ingestAuditEvent(viewsets.ViewSet):
         print(f"#### NTS #### RETRIEVE request received\n#### NTS #### {pk} / {request.body}")
 
         try:
-            base64_message = request.body
-            base64_bytes = base64_message.encode('ascii')
-            message_bytes = base64.b64decode(base64_bytes)
+            message_bytes = base64.b64decode(request.body)
             message = message_bytes.decode('ascii')
             print(f"{message}")
         except Exception as e:
@@ -82,9 +78,7 @@ class ingestAuditEvent(viewsets.ViewSet):
         print(f"#### NTS #### PUT request received\n#### NTS #### {request.body}")
 
         try:
-            base64_message = request.body
-            base64_bytes = base64_message.encode('ascii')
-            message_bytes = base64.b64decode(base64_bytes)
+            message_bytes = base64.b64decode(request.body)
             message = message_bytes.decode('ascii')
             print(f"{message}")
         except Exception as e:
