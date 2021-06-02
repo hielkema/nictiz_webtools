@@ -168,7 +168,7 @@ def createRulesFromEcl(taskid):
 
 
 @shared_task
-def createRulesForAllTasks():
+def createRulesForAllTasks(project_id=False):
     '''
     Function that recreates all rules for all ECL-1 tasks that already have at least 1 rule present.
     Fire after updating SNOMED.
@@ -182,6 +182,10 @@ def createRulesForAllTasks():
             'project_id',
             'source_component',
         )
+
+    if project_id:
+        print(f"Only do this for project {project_id}")
+        tasks = tasks.filter(project_id__id = project_id)
 
     # Check if there are rules present
     for task in tasks:

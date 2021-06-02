@@ -981,6 +981,52 @@ class MappingEclToRules(viewsets.ViewSet):
         )
         return Response(str(celery))
 
+    def create(self, request):
+        print(f"[mappings/MappingEclToRules create] requested by {request.user} - {request.data}")
+        
+        try:
+            if 'mapping | edit mapping' in request.user.groups.values_list('name', flat=True):
+                project = MappingProject.objects.get(id=request.data.get('id'))
+
+                print(f"[mappings/MappingEclToRules create] Project: {str(project)}")
+                
+                # Check if user has access to the project
+                current_user = User.objects.get(id=request.user.id)
+                if current_user in project.access.all():
+                    print(f"[mappings/MappingEclToRules create] User has access")
+                    # Check if it is an ECL-1 project
+                    if project.project_type == '4':
+                        print(f"[mappings/MappingEclToRules create] Fire")
+                        celery = createRulesForAllTasks.delay(
+                            project_id = project.id,
+                        )
+
+
+                return Response(True)
+
+                # if task.user == request.user:
+                #     if task.project_id.project_type == '4':
+                #         component = MappingCodesystemComponent.objects.get(
+                #             component_id=payload.get('conceptid'),
+                #             codesystem_id__id=payload.get('codesystem'),
+                #             )
+                #         obj = MappingRule.objects.create(
+                #             project_id = task.project_id,
+                #             source_component = task.source_component,
+                #             target_component = component,
+                #         )
+                #         return Response(f"[mappings/MappingEclToRules] @ {request.user.username} - Succes")
+                #     else:
+                #         return Response(f"[mappings/MappingEclToRules] @ {request.user.username} - Not supported for projects other than 1-N")
+                # else:
+                #     return Response(f"[mappings/MappingEclToRules] @ {request.user.username} - Not allowed: not your task?")
+            else:
+                print(f"[mappings/MappingEclToRules] @ {request.user.username} - Geen toegang")
+                return Response(f"[mappings/MappingEclToRules] @ {request.user.username} - Geen toegang")
+        except Exception as e:
+            print(f"[mappings/MappingEclToRules] @ {request.user.username} - Error: {str(e)}")
+            return Response(f"[mappings/MappingEclToRules] @ {request.user.username} - Error: {str(e)}")
+
 class MappingRemoveRules(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_ChangeMappings]
 
