@@ -48,8 +48,10 @@ class ingestAuditEvent(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
     def create(self, request):
         print(f"#### NTS #### POST request received\n#### NTS #### {request.body}")
-
+        
         try:
+        
+
             message_bytes = base64.b64decode(request.body)
             message = message_bytes.decode('utf-8')
             print(f"{message}")

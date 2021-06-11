@@ -1017,10 +1017,15 @@ def import_nhgbepalingen_task():
         else: groep = "Onbekend"
         groep = str(row[9]+' - '+groep)
 
+        # Omgaan met missende info voor positie 3 van sleutelcode
+        sleutelcode_pos_3 = row[3]
+        if sleutelcode_pos_3 == False:
+            sleutelcode_pos_3 = ""
+
         extra = {
             'Omschrijving' : row[4],
             'Memo' : row[1],
-            'Sleutelcode' : f"{row[1]} {row[2]} {row[3]}",
+            'Sleutelcode' : f"{row[1]} {row[2]} {sleutelcode_pos_3}",
             'Bepaling nummer' : row[0],
             'Aanvraag/Uitslag/Beide' : row[6],
             'Soort' : soort,
