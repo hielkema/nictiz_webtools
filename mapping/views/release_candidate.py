@@ -268,7 +268,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             selection = str(payload.get('selection',None))
             rc_id = int(payload.get('rc_id',0))
             codesystem = int(payload.get('codesystem',0))
-            id = int(payload.get('id',0))
+            id = str(payload.get('id',0))
 
             current_user = User.objects.get(id=request.user.id)
             rc = MappingReleaseCandidate.objects.get(id = rc_id, access__username=current_user)
