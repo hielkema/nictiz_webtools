@@ -1573,9 +1573,15 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                     # Add this source component with all targets and products to the element list
                     ## WARNING - export_all=True will disregard veto/fiat!
                     if rc.export_all == False:
-                        # # Only if it has approves and no rejects
-                        accepted_count = single_rule.accepted.count()
-                        rejected_count = single_rule.rejected.count()
+                        # # Only if it has approves and no rejects`
+                        if single_rule.accepted != None:
+                            accepted_count = len(single_rule.accepted)
+                        else:
+                            accepted_count = 0
+                        if single_rule.rejected != None:
+                            rejected_count = len(single_rule.rejected)
+                        else:
+                            rejected_count = 0
                         if (accepted_count > 0) and (rejected_count == 0):
                             source_component = single_rule.static_source_component
                             output = {
