@@ -1043,7 +1043,204 @@ def import_nhgbepalingen_task():
         obj.save()
 
 @shared_task
-def import_icpc_task():
+def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_property_displays="false"):
+    print(f"[tasks/import_fhir_codesystem]")
+    print(f"[tasks/import_fhir_codesystem] Settings:")
+    print(f"[tasks/import_fhir_codesystem] Codesystem ID: {codesystem_id}")
+    print(f"[tasks/import_fhir_codesystem] version: {version}")
+    print(f"[tasks/import_fhir_codesystem] url_cs: {url_cs}")
+    print(f"[tasks/import_fhir_codesystem] fetch_property_displays: {fetch_property_displays}")
+        
+    print(f"[tasks/import_fhir_codesystem] Get token")
+    data = data = {
+        "grant_type"    : "client_credentials",
+        "client_id"     : env('nts_client'),
+        "client_secret" : env('nts_apikey'),
+    }
+    token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
+
+    headers = {
+        "Content-Type" : "application/json",
+        "Authorization": f"Bearer {token['access_token']}"
+    }
+
+    # Fetch ValueSet
+    valueset = requests.post(f"https://terminologieserver.nl/fhir/ValueSet/$expand", data=json.dumps(request_body), headers=headers).json()
+    print(f"[tasks/import_fhir_codesystem] Expansion of ValueSet \n{json.dumps(request_body, indent=2)}\n")
+
+    if valueset.get('expansion',False) == False:
+        print("*"*80)
+        print("Response:")
+        print("*"*80)
+        print(json.dumps(valueset, indent=2))
+        raise Exception(f"Expansion niet aanwezig in response. Bestaat de gezochte versie [{version}] wel?")
+
+    if valueset['expansion'].get('total'):
+        print(f"[tasks/import_fhir_codesystem] Total code count: \t{valueset['expansion']['total']}")
+    else:
+        print(f"[tasks/import_fhir_codesystem] Total code count: \t{len(valueset['expansion']['contains'])}")
+
+    for parameter in valueset['expansion']['parameter']:
+        if parameter['name'] == 'version':
+            version_major = parameter['valueUri'].split('|')[1].split('.')[0]
+            version_cs = parameter['valueUri'].split('|')[1]
+            print(f"[tasks/import_fhir_codesystem] Version: \t\t{version_major}")
+    
+    # Fetch CodeSystem details
+    codesystem = requests.get(f"https://terminologieserver.nl/fhir/CodeSystem?url={url_cs}&version={version}", headers=headers).json()
+    print(f"[tasks/import_fhir_codesystem] Laatste update CS op NTS: \t\t{codesystem['entry'][0]['resource']['meta']['lastUpdated']}")
+    print(f"[tasks/import_fhir_codesystem] Gevonden versie: \t\t{codesystem['entry'][0]['resource']['version']}")
+
+    # Recognized extensions
+    recognized_extensions = [
+        "http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property",
+        "http://ontoserver.csiro.au/profiles/expansion"
+    ]
+
+    # Codes
+    concepts = []
+    for key, concept in enumerate(valueset['expansion']['contains']):
+        print(f"Handling concept {key} / {len(valueset['expansion']['contains'])} - {concept['code']} - {concept['display']}")
+        concept_properties = {}
+        children = []
+        parents = []
+
+        for extension in concept.get('extension',[]):
+            if extension['url'] not in recognized_extensions:
+                raise Exception(f"Unrecognized extension: {extension['url']}")
+            else:
+                code = None
+                value = None
+                for concept_property in extension['extension']:
+                    if (concept_property['url'] == 'code'):
+                        code = concept_property['valueCode']
+                    elif (concept_property['url'] == 'value_x_'):
+                        keys = concept_property.keys()
+                        if 'valueCode' in keys:
+                            value = concept_property['valueCode']
+                        elif 'valueBoolean' in keys:
+                            value = concept_property['valueBoolean']
+                        elif 'valueString' in keys:
+                            value = concept_property['valueString']
+                        elif 'valueInteger' in keys:
+                            value = concept_property['valueInteger']
+                        elif 'valueDecimal' in keys:
+                            value = concept_property['valueDecimal']
+                        elif 'valueCoding' in keys:
+                            value = concept_property['valueCoding']
+                        else:
+                            raise Exception(f"Unrecognized property type: {concept_property}")
+
+                        if code == 'child':
+                            if fetch_property_displays == "true":
+                                req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
+                                result = requests.get(req_url, headers=headers)
+
+                                result = result.json()
+                                if result.get('resourceType') == "Parameters":
+                                    for parameter in result['parameter']:
+                                        if parameter.get('name') == "display":
+                                            children.append(f"{value} [{parameter.get('valueString')}]")
+                                else:
+                                    children.append(value)
+                            else:
+                                parents.append(value)
+
+                        if code == 'parent':
+                            if fetch_property_displays == "true":
+                                req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
+                                result = requests.get(req_url, headers=headers)
+
+                                result = result.json()
+                                if result.get('resourceType') == "Parameters":
+                                    for parameter in result['parameter']:
+                                        if parameter.get('name') == "display":
+                                            parents.append(f"{value} [{parameter.get('valueString')}]")
+                                else:
+                                    parents.append(value)
+                            else:
+                                parents.append(value)
+                if (code != 'child') and (code != 'parent'):
+                    if code != None:
+                        concept_properties[str(code)] = value
+        if len(children) > 0:
+            concept_properties['children'] = children
+        if len(parents) > 0:
+            concept_properties['parents'] = parents
+
+        # Handle fetching of displays for coding properties
+        if fetch_property_displays == "true":
+            keys_to_pop = []
+            for key, value in concept_properties.items():
+                # Is there a space in the property name?
+                if len(key.split(" ")) > 1:
+                    # If so, is the part after the space equal to "system"?
+                    if key.split(" ")[1] == "system":
+                        # Now, lookup the display and change the value of the coding property to the display
+                        req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display&version={version}"
+                        result = requests.get(req_url, headers=headers)
+                        if result.status_code == 404:
+                            req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display"
+                            result = requests.get(req_url, headers=headers)
+                        result = result.json()
+                        if result.get('resourceType') == "Parameters":
+                            for parameter in result['parameter']:
+                                if parameter.get('name') == "display":
+                                    # If a display is to be had, exchange the code for display, otherwise use the original value
+                                    concept_properties[key.split(' ')[0]] = f"{concept_properties[key.split(' ')[0]]} [{parameter.get('valueString',value)}]"
+                                    keys_to_pop.append(key)
+            # Pop all the 'system' properties from codings which we handled in the loop above
+            for key in keys_to_pop:
+                concept_properties.pop(key)
+
+        concepts.append({
+            'code'      : concept['code'],
+            'display'   : concept['display'],
+            'properties': concept_properties,
+        })
+
+    # Update codesystem metadata
+    codesystem = MappingCodesystem.objects.get(id=codesystem_id)
+    codesystem.codesystem_version = version_cs
+    codesystem.save()
+
+    for concept in concepts:
+
+        obj, created = MappingCodesystemComponent.objects.get_or_create(
+            codesystem_id=codesystem,
+            component_id=str(concept['code']),
+        )
+
+        # #### Sticky audit hit if concept was already in database and title changed
+        # if (obj.component_title != None) and (obj.component_title != concept['display']):
+        #     print(f"{obj.component_title} in database != {concept['display']} - audit hit maken")
+        #     # Find tasks using this component
+        #     tasks = MappingTask.objects.filter(source_component = obj)
+        #     for task in tasks:
+        #         audit, created_audit = MappingTaskAudit.objects.get_or_create(
+        #                 task=task,
+        #                 audit_type="IMPORT",
+        #                 sticky=True,
+        #                 hit_reason=f"Let op: de bronterm/FSN is gewijzigd [{obj.component_title} -> {concept['display']}] bij een update van het codestelsel. Controleer of de betekenis nog gelijk is.",
+        #             )
+        # else:
+        #     print(f"{obj.component_title} in database == {concept['display']} - geen hits")
+
+        obj.component_title = concept['display']
+
+        extra = {
+            'Actief' : str((not concept['properties']['inactive'])).capitalize()
+        }
+        extra.update(concept['properties'])
+
+        obj.component_extra_dict = {k.capitalize(): v for k, v in extra.items()}
+        obj.save()
+
+    print(f"[tasks/import_fhir_codesystem] Updaten codesystem {codesystem.codesystem_title} [id={codesystem.id}] Voltooid")
+
+
+@shared_task
+def import_icpc_task(version):
     print(f"[tasks/import_icpc_task]")
         
     print(f"[tasks/import_icpc_task] Get token")
@@ -1061,10 +1258,44 @@ def import_icpc_task():
         "Authorization": f"Bearer {token['access_token']}"
     }
 
+    # Define ValueSet to be fetched
+    data = {
+        "resourceType": "Parameters",
+        "parameter": [
+        {
+            "name" : "property",
+            "valueString" : "*"
+        },
+            {
+                "name": "valueSet",
+                "resource": {
+                    "resourceType": "ValueSet",
+                    "compose": {
+                        "include": [
+                            {
+                                "system": url_cs,
+                                "version" : version
+                            }
+                        ]
+                    }
+                }
+            }
+        ]
+    }
+
     # Fetch ValueSet
-    valueset = requests.get(f"https://terminologieserver.nl/fhir/ValueSet/$expand?url={url_vs}&property=*", headers=headers).json()
-    print(f"[tasks/import_icpc_task] Expansion of ValueSet [{url_vs}]:")
+    valueset = requests.post(f"https://terminologieserver.nl/fhir/ValueSet/$expand", data=json.dumps(data), headers=headers).json()
+    print(f"[tasks/import_icpc_task] Expansion of ValueSet [{json.dumps(data, indent=2)}]:")
+
+    if valueset.get('expansion',False) == False:
+        print("*"*80)
+        print("Response:")
+        print("*"*80)
+        print(json.dumps(valueset, indent=2))
+        raise Exception(f"Expansion niet aanwezig in response. Bestaat de gezochte versie [{version}] wel?")
+
     print(f"[tasks/import_icpc_task] Total code count: \t{valueset['expansion']['total']}")
+
 
     for parameter in valueset['expansion']['parameter']:
         if parameter['name'] == 'version':
@@ -1073,7 +1304,7 @@ def import_icpc_task():
             print(f"[tasks/import_icpc_task] Version: \t\t{version_major}")
     
     # Fetch CodeSystem details
-    codesystem = requests.get(f"https://terminologieserver.nl/fhir/CodeSystem?url={url_cs}&version={version_cs}", headers=headers).json()
+    codesystem = requests.get(f"https://terminologieserver.nl/fhir/CodeSystem?url={url_cs}&version={version}", headers=headers).json()
     datum = codesystem['entry'][0]['resource']['date']
     print(f"[tasks/import_icpc_task] Datum: \t\t{datum}")
 
@@ -1544,7 +1775,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                     'property' : property_value,
                                     'system' : target_data.codesystem_id.codesystem_fhir_uri,
                                     'value' : target.get('id'),
-                                    # 'display' : target.get('title'), ## TODO - remove for production
+                                    # 'display' : target.get('title'), ## Do NOT include display in the conceptmap for copyright reasons.
                                 })
 
                             # Translate the map correlation
@@ -1559,7 +1790,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             output = {
                                 'code' : target_component.get('identifier'),
                                 'equivalence' : equivalence,
-                                # 'display' : target_component.get('title'), ## TODO - remove for production
+                                # 'display' : target_component.get('title'), ## Do NOT include display in the conceptmap for copyright reasons.
                             }
                             if single_rule.mapadvice != None:
                                 output.update({'comment' : single_rule.mapadvice,})
@@ -1588,7 +1819,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 # 'DEBUG_numrules' : rules_for_task.count(),
                                 # 'DEBUG_productlist' : product_list,
                                 'code' : source_component.get('identifier'),
-                                # 'display' : source_component.get('title'), ## TODO - remove for production
+                                # 'display' : source_component.get('title'), ## Do NOT include display in the conceptmap for copyright reasons.
                                 'target' : targets,
                             }
                             elements.append(output)
@@ -1599,7 +1830,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                             # 'DEBUG_numrules' : rules_for_task.count(),
                             # 'DEBUG_productlist' : product_list,
                             'code' : source_component.get('identifier'),
-                            # 'display' : source_component.get('title'), ## TODO - remove for production
+                            # 'display' : source_component.get('title'), ## Do NOT include display in the conceptmap for copyright reasons.
                             'target' : targets,
                         }
                         elements.append(output)
