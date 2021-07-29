@@ -1063,6 +1063,24 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
         "Content-Type" : "application/json",
         "Authorization": f"Bearer {token['access_token']}"
     }
+    print(json.dumps(request_body,indent=2))
+
+    # Loop step size
+    request_body['parameter'].append(
+        {
+            'name' : 'count',
+            'valueInteger' : 10000
+        }
+    )
+    request_body['parameter'].append(
+        {
+            'name' : 'offset',
+            'valueInteger' : 0
+        }
+    )
+
+    print(json.dumps(request_body,indent=2))
+
 
     # Fetch ValueSet
     valueset = requests.post(f"https://terminologieserver.nl/fhir/ValueSet/$expand", data=json.dumps(request_body), headers=headers).json()
@@ -1097,9 +1115,30 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
         "http://ontoserver.csiro.au/profiles/expansion"
     ]
 
+    # Loop valueset until all concepts have been fetched
+    fetched_concepts = []
+    while len(fetched_concepts) < valueset['expansion']['total']:
+
+        print(f"Original {id(request_body)}")
+
+        modified_request = dict(request_body)
+        
+        
+        d = next(item for item in modified_request['parameter'] if item['name'] == 'offset')
+        d['valueInteger'] = len(fetched_concepts)
+
+        print(f"Modified {id(modified_request)}")
+        print(f"{'*'*80}\nRequest:\n{modified_request}")
+        
+        _response = requests.post(f"https://terminologieserver.nl/fhir/ValueSet/$expand", data=json.dumps(modified_request), headers=headers).json()
+        # print(json.dumps(_response,indent=2))
+
+        fetched_concepts.extend(_response['expansion']['contains'])
+        print(f"Concepten: {len(fetched_concepts)}")
+
     # Codes
     concepts = []
-    for key, concept in enumerate(valueset['expansion']['contains']):
+    for key, concept in enumerate(fetched_concepts):
         print(f"Handling concept {key} / {len(valueset['expansion']['contains'])} - {concept['code']} - {concept['display']}")
         concept_properties = {}
         children = []
@@ -1793,7 +1832,7 @@ def GenerateFHIRConceptMap(rc_id=None, action=None, payload=None):
                                 # 'display' : target_component.get('title'), ## Do NOT include display in the conceptmap for copyright reasons.
                             }
                             if single_rule.mapadvice != None:
-                                output.update({'comment' : single_rule.mapadvice,})
+                                output.update({'comment' : str(single_rule.mapadvice).strip(),})
                             # Add products to output if they exist
                             if len(products) > 0:
                                 output['product'] = products
