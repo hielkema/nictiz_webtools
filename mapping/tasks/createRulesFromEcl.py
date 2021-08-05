@@ -188,6 +188,9 @@ def createRulesForAllTasks(project_id=False, all_tasks=False):
         print(f"Only do this for project {project_id}")
         tasks = tasks.filter(project_id__id = project_id)
 
+    if all_tasks:
+        print(f"Create rules for ALL tasks regardless of prior rules")
+
     # Check if there are rules present
     for task in tasks:
         rules = MappingRule.objects.filter(
