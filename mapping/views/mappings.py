@@ -68,6 +68,46 @@ class Permission_Secret(permissions.BasePermission):
         else:
             return True
 
+class MappingTaskReset(viewsets.ViewSet):
+    """
+    Destroys most of the things about an ECL-1 task that can hang up the system.
+    - Rules
+    - ECL queries and its results
+    """
+
+    permission_classes = [Permission_MappingProject_ChangeMappings]
+
+    def retrieve(self, request, pk=None):
+        if pk is not None:
+            print(f"[mappings/MappingTaskReset retrieve] requested by {request.user} - {pk}")
+            
+            task = MappingTask.objects.get(id=pk)
+
+            if task.project_id.project_type == '4':
+                print(f"[mappings/MappingTaskReset retrieve] resetting ecl_parts")
+                result = MappingEclPart.objects.filter(task = task).delete()
+                print(f"[mappings/MappingTaskReset retrieve] resetting ecl_parts result: {result}")
+
+                print(f"[mappings/MappingTaskReset retrieve] removing rules")
+                rules = MappingRule.objects.filter(
+                    project_id = task.project_id.id,
+                    target_component = task.source_component
+                    )
+                print(f"Found {rules.count()} rules - now deleting.")
+                result = rules.delete()
+                print(f"[mappings/MappingTaskReset retrieve] removing rules result: {result}")
+
+                # Disabled on request
+                # print(f"[mappings/MappingTaskReset retrieve] removing exclusions")
+                # result = MappingEclPartExclusion.objects.filter(task = task).delete()
+                # print(f"[mappings/MappingTaskReset retrieve] removing exclusions result: {result}")
+            else:
+                print(f"Eh.. Nothing to do for a non-ECL task.")
+
+            return Response(f"Task reset completed for task id {pk}")
+        else:
+            return Response("No id = no reset")
+
 class MappingTargetSearch(viewsets.ViewSet):
     permission_classes = [Permission_MappingProject_Access]
 

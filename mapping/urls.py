@@ -49,7 +49,7 @@ router_1_0.register(r'remove_rules', views.MappingRemoveRules, basename="Remove 
 router_1_0.register(r'mapping_add_from_reverse', views.MappingTargetFromReverse, basename="Add a rule from a reverse mapping")
 router_1_0.register(r'mapping_add_remote_exclusion', views.AddRemoteExclusion, basename="Add a remote exclusion")
 router_1_0.register(r'mapping_remove_reverse', views.RemoveMappingExclusions, basename="Remove an exclusion")
-
+router_1_0.register(r'mapping_reset_task', views.MappingTaskReset, basename="Reset a task")
 
 router_1_0.register(r'related_tasks', views.RelatedTasks, basename="Related tasks")
 router_1_0.register(r'reverse', views.MappingReverse, basename="Reverse mappings")
