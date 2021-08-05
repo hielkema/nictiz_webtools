@@ -62,9 +62,9 @@ services:
     links:
       - postgres
   # GUI for taskmanager Celery
-  flower:
-    image: mher/flower
-    command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888"]
-    restart: always
-    ports:
-      - ${FLOWER_PORT}:8888
+  # flower:
+  #   image: mher/flower
+  #   command: ["flower", "--broker=amqp://guest:guest@rabbitmq/", "--port=8888"]
+  #   restart: always
+  #   ports:
+  #     - ${FLOWER_PORT}:8888
