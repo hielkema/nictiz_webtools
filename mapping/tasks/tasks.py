@@ -1050,12 +1050,18 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
     print(f"[tasks/import_fhir_codesystem] fetch_property_displays: {fetch_property_displays}")
         
     print(f"[tasks/import_fhir_codesystem] Get token")
-    data = data = {
-        "grant_type"    : "client_credentials",
-        "client_id"     : env('nts_client'),
-        "client_secret" : env('nts_apikey'),
-    }
-    token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
+    def fetch_headers():
+        data = {
+            "grant_type"    : "client_credentials",
+            "client_id"     : env('nts_client'),
+            "client_secret" : env('nts_apikey'),
+        }
+        token = requests.post('https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token', data=data).json()
+        return {
+            "Content-Type" : "application/json",
+            "Authorization": f"Bearer {token['access_token']}"
+        }
+    headers = fetch_headers()
 
     headers = {
         "Content-Type" : "application/json",
@@ -1141,6 +1147,11 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
     # Codes
     concepts = []
     for key, concept in enumerate(fetched_concepts):
+
+        # Fetch a new token - should really refresh the token, but out of dev time..
+        headers = fetch_headers()
+
+        # Move on to handling concept
         print(f"Handling concept {key} / {len(valueset['expansion']['contains'])} - {concept['code']} - {concept['display']}")
         concept_properties = {}
         children = []
