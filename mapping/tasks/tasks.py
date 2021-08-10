@@ -33,8 +33,6 @@ from snowstorm_client import Snowstorm
 from celery.task.control import  inspect
 i = inspect()
 
-# from nictiz_webtools.mapping.tasks.nhg_labcodeset import nhg_loinc_order_vs_observation
-
 logger = get_task_logger(__name__)
 
 @shared_task
@@ -1094,8 +1092,10 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
         raise Exception(f"Expansion niet aanwezig in response. Bestaat de gezochte versie [{version}] wel?")
 
     if valueset['expansion'].get('total'):
+        print("Key expansion.total is present")
         print(f"[tasks/import_fhir_codesystem] Total code count: \t{valueset['expansion']['total']}")
     else:
+        print("Key expansion.total is not present - using expansion.contains")
         print(f"[tasks/import_fhir_codesystem] Total code count: \t{len(valueset['expansion']['contains'])}")
 
     for parameter in valueset['expansion']['parameter']:
