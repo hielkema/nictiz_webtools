@@ -28,20 +28,27 @@ def nhg_loinc_order_vs_observation(taskid):
 
     # For each mapping rule associated with the selected task:
     for mapping in mappings:
-        # If the mapping is between Labcodeset and NHG Diagnostisch bepalingen:
-        if ((mapping.source_component.codesystem_id.codesystem_title == "NHG Diagnostische bepalingen") and (mapping.target_component.codesystem_id.codesystem_title == "Labcodeset")) or ((mapping.target_component.codesystem_id.codesystem_title == "NHG Diagnostische bepalingen") and (mapping.source_component.codesystem_id.codesystem_title == "Labcodeset")):
-            # Source AUB
-            if mapping.source_component.component_extra_dict.get('Aanvraag/Uitslag/Beide'):
-                source = mapping.source_component.component_extra_dict.get('Aanvraag/Uitslag/Beide')
-            else:
-                source = mapping.source_component.component_extra_dict.get('Aanvraag/Resultaat')
-            # Target AUB
-            if mapping.target_component.component_extra_dict.get('Aanvraag/Uitslag/Beide'):
-                target = mapping.target_component.component_extra_dict.get('Aanvraag/Uitslag/Beide')
-            else:
-                target = mapping.target_component.component_extra_dict.get('Aanvraag/Resultaat')
+        hit = False
 
-            hit = False
+        # Source AUB
+        if mapping.source_component.component_extra_dict.get('Aub'):
+            source = mapping.source_component.component_extra_dict.get('Aub')
+        else:
+            source = mapping.source_component.component_extra_dict.get('Order_obs')
+        # Target AUB
+        if mapping.target_component.component_extra_dict.get('Aub'):
+            target = mapping.target_component.component_extra_dict.get('Aub')
+        else:
+            target = mapping.target_component.component_extra_dict.get('Order_obs')
+
+        # For projects labcodeset -> NHG
+        if ((mapping.source_component.codesystem_id.codesystem_title == "Labcodeset") and (mapping.target_component.codesystem_id.codesystem_title == "NHG Diagnostische bepalingen")):
+            # If target is Aanvraag -> should not happen
+            if (target == "A"):
+                hit = True
+
+        # If the mapping is between Labcodeset and NHG Diagnostisch bepalingen (in any direction):
+        if ((mapping.source_component.codesystem_id.codesystem_title == "NHG Diagnostische bepalingen") and (mapping.target_component.codesystem_id.codesystem_title == "Labcodeset")) or ((mapping.target_component.codesystem_id.codesystem_title == "NHG Diagnostische bepalingen") and (mapping.source_component.codesystem_id.codesystem_title == "Labcodeset")):
             if (source == "A" and target == "Observation") or (target == "A" and source == "Observation"):
                 hit = True
             if (source == "U" and target == "Order") or (target == "U" and source == "Order"):
@@ -51,11 +58,11 @@ def nhg_loinc_order_vs_observation(taskid):
             if (source == "B" and target == "Observation"):
                 hit = True
 
-            if hit:
-                logger.info("That's a problem. Mismatch.")
-                obj, created = MappingTaskAudit.objects.get_or_create(
-                                task=task,
-                                audit_type="nhg_loinc_order_vs_observation",
-                                hit_reason='Mismatch order/aanvraag',
-                            )
-                logger.info(str(obj))
+        if hit:
+            logger.info("That's a problem. Mismatch.")
+            obj, created = MappingTaskAudit.objects.get_or_create(
+                            task=task,
+                            audit_type="nhg_loinc_order_vs_observation",
+                            hit_reason='Mismatch order/aanvraag',
+                        )
+            logger.info(str(obj))
