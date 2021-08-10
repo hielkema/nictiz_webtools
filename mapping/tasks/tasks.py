@@ -1220,12 +1220,16 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                         print(f"Attempt to fetch display for property {concept_properties[key.split(' ')[0]]}")
                         # Now, lookup the display and change the value of the coding property to the display
                         req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display&version={version}"
+                        print(req_url)
                         result = requests.get(req_url, headers=headers)
                         if result.status_code == 404:
                             print(f"Could not find a display with version {version} - trying without version")
                             req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display"
                             result = requests.get(req_url, headers=headers)
+                        else:
+                            print(f"Req status: {result.status_code}")
                         result = result.json()
+                        print(req_url)
                         print(result)
                         if result.get('resourceType') == "Parameters":
                             for parameter in result['parameter']:
