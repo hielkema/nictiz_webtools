@@ -1063,10 +1063,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
         }
     headers = fetch_headers()
 
-    headers = {
-        "Content-Type" : "application/json",
-        "Authorization": f"Bearer {token['access_token']}"
-    }
+    print("Request body from task:")
     print(json.dumps(request_body,indent=2))
 
     # Loop step size
@@ -1083,6 +1080,8 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
         }
     )
 
+
+    print("Edited request body (including loop parameters):")
     print(json.dumps(request_body,indent=2))
 
 
@@ -1148,9 +1147,6 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
     concepts = []
     for key, concept in enumerate(fetched_concepts):
 
-        # Fetch a new token - should really refresh the token, but out of dev time..
-        headers = fetch_headers()
-
         # Move on to handling concept
         print(f"Handling concept {key} / {len(valueset['expansion']['contains'])} - {concept['code']} - {concept['display']}")
         concept_properties = {}
@@ -1185,10 +1181,18 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
 
                         if code == 'child':
                             if fetch_property_displays == "true":
-                                req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
-                                result = requests.get(req_url, headers=headers)
+                                while True:
+                                    req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
+                                    result = requests.get(req_url, headers=headers)
+                                    if result.status_code == 200:
+                                        result = result.json()
+                                        break
+                                    else:
+                                        # Retry
+                                        # Fetch a new token - should really refresh the token, but out of dev time..
+                                        headers = fetch_headers()
+                                        continue
 
-                                result = result.json()
                                 if result.get('resourceType') == "Parameters":
                                     for parameter in result['parameter']:
                                         if parameter.get('name') == "display":
@@ -1200,10 +1204,18 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
 
                         if code == 'parent':
                             if fetch_property_displays == "true":
-                                req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
-                                result = requests.get(req_url, headers=headers)
-
-                                result = result.json()
+                                while True:
+                                    req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(url_cs)}&code={value}&property=display&version={version}"
+                                    result = requests.get(req_url, headers=headers)
+                                    if result.status_code == 200:
+                                        result = result.json()
+                                        break
+                                    else:
+                                        # Retry
+                                        # Fetch a new token - should really refresh the token, but out of dev time..
+                                        headers = fetch_headers()
+                                        continue
+                                    
                                 if result.get('resourceType') == "Parameters":
                                     for parameter in result['parameter']:
                                         if parameter.get('name') == "display":
@@ -1229,17 +1241,29 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                     # If so, is the part after the space equal to "system"?
                     if key.split(" ")[1] == "system":
                         print(f"Attempt to fetch display for property {concept_properties[key.split(' ')[0]]}")
+                        
                         # Now, lookup the display and change the value of the coding property to the display
-                        req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display&version={version}"
-                        print(req_url)
-                        result = requests.get(req_url, headers=headers)
-                        if result.status_code == 404:
-                            print(f"Could not find a display with version {version} - trying without version")
-                            req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display"
+                        while True:
+                            req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display&version={version}"
+                            print(req_url)
                             result = requests.get(req_url, headers=headers)
-                        else:
-                            print(f"Req status: {result.status_code}")
-                        result = result.json()
+                            if result.status_code == 404:
+                                print(f"Could not find a display with version {version} - trying without version")
+                                req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display"
+                                result = requests.get(req_url, headers=headers)
+                                result = result.json()
+                                break
+                            elif result.status_code == 401:
+                                # Retry
+                                # Fetch a new token - should really refresh the token, but out of dev time..
+                                headers = fetch_headers()
+                                continue
+                            else:
+                                print(f"Req status: {result.status_code}")
+                                result = result.json()
+                                break
+                        
+                        
                         print(req_url)
                         print(result)
                         if result.get('resourceType') == "Parameters":
