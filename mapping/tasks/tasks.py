@@ -1187,11 +1187,14 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                                     if result.status_code == 200:
                                         result = result.json()
                                         break
-                                    else:
+                                    elif result.status_code == 401:
                                         # Retry
                                         # Fetch a new token - should really refresh the token, but out of dev time..
                                         headers = fetch_headers()
+                                        print("Fetched new token")
                                         continue
+                                    else:
+                                        break
 
                                 if result.get('resourceType') == "Parameters":
                                     for parameter in result['parameter']:
@@ -1210,11 +1213,14 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                                     if result.status_code == 200:
                                         result = result.json()
                                         break
-                                    else:
+                                    elif result.status_code == 401:
                                         # Retry
                                         # Fetch a new token - should really refresh the token, but out of dev time..
                                         headers = fetch_headers()
+                                        print("Fetched new token")
                                         continue
+                                    else:
+                                        break
                                     
                                 if result.get('resourceType') == "Parameters":
                                     for parameter in result['parameter']:
@@ -1257,6 +1263,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                                 # Retry
                                 # Fetch a new token - should really refresh the token, but out of dev time..
                                 headers = fetch_headers()
+                                print("Fetched new token")
                                 continue
                             else:
                                 print(f"Req status: {result.status_code}")
