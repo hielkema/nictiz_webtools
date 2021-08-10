@@ -1194,6 +1194,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                                         print("Fetched new token")
                                         continue
                                     else:
+                                        result = result.json()
                                         break
 
                                 if result.get('resourceType') == "Parameters":
@@ -1220,6 +1221,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                                         print("Fetched new token")
                                         continue
                                     else:
+                                        result = result.json()
                                         break
                                     
                                 if result.get('resourceType') == "Parameters":
