@@ -1094,9 +1094,11 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
     if valueset['expansion'].get('total'):
         print("Key expansion.total is present")
         print(f"[tasks/import_fhir_codesystem] Total code count: \t{valueset['expansion']['total']}")
+        valueset_code_count = valueset['expansion']['total']
     else:
         print("Key expansion.total is not present - using expansion.contains")
         print(f"[tasks/import_fhir_codesystem] Total code count: \t{len(valueset['expansion']['contains'])}")
+        valueset_code_count = valueset['expansion']['contains']
 
     for parameter in valueset['expansion']['parameter']:
         if parameter['name'] == 'version':
@@ -1117,7 +1119,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
 
     # Loop valueset until all concepts have been fetched
     fetched_concepts = []
-    while len(fetched_concepts) < valueset['expansion']['total']:
+    while len(fetched_concepts) < valueset_code_count:
 
         print(f"Original {id(request_body)}")
 
