@@ -1217,16 +1217,20 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
                 if len(key.split(" ")) > 1:
                     # If so, is the part after the space equal to "system"?
                     if key.split(" ")[1] == "system":
+                        print(f"Attempt to fetch display for property {concept_properties[key.split(' ')[0]]}")
                         # Now, lookup the display and change the value of the coding property to the display
                         req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display&version={version}"
                         result = requests.get(req_url, headers=headers)
                         if result.status_code == 404:
+                            print(f"Could not find a display with version {version} - trying without version")
                             req_url = f"https://terminologieserver.nl/fhir/CodeSystem/$lookup?system={requests.utils.quote(value)}&code={concept_properties[key.split(' ')[0]]}&property=display"
                             result = requests.get(req_url, headers=headers)
                         result = result.json()
+                        print(result)
                         if result.get('resourceType') == "Parameters":
                             for parameter in result['parameter']:
                                 if parameter.get('name') == "display":
+                                    print("Found a display value")
                                     # If a display is to be had, exchange the code for display, otherwise use the original value
                                     concept_properties[key.split(' ')[0]] = f"{concept_properties[key.split(' ')[0]]} [{parameter.get('valueString',value)}]"
                                     keys_to_pop.append(key)
