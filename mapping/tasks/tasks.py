@@ -1098,7 +1098,7 @@ def import_fhir_codesystem(request_body, codesystem_id, version, url_cs, fetch_p
     else:
         print("Key expansion.total is not present - using expansion.contains")
         print(f"[tasks/import_fhir_codesystem] Total code count: \t{len(valueset['expansion']['contains'])}")
-        valueset_code_count = valueset['expansion']['contains']
+        valueset_code_count = len(valueset['expansion']['contains'])
 
     for parameter in valueset['expansion']['parameter']:
         if parameter['name'] == 'version':
