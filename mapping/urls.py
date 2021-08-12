@@ -66,6 +66,9 @@ router_1_0.register(r'automap', views.MappingAutoMapNTS, basename="Automap using
 router_1_0.register(r'list_lookup', views.MappingListLookup, basename="Retrieve mapping rules from list of components")
 router_1_0.register(r'rules_by_codesystem', views.MappingRulesInvolvingCodesystem, basename="Retrieve components used in rules by codesystem")
 
+router_1_0.register(r'export_source_data', views.ExportEclSourceData, basename="Export source data for ECL-1 projects")
+
+
 urlpatterns = [
     # DRF router
     path(r'api/1.0/', include(router_1_0.urls)),
