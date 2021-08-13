@@ -46,7 +46,7 @@ class Permission_MappingProject_ChangeMappings(permissions.BasePermission):
 
 class ExportEclSourceData(viewsets.ViewSet):
     """
-    Delivers the source data of ECL-1 project
+    Outputs the source data of ECL-1 projects, for reproduction of the project in another system
     """
 
     permission_classes = [Permission_MappingProject_ChangeMappings]
@@ -63,7 +63,9 @@ class ExportEclSourceData(viewsets.ViewSet):
         # Fetch tasks
         filtered_tasks = MappingTask.objects.order_by('id').filter(project_id = project).prefetch_related(
             'source_component',
-            'status'
+            'source_component__codesystem_id',
+            'user',
+            'status',
             )
 
         # Fetch exclusions
@@ -93,7 +95,10 @@ class ExportEclSourceData(viewsets.ViewSet):
                 for item in ecl_parts]
 
         # Fetch all comments
-        comments = MappingComment.objects.filter(comment_task__project_id = project).values(
+        comments = MappingComment.objects.filter(comment_task__project_id = project).prefetch_related(
+            'user',
+            'task'
+        ).values(
             'comment_task__id',
             'comment_body',
             'comment_user__username',
@@ -107,12 +112,40 @@ class ExportEclSourceData(viewsets.ViewSet):
                     }
                 for item in comments]
 
+        # Fetch all QA hits
+        qa_hits = MappingTaskAudit.objects.filter(task__project_id = project).prefetch_related(
+            'user',
+            'task'
+        ).values(
+            'task__id',
+            'audit_type',
+            'hit_reason',
+            'sticky',
+            'ignore',
+            'ignore_user',
+        )
+        qa_hits = [{
+                        'task__id' : int(item['task__id']),
+                        'audit_type': item['audit_type'],
+                        'hit_reason' : item['hit_reason'],
+                        'sticky' : item['sticky'],
+                        'whitelisted' : item['ignore'],
+                        'whitelisted_by_user' : item['ignore_user'],
+                    }
+                for item in qa_hits]
+
         # Loop over tasks
         tasks = [{
                 'id' : task.id,
                 'category' : task.category,
                 'target' : {
-                    'id' : task.source_component.component_id,
+                    'code' : task.source_component.component_id,
+                    'codesystem' : {
+                        'title' : task.source_component.codesystem_id.codesystem_title,
+                        'fhir_uri' : task.source_component.codesystem_id.codesystem_fhir_uri,
+                        'id' : task.source_component.codesystem_id.id,
+                        'version' : task.source_component.codesystem_id.codesystem_version,
+                    },
                     'title' : task.source_component.component_title,
                 },
                 'status' : {
@@ -122,6 +155,7 @@ class ExportEclSourceData(viewsets.ViewSet):
                 'exclusions' : exclusions.get(task.id,[]),
                 'ecl_queries' : list(filter(lambda item: (item['task__id'] == task.id), ecl_parts)),
                 'comments' : list(filter(lambda item: (item['task__id'] == task.id), comments)),
+                'qa_hits' : list(filter(lambda item: (item['task__id'] == task.id), qa_hits)),
             } for task in filtered_tasks]
         
         output = {
