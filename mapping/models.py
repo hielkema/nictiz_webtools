@@ -42,8 +42,8 @@ class MappingProject(models.Model):
         return str(self.id) + " " + self.title
 
 class MappingCodesystem(models.Model):
-    codesystem_title    = models.CharField(max_length=50)
-    codesystem_version  = models.CharField(max_length=50)
+    codesystem_title    = models.CharField(max_length=500)
+    codesystem_version  = models.CharField(max_length=500)
     codesystem_fhir_uri = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_fhir_uri  = models.CharField(max_length=500, default=None, null=True, blank=True)
     component_created   = models.DateTimeField(default=timezone.now)
