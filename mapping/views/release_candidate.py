@@ -383,266 +383,270 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             source_codesystem = MappingCodesystemComponent.objects.select_related(
                 'codesystem_id'
             ).filter(codesystem_id = rc.codesystem)
-            # Identify all unique tasks in order to group the rules for export
-            all_rules = MappingReleaseCandidateRules.objects.select_related(
-                'export_rc', 
-                'export_user', 
-                'export_task', 
-                'export_task__source_component', 
-                'export_task__source_codesystem', 
-                'export_rule',
-                'export_rule__project_id', 
-                'source_component', 
-                'source_component__codesystem_id', 
-                'target_component',
-                'target_component__codesystem_id',
-                ).filter(export_rc = rc)
-            print('Exporting',all_rules.count(),'rules')
-            source_components = all_rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
-            print('Found',len(source_components),'distinct source components / =tasks')
             
-            # Fetch all rule-related data
-            rules = all_rules.order_by('mapgroup', 'mappriority').values(
-                'export_rc', 
-                'export_user__id', 
-                'export_task__category', 
-                'export_task__source_component', 
-                'export_task__source_codesystem', 
-                'export_rule',
-                'export_rule__project_id', 
-                'source_component', 
-                'source_component__codesystem_id', 
-                'target_component',
-                'target_component__codesystem_id',
-                'static_source_component', 
-                'static_source_component_ident', 
-                'mapspecifies',
-                'mapcorrelation',
-                'export_rule__id',
-                'export_rule__project_id__title',
-                'export_rule__project_id__id',
-                'export_task__id',
-                'task_user',
-                'task_status',
-                'target_component__codesystem_id__codesystem_title',
-                'static_target_component',
-                'mapgroup',
-                'mappriority',
-                'mapadvice',
-                'maprule',
-                'accepted',
-                'rejected',
-            )
+            if rc.export_all == False:
+                # Identify all unique tasks in order to group the rules for export
+                all_rules = MappingReleaseCandidateRules.objects.select_related(
+                    'export_rc', 
+                    'export_user', 
+                    'export_task', 
+                    'export_task__source_component', 
+                    'export_task__source_codesystem', 
+                    'export_rule',
+                    'export_rule__project_id', 
+                    'source_component', 
+                    'source_component__codesystem_id', 
+                    'target_component',
+                    'target_component__codesystem_id',
+                    ).filter(export_rc = rc)
+                print('Exporting',all_rules.count(),'rules')
+                source_components = all_rules.order_by('static_source_component_ident').values_list('static_source_component_ident',flat=True).distinct()
+                print('Found',len(source_components),'distinct source components / =tasks')
+
+                # Fetch all rule-related data
+                rules = all_rules.order_by('mapgroup', 'mappriority').values(
+                    'export_rc', 
+                    'export_user__id', 
+                    'export_task__category', 
+                    'export_task__source_component', 
+                    'export_task__source_codesystem', 
+                    'export_rule',
+                    'export_rule__project_id', 
+                    'source_component', 
+                    'source_component__codesystem_id', 
+                    'target_component',
+                    'target_component__codesystem_id',
+                    'static_source_component', 
+                    'static_source_component_ident', 
+                    'mapspecifies',
+                    'mapcorrelation',
+                    'export_rule__id',
+                    'export_rule__project_id__title',
+                    'export_rule__project_id__id',
+                    'export_task__id',
+                    'task_user',
+                    'task_status',
+                    'target_component__codesystem_id__codesystem_title',
+                    'static_target_component',
+                    'mapgroup',
+                    'mappriority',
+                    'mapadvice',
+                    'maprule',
+                    'accepted',
+                    'rejected',
+                )
 
 
-            # Fetch all users and groups
-            userdata = User.objects.all().values('id', 'username', 'groups__name')
+                # Fetch all users and groups
+                userdata = User.objects.all().values('id', 'username', 'groups__name')
 
-            # Fetch all audit hits (ignore == False)
-            all_audit_hits = MappingTaskAudit.objects.filter(ignore = False).values(
-                'id',
-                'audit_type',
-                'task__id',
-                'hit_reason',
-                'comment',
-                'ignore',
-                'sticky',
-                'ignore_user',
-                'first_hit_time',
-            )
+                # Fetch all audit hits (ignore == False)
+                all_audit_hits = MappingTaskAudit.objects.filter(ignore = False).values(
+                    'id',
+                    'audit_type',
+                    'task__id',
+                    'hit_reason',
+                    'comment',
+                    'ignore',
+                    'sticky',
+                    'ignore_user',
+                    'first_hit_time',
+                )
 
-            # print(source_components)
-            # Loop through the unique source components to group all rules using this source
-            for component in source_components:
-                
-                component_id = component
-                # print('Handling component',component_id)
-                # Get all rules using this component as source
-                rule_list = []
-                filtered_rule_list = []
-                rejected = False
-                rejected_list = []
-                fiat_me = False
-                veto_me = False
-                accepted = None
-                accepted_list = []
-                ignore_list = []
+                # print(source_components)
+                # Loop through the unique source components to group all rules using this source
+                for component in source_components:
 
-            # .filter(static_source_component_ident = component_id)
-                # print(f"[[***]] -> {component_id}")
-                _rules = list(filter(lambda x: (x['static_source_component_ident'] == component_id), rules))
-                for rule in _rules:
-                    # print(rule)
-                    mapspecifies = rule.get('mapspecifies')
-                    # Add ID's used as binding target to ignore list: don't show twice
-                    for value in mapspecifies:
-                        # print('Added',value.get('id'),'to ignore list')
-                        ignore_list.append(value.get('id'))
-                    # If no specifies are mentioned; false to hide rule in table
-                    if len(mapspecifies) == 0:
-                        mapspecifies = False
-                    
-                    correlation_options = [
-                        # (code, readable)
-                        ('447559001', 'Broad to narrow'),
-                        ('447557004', 'Exact match'),
-                        ('447558009', 'Narrow to broad'),
-                        ('447560006', 'Partial overlap'),
-                        ('447556008', 'Not mappable'),
-                        ('447561005', 'Not specified'),
-                    ]
-                    correlation = rule.get('mapcorrelation')
-                    for code, readable in correlation_options:
+                    component_id = component
+                    # print('Handling component',component_id)
+                    # Get all rules using this component as source
+                    rule_list = []
+                    filtered_rule_list = []
+                    rejected = False
+                    rejected_list = []
+                    fiat_me = False
+                    veto_me = False
+                    accepted = None
+                    accepted_list = []
+                    ignore_list = []
+
+                # .filter(static_source_component_ident = component_id)
+                    # print(f"[[***]] -> {component_id}")
+                    _rules = list(filter(lambda x: (x['static_source_component_ident'] == component_id), rules))
+                    for rule in _rules:
+                        # print(rule)
+                        mapspecifies = rule.get('mapspecifies')
+                        # Add ID's used as binding target to ignore list: don't show twice
+                        for value in mapspecifies:
+                            # print('Added',value.get('id'),'to ignore list')
+                            ignore_list.append(value.get('id'))
+                        # If no specifies are mentioned; false to hide rule in table
+                        if len(mapspecifies) == 0:
+                            mapspecifies = False
+
+                        correlation_options = [
+                            # (code, readable)
+                            ('447559001', 'Broad to narrow'),
+                            ('447557004', 'Exact match'),
+                            ('447558009', 'Narrow to broad'),
+                            ('447560006', 'Partial overlap'),
+                            ('447556008', 'Not mappable'),
+                            ('447561005', 'Not specified'),
+                        ]
+                        correlation = rule.get('mapcorrelation')
+                        for code, readable in correlation_options:
+                            try:
+                                correlation = correlation.replace(code, readable)
+                            except:
+                                continue
+
+                        # Handle foreign keys that could have been removed
                         try:
-                            correlation = correlation.replace(code, readable)
+                            from_project = rule.get('export_rule__project_id__id')
                         except:
-                            continue
+                            from_project = '[deleted]'
+                        try:
+                            rule_id = rule.get('export_rule__id')
+                        except:
+                            rule_id = '[deleted]'
+
+                        try:
+                            export_task_id = rule.get('export_task__id')
+                        except:
+                            export_task_id = '[deleted]'
+
+                        try:
+                            export_task_category = rule.get('export_task__category')
+                        except:
+                            export_task_category = '[deleted]'
+
+
+                        rule_list.append({
+                            'from_project' : from_project,
+                            'rule_id' : rule_id,
+
+                            'task_status'   : rule.get('task_status'),
+                            'task_user'     : rule.get('task_user'),
+
+                            'codesystem'    : rule.get('target_component__codesystem_id__codesystem_title'),
+                            'target'        : rule.get('static_target_component'),
+
+                            'mapgroup'      : rule.get('mapgroup'),
+                            'mappriority'   : rule.get('mappriority'),
+                            'mapcorrelation': correlation,
+                            'mapadvice'     : rule.get('mapadvice'),
+                            'maprule'       : rule.get('maprule'),
+                            'mapspecifies'  : mapspecifies,
+
+                        })
+                        # TODO - not validated yet 
+                        accepted_nvmm   = False
+                        accepted_nvkc   = False
+                        accepted_nictiz = False
+                        accepted_nhg    = False
+                        accepted_palga  = False
+                        if (rule.get('accepted') != None) and (len(rule.get('accepted')) > 0):
+                            # Fetch user groups
+                            accepted_groups = list(filter(lambda x: (x['id'] in rule.get('accepted')), userdata))
+                            accepted_groups = set([x['groups__name'] for x in accepted_groups])
+                            if 'groepen | nictiz' in accepted_groups:
+                                accepted_nictiz = True
+                            if 'groepen | palga' in accepted_groups:
+                                accepted_palga = True
+                            if 'groepen | nhg' in accepted_groups:
+                                accepted_nhg = True
+                            if 'groepen | nvmm' in accepted_groups:
+                                accepted_nvmm = True
+                            if 'groepen | nvkc' in accepted_groups:
+                                accepted_nvkc = True
+
+                        if (rule.get('rejected') != None) and (len(rule.get('rejected')) > 0):
+                            rejected = True
+                            for userid in rule.get('rejected'):
+                                _userdata = list(filter(lambda x: (x['id'] == userid), userdata))[0]
+                                rejected_list.append(_userdata['username'])
+                            if request.user.id in rule.get('rejected'):
+                                veto_me = True
+                        if (rule.get('accepted') != None) and (len(rule.get('accepted')) > 0):
+                            accepted = True
+                            for userid in rule.get('accepted'):
+                                _userdata = list(filter(lambda x: (x['id'] == userid), userdata))[0]
+                                accepted_list.append(_userdata['username'])
+                            if request.user.id in rule.get('accepted'):
+                                fiat_me = True
+
+                    # Filter -> ID not in rejected list
+                    for single_rule in rule_list:
+                        # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
+                        # print(ignore_list)
+                        if single_rule.get('target').get('identifier') in ignore_list:
+                            # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
+                            True
+                        else:
+                            # print("ADDED")
+                            filtered_rule_list.append(single_rule)
+
+
+                    # Handle foreign key info that might be deleted in dev path
+                    try:
+                        project_title = rule.get('export_rule__project_id__title')
+                        project_id = rule.get('export_rule__project_id__id')
+                    except:
+                        project_title = '[unknown]'
+                        project_id = '[unknown]'
+                    static_source_component = rule.get('static_source_component')
+
+                    # Add audit hits
+                    audit_hits = list(filter(lambda x: (x['task__id'] == rule.get('export_task__id')), all_audit_hits))
+                    audits = []
+                    audits_present = False
+                    for audit in audit_hits:
+                        audits.append({
+                            'id':audit.get('id'),
+                            'type':audit.get('audit_type'),
+                            'reason':audit.get('hit_reason'),
+                            'ignore':audit.get('ignore'),
+                            'sticky':audit.get('sticky'),
+                            'timestamp':audit.get('first_hit_time'),
+                        })
+                        audits_present = True
+
+                    task_list.append({
+                        'status' : rule.get('task_status'),
+                        'source' : static_source_component,
+                        'source_title' : static_source_component.get('title',None),
+                        'task_id': export_task_id,
+                        'task_category' : export_task_category,
+                        'project' : project_title,
+                        'project_id' : project_id,
+
+                        # Extra data for filtering
+                        'group' : static_source_component.get('extra',{}).get('Groep',None),
+                        'class' : static_source_component.get('extra',{}).get('Klasse',None),
+
+                        'rules' : filtered_rule_list,
+
+                        'audit' : audits,
+                        'audit_present' : audits_present,
+
+                        'accepted_list' : ", ".join(set(accepted_list)),
+                        'num_accepted' : len(set(accepted_list)),
+                        'accepted_me' : fiat_me,
+                        'rejected_list' : ", ".join(set(rejected_list)),
+                        'num_rejected' : len(set(rejected_list)),
+                        'rejected_me' : veto_me,
+                        'accepted' : accepted,
+                        'rejected' : rejected,
+
+                        'accepted_nvmm'     : accepted_nvmm,
+                        'accepted_nvkc'     : accepted_nvkc,
+                        'accepted_nictiz'   : accepted_nictiz,
+                        'accepted_nhg'      : accepted_nhg,
+                        'accepted_palga'    : accepted_palga,
+                    })
+            else:
+                print("Skip exporting rules, since rc.export_all is True. Veto would not matter.")
                     
-                    # Handle foreign keys that could have been removed
-                    try:
-                        from_project = rule.get('export_rule__project_id__id')
-                    except:
-                        from_project = '[deleted]'
-                    try:
-                        rule_id = rule.get('export_rule__id')
-                    except:
-                        rule_id = '[deleted]'
-
-                    try:
-                        export_task_id = rule.get('export_task__id')
-                    except:
-                        export_task_id = '[deleted]'
-
-                    try:
-                        export_task_category = rule.get('export_task__category')
-                    except:
-                        export_task_category = '[deleted]'
-
-
-                    rule_list.append({
-                        'from_project' : from_project,
-                        'rule_id' : rule_id,
-
-                        'task_status'   : rule.get('task_status'),
-                        'task_user'     : rule.get('task_user'),
-
-                        'codesystem'    : rule.get('target_component__codesystem_id__codesystem_title'),
-                        'target'        : rule.get('static_target_component'),
-
-                        'mapgroup'      : rule.get('mapgroup'),
-                        'mappriority'   : rule.get('mappriority'),
-                        'mapcorrelation': correlation,
-                        'mapadvice'     : rule.get('mapadvice'),
-                        'maprule'       : rule.get('maprule'),
-                        'mapspecifies'  : mapspecifies,
-
-                    })
-                    # TODO - not validated yet 
-                    accepted_nvmm   = False
-                    accepted_nvkc   = False
-                    accepted_nictiz = False
-                    accepted_nhg    = False
-                    accepted_palga  = False
-                    if (rule.get('accepted') != None) and (len(rule.get('accepted')) > 0):
-                        # Fetch user groups
-                        accepted_groups = list(filter(lambda x: (x['id'] in rule.get('accepted')), userdata))
-                        accepted_groups = set([x['groups__name'] for x in accepted_groups])
-                        if 'groepen | nictiz' in accepted_groups:
-                            accepted_nictiz = True
-                        if 'groepen | palga' in accepted_groups:
-                            accepted_palga = True
-                        if 'groepen | nhg' in accepted_groups:
-                            accepted_nhg = True
-                        if 'groepen | nvmm' in accepted_groups:
-                            accepted_nvmm = True
-                        if 'groepen | nvkc' in accepted_groups:
-                            accepted_nvkc = True
-
-                    if (rule.get('rejected') != None) and (len(rule.get('rejected')) > 0):
-                        rejected = True
-                        for userid in rule.get('rejected'):
-                            _userdata = list(filter(lambda x: (x['id'] == userid), userdata))[0]
-                            rejected_list.append(_userdata['username'])
-                        if request.user.id in rule.get('rejected'):
-                            veto_me = True
-                    if (rule.get('accepted') != None) and (len(rule.get('accepted')) > 0):
-                        accepted = True
-                        for userid in rule.get('accepted'):
-                            _userdata = list(filter(lambda x: (x['id'] == userid), userdata))[0]
-                            accepted_list.append(_userdata['username'])
-                        if request.user.id in rule.get('accepted'):
-                            fiat_me = True
-                
-                # Filter -> ID not in rejected list
-                for single_rule in rule_list:
-                    # print('IGNORE HANDLING',single_rule.get('target').get('identifier'))
-                    # print(ignore_list)
-                    if single_rule.get('target').get('identifier') in ignore_list:
-                        # print('IGNORED',single_rule.get('target').get('identifier'),': rule binding in place')
-                        True
-                    else:
-                        # print("ADDED")
-                        filtered_rule_list.append(single_rule)
-                
-
-                # Handle foreign key info that might be deleted in dev path
-                try:
-                    project_title = rule.get('export_rule__project_id__title')
-                    project_id = rule.get('export_rule__project_id__id')
-                except:
-                    project_title = '[unknown]'
-                    project_id = '[unknown]'
-                static_source_component = rule.get('static_source_component')
-
-                # Add audit hits
-                audit_hits = list(filter(lambda x: (x['task__id'] == rule.get('export_task__id')), all_audit_hits))
-                audits = []
-                audits_present = False
-                for audit in audit_hits:
-                    audits.append({
-                        'id':audit.get('id'),
-                        'type':audit.get('audit_type'),
-                        'reason':audit.get('hit_reason'),
-                        'ignore':audit.get('ignore'),
-                        'sticky':audit.get('sticky'),
-                        'timestamp':audit.get('first_hit_time'),
-                    })
-                    audits_present = True
-
-                task_list.append({
-                    'status' : rule.get('task_status'),
-                    'source' : static_source_component,
-                    'source_title' : static_source_component.get('title',None),
-                    'task_id': export_task_id,
-                    'task_category' : export_task_category,
-                    'project' : project_title,
-                    'project_id' : project_id,
-
-                    # Extra data for filtering
-                    'group' : static_source_component.get('extra',{}).get('Groep',None),
-                    'class' : static_source_component.get('extra',{}).get('Klasse',None),
-
-                    'rules' : filtered_rule_list,
-
-                    'audit' : audits,
-                    'audit_present' : audits_present,
-
-                    'accepted_list' : ", ".join(set(accepted_list)),
-                    'num_accepted' : len(set(accepted_list)),
-                    'accepted_me' : fiat_me,
-                    'rejected_list' : ", ".join(set(rejected_list)),
-                    'num_rejected' : len(set(rejected_list)),
-                    'rejected_me' : veto_me,
-                    'accepted' : accepted,
-                    'rejected' : rejected,
-
-                    'accepted_nvmm'     : accepted_nvmm,
-                    'accepted_nvkc'     : accepted_nvkc,
-                    'accepted_nictiz'   : accepted_nictiz,
-                    'accepted_nhg'      : accepted_nhg,
-                    'accepted_palga'    : accepted_palga,
-                })
-
             status_options = [
                 # (code, readable)
                 ['0', 'Testing'],
