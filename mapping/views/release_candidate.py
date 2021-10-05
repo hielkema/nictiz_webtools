@@ -644,43 +644,80 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                         'accepted_nhg'      : accepted_nhg,
                         'accepted_palga'    : accepted_palga,
                     })
+                    
+                    status_options = [
+                        # (code, readable)
+                        ['0', 'Testing'],
+                        ['1', 'Experimental'],
+                        ['2', 'Acceptance'],
+                        ['3', 'Production'],
+                    ]
+                    status = rc.status
+                    for code, readable in status_options:
+                        try:
+                            status = status.replace(code, readable)
+                        except:
+                            continue
+
+                    return Response({
+                        'message' : 'Lijst met alle items voor RC',
+                        'rc' : {
+                            'id' : rc.id,
+                            'title' : rc.title,
+                            'status' : status,
+                            'created' : rc.created,
+                            'finished' : rc.finished,
+                            'stats' : {
+                                'total_tasks'   : source_components.count(),
+                                'tasks_in_rc'   : len(task_list),
+                                'num_accepted'  : len(list(filter(lambda x: x['accepted'] == True, task_list))),
+                                'num_rejected'  : len(list(filter(lambda x: x['rejected'] == True, task_list))),
+                                'total_components' : source_codesystem.count(),
+                                'perc_in_rc'    :  round(source_components.count() / source_codesystem.count() * 100),
+                            },
+                            'text' : rc.title + ' [' + str(rc.created) + ']',
+                        },
+                        'rules' : task_list,
+                    })
+                    
             else:
                 print("Skip exporting rules, since rc.export_all is True. Veto would not matter.")
                     
-            status_options = [
-                # (code, readable)
-                ['0', 'Testing'],
-                ['1', 'Experimental'],
-                ['2', 'Acceptance'],
-                ['3', 'Production'],
-            ]
-            status = rc.status
-            for code, readable in status_options:
-                try:
-                    status = status.replace(code, readable)
-                except:
-                    continue
+                status_options = [
+                    # (code, readable)
+                    ['0', 'Testing'],
+                    ['1', 'Experimental'],
+                    ['2', 'Acceptance'],
+                    ['3', 'Production'],
+                ]
+                status = rc.status
+                for code, readable in status_options:
+                    try:
+                        status = status.replace(code, readable)
+                    except:
+                        continue
 
-            return Response({
-                'message' : 'Lijst met alle items voor RC',
-                'rc' : {
-                    'id' : rc.id,
-                    'title' : rc.title,
-                    'status' : status,
-                    'created' : rc.created,
-                    'finished' : rc.finished,
-                    'stats' : {
-                        'total_tasks'   : source_components.count(),
-                        'tasks_in_rc'   : len(task_list),
-                        'num_accepted'  : len(list(filter(lambda x: x['accepted'] == True, task_list))),
-                        'num_rejected'  : len(list(filter(lambda x: x['rejected'] == True, task_list))),
-                        'total_components' : source_codesystem.count(),
-                        'perc_in_rc'    :  round(source_components.count() / source_codesystem.count() * 100),
+                # Skip the entirety of this statistical calculation, but do output zeroes.
+                return Response({
+                    'message' : 'Lijst met alle items voor RC',
+                    'rc' : {
+                        'id' : rc.id,
+                        'title' : rc.title,
+                        'status' : status,
+                        'created' : rc.created,
+                        'finished' : rc.finished,
+                        'stats' : {
+                            'total_tasks'   : 0,
+                            'tasks_in_rc'   : 0,
+                            'num_accepted'  : 0,
+                            'num_rejected'  : 0,
+                            'total_components' : 0,
+                            'perc_in_rc'    :  0,
+                        },
+                        'text' : rc.title + ' [' + str(rc.created) + ']',
                     },
-                    'text' : rc.title + ' [' + str(rc.created) + ']',
-                },
-                'rules' : task_list,
-            })
+                    'rules' : [],
+                })
         except Exception as e:
             print("[release_candidate/exportReleaseCandidateRules retrieve] ERROR: ", e)
 
