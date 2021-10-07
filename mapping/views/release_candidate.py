@@ -385,6 +385,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
             ).filter(codesystem_id = rc.codesystem)
             
             if rc.export_all == False:
+                print("rc.export_all == False -> Generate list of rules for fiat/veto")
                 # Identify all unique tasks in order to group the rules for export
                 all_rules = MappingReleaseCandidateRules.objects.select_related(
                     'export_rc', 
@@ -658,7 +659,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                             status = status.replace(code, readable)
                         except:
                             continue
-
+                    
+                    print("Generated all RC candidate rules - sending to client")
                     return Response({
                         'message' : 'Lijst met alle items voor RC',
                         'rc' : {
