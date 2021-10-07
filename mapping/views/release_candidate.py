@@ -456,6 +456,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
 
                 # print(source_components)
                 # Loop through the unique source components to group all rules using this source
+                print(f"Found {len(source_components)} source components to loop through.")
                 for component in source_components:
 
                     component_id = component
@@ -474,6 +475,7 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                 # .filter(static_source_component_ident = component_id)
                     # print(f"[[***]] -> {component_id}")
                     _rules = list(filter(lambda x: (x['static_source_component_ident'] == component_id), rules))
+                    print(f"{component_id} -> {len(_rules)} rules")
                     for rule in _rules:
                         # print(rule)
                         mapspecifies = rule.get('mapspecifies')
@@ -611,6 +613,8 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                             'timestamp':audit.get('first_hit_time'),
                         })
                         audits_present = True
+
+                    print(f"Got {len(task_list)} tasks.")
 
                     task_list.append({
                         'status' : rule.get('task_status'),
