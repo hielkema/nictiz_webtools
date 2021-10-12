@@ -626,8 +626,11 @@ class exportReleaseCandidateRules(viewsets.ViewSet):
                         'project_id' : project_id,
 
                         # Extra data for filtering
+                        class_tag = static_source_component.get('extra',{}).get('Klasse',None)
+                        if class_tag == None:
+                            static_source_component.get('extra',{}).get('Class',None)
                         'group' : static_source_component.get('extra',{}).get('Groep',None),
-                        'class' : static_source_component.get('extra',{}).get('Klasse',None),
+                        'class' : class_tag,
 
                         'rules' : filtered_rule_list,
 
