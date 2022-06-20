@@ -638,7 +638,7 @@ def import_nhgverrichtingen_task():
 
 @shared_task
 def import_apache_async():
-    df = read_excel('/webserver/mapping/resources/apache/extractie_20171120.xlsx')
+    df = read_excel('/webserver/mapping/resources/apache/apache4_20220617.xlsx')
     # Vervang lege cellen door False
     df=df.fillna(value=False)
     for index, row in df.iterrows():
